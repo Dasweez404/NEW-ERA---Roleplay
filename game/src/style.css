@@ -345,3 +345,10 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .mapbtns .ibtn{width:40px;height:40px;font-size:1.1rem}
 @media(max-width:960px){.mapscroll{height:58vh}}
 .travelinfo{margin-top:8px;padding:8px 12px;border-left:3px solid var(--acc);background:#12121e;font-size:.95rem;min-height:3.4em}
+/* combat épuré */
+.combat .foes{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.frow{position:relative;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(70px,1fr) auto auto;gap:10px;align-items:center;padding:8px 10px;background:#12121e;border:1px solid #2c2c44;border-left:3px solid var(--bad);cursor:pointer}
+.frow.tgt{border-color:var(--acc);border-left-color:var(--acc)}.frow.dead{opacity:.35}
+.frow .fn{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.frow .fv{font-family:var(--fm);font-size:.72rem;color:var(--mut)}.frow .fs{font-size:.8rem}
+.frow.hit,[data-k=pc].hit{animation:foehit .45s}
+.combat [data-k=pc]{position:relative}
