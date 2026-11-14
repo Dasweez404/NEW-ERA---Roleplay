@@ -251,10 +251,14 @@ function mapEl(o = {}) {
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
-  if (o.route && o.route.length > 1) {
-    const runs = [[]]; o.route.forEach((id, i) => { runs[runs.length - 1].push(OT_ST[id][0] + ',' + OT_ST[id][1]); const nx = o.route[i + 1]; if (nx && OT_WRAP.some(w => (w[0] === id && w[1] === nx) || (w[1] === id && w[0] === nx))) { const e1 = wrapStub(id, nx), e2 = wrapStub(nx, id); runs[runs.length - 1].push(e1.join(',')); runs.push([e2.join(',')]); } });
-    runs.forEach(r => svg.append(el('polyline', { points: r.join(' '), fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '4 14', 'stroke-linecap': 'round', class: 'routeline' })));
-    o.route.forEach(id => svg.append(el('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 15, fill: 'none', stroke: '#ff3d7f', 'stroke-width': 4, class: 'pulse' })));
+  const routeSteps = o.routeObj && o.routeObj.steps;
+  if (routeSteps && routeSteps.length && !o.routeObj.custom) {
+    const runs = [[]];
+    routeSteps.forEach(st => { const g = edgeGeom(st.from, st.to, st.line); let cur = runs[runs.length - 1];
+      if (g.off) { g.pts.slice(0, g.na).forEach(q => cur.push(q)); const nr = g.pts.slice(g.na).map(q => [q[0] - g.off, q[1]]); runs.push(nr); }
+      else g.pts.forEach((q, k) => { if (!(cur.length && k === 0)) cur.push(q); }); });
+    runs.forEach(r => { const pts = r.map(q => q.join(',')).join(' '); svg.append(el('polyline', { points: pts, fill: 'none', stroke: '#0a0a14', 'stroke-width': 17, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: .55 }), el('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '2 13', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'routeline' })); });
+    routeSteps.forEach(st => [st.from, st.to].forEach(id => svg.append(el('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 15, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4, class: 'pulse' }))));
   }
   if (o.tile) { const kids = [...svg.childNodes]; [-1800, 1800].forEach(off => { const g = el('g', { transform: `translate(${off} 0)`, opacity: .5 }); kids.forEach(k => g.append(k.cloneNode(true))); svg.append(g); }); svg.prepend(el('rect', { x: -4000, y: -400, width: 9800, height: 1800, fill: '#0a0a14' })); }
   return svg;
@@ -265,9 +269,33 @@ function wrapStub(a, b) { // point de sortie au bord de la carte pour la station
   return [OT_ST[a][0], OT_ST[a][1]];
 }
 function mapBox(o = {}) {
-  UI.zoom = UI.zoom || 1; const svg = mapEl(o); const inner = h('div', { class: 'mapin', style: `width:${UI.zoom * 100}%` }, svg);
-  const z = d => () => { UI.zoom = clamp(UI.zoom + d, 1, 3); inner.style.width = UI.zoom * 100 + '%'; };
-  return h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, h('button', { class: 'ibtn', onclick: z(0.5) }, '＋'), h('button', { class: 'ibtn', onclick: z(-0.5) }, '－')), h('div', { class: 'mapscroll' }, inner));
+  let moved = false; const o2 = Object.assign({}, o, { onPick: sid => { if (moved) return; o.onPick && o.onPick(sid); } });
+  const svg = mapEl(o2); svg.style.touchAction = 'none'; svg.style.cursor = 'grab';
+  const wrap = h('div', { class: 'mapscroll' }, svg); let vb = { x: 0, y: 0, w: 2000, h: 975 };
+  const cw = () => wrap.clientWidth || 600, chh = () => wrap.clientHeight || 380;
+  const apply = () => { vb.h = vb.w * chh() / cw(); vb.x = clamp(vb.x, -350, 2350 - vb.w); vb.y = clamp(vb.y, -200, 1175 - vb.h); svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); svg.style.setProperty('--fs', (11.5 * vb.w / cw()).toFixed(1) + 'px'); };
+  const focus = (sid, w) => { const st = OT_ST[stationOf(sid)]; vb.w = w; vb.h = vb.w * chh() / cw(); vb.x = st[0] - vb.w / 2; vb.y = st[1] - vb.h / 2; apply(); };
+  const fit = () => { vb.w = 2000; vb.h = vb.w * chh() / cw(); vb.x = 0; vb.y = (975 - vb.h) / 2; apply(); };
+  const zoomAt = (f, px, py) => { const nw = clamp(vb.w / f, 300, 2400); const rx = px == null ? .5 : px, ry = py == null ? .5 : py; const cx = vb.x + vb.w * rx, cy = vb.y + vb.h * ry; vb.w = nw; vb.h = nw * chh() / cw(); vb.x = cx - vb.w * rx; vb.y = cy - vb.h * ry; apply(); };
+  const home = () => o.here ? focus(o.here, innerWidth < 700 ? 700 : 1100) : fit();
+  const ptrs = new Map(); let lastD = 0, startX = 0, startY = 0;
+  svg.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false; startX = e.clientX; startY = e.clientY; try { svg.setPointerCapture(e.pointerId); } catch (x) { } lastD = 0; svg.style.cursor = 'grabbing'; });
+  svg.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return; const prev = ptrs.get(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 7) moved = true; if (!moved) return;
+    if (ptrs.size === 1) { vb.x -= (e.clientX - prev[0]) * vb.w / cw(); vb.y -= (e.clientY - prev[1]) * vb.h / chh(); apply(); }
+    else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); const r = wrap.getBoundingClientRect(); if (lastD) zoomAt(d / lastD, ((a[0] + b[0]) / 2 - r.left) / r.width, ((a[1] + b[1]) / 2 - r.top) / r.height); lastD = d; }
+  });
+  const up = e => { ptrs.delete(e.pointerId); lastD = 0; svg.style.cursor = 'grab'; setTimeout(() => { if (!ptrs.size) moved = false; }, 60); };
+  svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+  svg.addEventListener('wheel', e => { e.preventDefault(); const r = wrap.getBoundingClientRect(); zoomAt(Math.pow(1.0011, -e.deltaY), (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); }, { passive: false });
+  svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
+  const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
+  const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
+    h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
+  const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
+  if (window.ResizeObserver) new ResizeObserver(() => apply()).observe(wrap);
+  return box;
 }
 function tabCarte() {
   const box = h('div'); box.append(mapBox({ here: G.loc }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));

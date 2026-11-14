@@ -41,7 +41,7 @@ const EVENT_FN = {};
 // ───────── Voyager ─────────
 function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
-  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt. La Terre est une boucle : Tokyo et Toronto (ligne 1), Nouméa et Lima (ligne 3) se rejoignent par le Pacifique, des deux côtés de la carte (traversée = 3 arrêts). Les petites stations (Reykjavik, Madrid, Abidjan, San José, Sydney, Auckland) sont des destinations comme les autres. Un véhicule permet de voyager hors du réseau.'],
+  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Touche une station allumée (18 ¢ par arrêt). La Terre est une boucle : le Pacifique relie Tokyo↔Toronto et Nouméa↔Lima par les bords de la carte.'],
     extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
     choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu)] });
 }
@@ -55,7 +55,7 @@ function travelConfirm(to) {
   const r = otRoute(G.loc, to); if (!r) return travelMenu();
   const weeks = 1 + Math.floor((r.hops - 1) / 4); const chance_ = Math.round(detectChance() * 100);
   show({ kicker: 'Orbitrail', title: `${capName(G.loc)} → ${capName(to)}`, text: [`Trajet : ${esc(routeText(r))}.`, `${r.hops} arrêt(s), ${weeks} semaine(s), <b>${r.cost} ¢</b>.`, `Risque de contrôle : environ <b>${chance_} %</b> ${pc_hasFaux() ? '(faux papiers)' : ''}`],
-    extra: h('div', {}, mapBox({ here: G.loc, pick: new Set([to]), onPick: () => { }, route: r.path })), choices: [C('Partir', () => travelGo(to, r, weeks), { req: { money: r.cost } }), C('Annuler', travelMenu)] });
+    extra: h('div', {}, mapBox({ here: G.loc, pick: new Set([to]), onPick: () => { }, routeObj: r })), choices: [C('Partir', () => travelGo(to, r, weeks), { req: { money: r.cost } }), C('Annuler', travelMenu)] });
 }
 const pc_hasFaux = () => G.pc.faux > 0;
 function detectChance() {

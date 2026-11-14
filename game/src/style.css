@@ -338,3 +338,9 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .map .stc.here{fill:#fcee09}.map .stc.gos{fill:#05ffa1}
 .stage{overflow:visible}.stage .vs{font-size:.9rem}.sg .fi{max-width:84px}.stage .side{gap:2px}
 .env .envtag b{font-size:.78rem}.env .envtag span{font-size:.56rem}
+.mapscroll{height:min(62vh,520px);min-height:300px;overflow:hidden;max-height:none}.mapin{display:none}
+.mapscroll svg.map{width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none}
+.map text{font-size:var(--fs,15px);stroke-width:calc(var(--fs,15px)*.3)}
+.maphint{font-family:var(--fm);font-size:.64rem;letter-spacing:.06em;color:var(--mut);margin-top:4px;text-transform:uppercase}
+.mapbtns .ibtn{width:40px;height:40px;font-size:1.1rem}
+@media(max-width:960px){.mapscroll{height:58vh}}

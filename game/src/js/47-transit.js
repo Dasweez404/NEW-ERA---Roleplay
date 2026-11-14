@@ -13,7 +13,7 @@ function edgeGeom(a, b, line) {
   // traversée du Pacifique : on sort par le bord de la carte et on ressort de l'autre côté
   const toEdge = (s) => { for (const path of OT_LINES[line].p) { const i = path.indexOf(s); if (i < 0) continue; for (const dir of [-1, 1]) { const seg = [otPt(s)]; for (let j = i + dir; j >= 0 && j < path.length; j += dir) { const it = path[j]; if (typeof it === 'string' && it.startsWith('@')) { seg.push(otPt(it)); return seg; } if (typeof it === 'string') break; seg.push(it); } } } return [otPt(s)]; };
   const east = OT_ST[a][0] > OT_ST[b][0]; const off = east ? 1800 : -1800; const sa = toEdge(a), sb = toEdge(b).reverse().map(q => [q[0] + off, q[1]]);
-  return { pts: sa.concat(sb), off };
+  return { pts: sa.concat(sb), off, na: sa.length };
 }
 function routeGeom(r) {
   if (r.custom) { const pts = r.custom.slice(); let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return { pts, stops: [{ id: r.steps[0].from, at: 0, i: 0 }, { id: r.steps[0].to, at: len, i: pts.length - 1 }], len, jumps: [] }; }
