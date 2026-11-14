@@ -3,8 +3,10 @@ const SPR = SPR_DATA;
 const FOE_SPR = { soldat: '0001', droide: '0002', centaure: '0003', gorgone: '0004', cyclope: '0005', atlas: '0005', prometh: '0005', epimeth: '0005', menet: '0005' };
 const hasSpr = id => !!(id && SPR[id]);
 function sprFit(id, hpx, cls) {
-  const s = SPR[id]; if (!s) return null; const k = hpx / s[1];
-  return h('img', { class: 'spr ' + (cls || ''), src: s[2], width: Math.max(1, Math.round(s[0] * k)), height: hpx, alt: '', draggable: 'false' });
+  // échelle ENTIÈRE et identique pour tous les sprites d'un même contexte : proportions fidèles, pixels nets
+  const s = SPR[id]; if (!s) return null; let k = Math.max(1, Math.round(hpx / 40));
+  const maxW = Math.max(hpx * 1.9, 110); while (k > 1 && s[0] * k > maxW) k--;
+  return h('img', { class: 'spr ' + (cls || ''), src: s[2], width: s[0] * k, height: s[1] * k, alt: '', draggable: 'false' });
 }
 const pcSprite = () => (G && G.pc && (G.pc.charId || G.pc.sprite)) || null;
 const foeSprite = f => f.cid || FOE_SPR[f.tid] || null;

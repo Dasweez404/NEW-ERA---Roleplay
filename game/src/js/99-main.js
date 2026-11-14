@@ -5,24 +5,15 @@ const randName = () => cap(pick(NAME_A).toLowerCase() + pick(NAME_B) + (chance(0
 let CR = null;
 
 function titleScreen() {
-  G = null; const sc = hasSave(); const mob = innerWidth < 700; const k = mob ? 3 : 4;
-  const fig = (id, kk, i, cls) => { const c = CH[id]; const s = SPR[id]; if (!s) return null; const hue = (hashStr(c.faction) * 7) % 360;
-    return h('div', { class: 'fig ' + (cls || ''), style: `--hue:${hue};--i:${i}` }, h('div', { class: 'pose' }, h('img', { class: 'spr', src: s[2], width: s[0] * kk, height: s[1] * kk, alt: '', draggable: 'false' })), h('div', { class: 'pad' }), h('div', { class: 'nt' }, `${c.name} // ${F[c.faction].name}`)); };
-  const order = mob ? [['275', k], ['274', k + 1], ['277', k]] : [['021', k - 1], ['275', k], ['274', k + 1], ['277', k], ['300', k - 1]];
-  const ghost = h('div', { class: 'fig ghost', style: '--hue:350' }, h('div', { class: 'pose' }, h('img', { class: 'spr', src: SPR['000'][2], width: SPR['000'][0] * (k + 2), height: SPR['000'][1] * (k + 2), alt: '' })));
-  const sky = h('div', { class: 'sky' }, h('i', { class: 'a drift', style: `background-image:${skylineURL('title', 280, 0)}` }), h('i', { class: 'b drift', style: `background-image:${skylineURL('title', 190, 1)}` }));
-  const logo = h('h1', { class: 'logo2', 'data-t': 'NEW\n   ERA' }, h('span', {}, 'NEW'), h('span', {}, 'ERA'));
-  UI.scene = { bare: true, extra: h('div', { class: 'hero' }, h('div', { class: 'sun' }), sky, h('div', { class: 'floor' }), h('div', { class: 'vig' }),
-    h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Let justice begin'),
-    h('p', { class: 'lore' }, 'Cratès, 2071. Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
-    h('div', { class: 'lineup' }, ghost, order.map(([id, kk], i) => fig(id, kk, i, i === (mob ? 1 : 2) ? 'big' : ''))),
-    h('div', { class: 'menu' },
-      sc ? h('button', { class: 'ch go', onclick: () => { sfx('click'); if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Continuer la partie'))) : null,
-      h('button', { class: 'ch' + (sc ? '' : ' go'), onclick: () => { sfx('click'); newGameMenu(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Nouvelle partie'))),
-      h('button', { class: 'ch', onclick: () => { sfx('click'); scoresScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Meilleurs scores'))),
-      h('button', { class: 'ch', onclick: () => { sfx('click'); aboutScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'À propos & sources')))),
-    h('div', { class: 'foot' }, 'Jeu non officiel · 52 États · 31 factions · 441 personnages')) };
-  UI.after = []; render(); UI.after.push(() => fixDrift()); runAfter(); setTimeout(() => fixDrift(), 60);
+  G = null; const sc = hasSave(); const city = pick(DATA.states).id;
+  const logo = h('h1', { class: 'logo2' }, h('span', {}, 'NEW'), h('span', {}, 'ERA'));
+  const btn = (t, f, go) => h('button', { class: 'ch' + (go ? ' go' : ''), onclick: () => { sfx('click'); f(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, t)));
+  UI.scene = { bare: true, extra: h('div', { class: 'hero' }, envBanner(city, 260, 'night'),
+    h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Cratès · 2071'),
+    h('p', { class: 'lore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
+    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('À propos & sources', aboutScreen), btn('Debug : Orbitrail', orbitrailDebug)),
+    h('div', { class: 'foot' }, '52 États · 31 factions · 441 personnages')) };
+  UI.after = []; render(); runAfter();
 }
 function aboutScreen() {
   show({ kicker: 'À propos', title: 'Fidélité et libertés prises', text: [

@@ -46,7 +46,7 @@ function show(sc) {
 }
 function paragraphs(t) { return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => typeof x === 'string' ? h('p', { class: 'rv', style: `--i:${i}`, html: x }) : x); }
 
-function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; const sp = pcSprite(); if (sp && hasSpr(sp)) return h('div', { class: 'avatar sp', style: `--hue:${hue}` }, sprFit(sp, 64)); return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
+function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; const sp = pcSprite(); if (sp && hasSpr(sp)) return h('div', { class: 'avatar sp', style: `--hue:${hue}` }, sprFit(sp, 80)); return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
 function hudEl() {
   const pc = G.pc; const st = wantedStars(); const f = F[pc.faction]; const pv = UI.prev || { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   const hpP = pc.hp / pc.hpMax * 100, enP = pc.enMax ? pc.en / pc.enMax * 100 : 0;
@@ -93,7 +93,7 @@ function render(quiet) {
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
-  if (live) { app.append(hudEl()); const tk = tickerEl(); if (tk) app.append(tk); }
+  if (live) { app.append(hudEl()); if (!sc.banner) app.append(envBanner(G.loc, innerWidth < 640 ? 70 : 92)); const tk = tickerEl(); if (tk) app.append(tk); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
   if (live) app.append(dockEl());
@@ -229,17 +229,22 @@ function tabAide() {
 // ───────── Carte de l'Orbitrail (SVG) ─────────
 function mapEl(o = {}) {
   const NS = 'http://www.w3.org/2000/svg'; const el = (t, a, ...k) => { const e = document.createElementNS(NS, t); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => e.append(c.nodeType ? c : document.createTextNode(c))); return e; };
-  const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map' + (o.dark ? ' dark' : '') });
+  const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map dark' });
+  const CONTS = ['60,230 130,170 300,150 420,200 520,270 540,330 500,360 470,400 420,440 420,520 470,560 520,640 450,650 380,620 300,600 220,560 150,520 90,430 60,330', '470,640 560,650 640,690 660,780 620,880 560,960 500,940 470,870 440,800 420,720', '640,60 760,40 1100,30 1500,50 1800,150 1900,240 1850,330 1700,400 1640,440 1520,470 1400,520 1300,470 1180,420 1130,360 1000,330 900,330 820,300 760,320 700,260 640,200', '700,390 840,350 1000,370 1100,420 1160,520 1110,640 1090,760 1010,860 900,960 780,960 740,880 720,760 690,620 640,520', '1400,540 1500,560 1600,620 1560,680 1450,690 1380,640', '1560,740 1700,720 1830,760 1840,850 1760,900 1640,880 1580,830', '1690,300 1760,290 1790,350 1730,380'];
+  svg.append(el('rect', { x: 0, y: 0, width: 2000, height: 975, fill: '#0a0a14' }));
+  for (let gx = 0; gx <= 2000; gx += 100) svg.append(el('line', { x1: gx, y1: 0, x2: gx, y2: 975, stroke: '#171726', 'stroke-width': 1 }));
+  for (let gy = 0; gy <= 975; gy += 100) svg.append(el('line', { x1: 0, y1: gy, x2: 2000, y2: gy, stroke: '#171726', 'stroke-width': 1 }));
+  CONTS.forEach(c => svg.append(el('polygon', { points: c, fill: '#12121f', stroke: '#2a2a44', 'stroke-width': 2, 'stroke-linejoin': 'round' })));
   const pt = x => typeof x === 'string' ? (x.startsWith('@') ? x.slice(1).split('|').slice(1).map(Number) : [OT_ST[x][0], OT_ST[x][1]]) : x;
   for (const [ln, L] of Object.entries(OT_LINES)) L.p.forEach(path => {
     const pts = path.map(pt).map(p => p.join(',')).join(' ');
-    svg.append(el('polyline', { points: pts, fill: 'none', stroke: o.dark && L.c === '#151515' ? '#cfd3e6' : L.c, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    svg.append(el('polyline', { points: pts, fill: 'none', stroke: L.c === '#151515' ? '#cfd3e6' : L.c, opacity: (o.hl && o.hl !== +ln) ? 0.13 : 1, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
     path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); svg.append(el('circle', { cx: px, cy: py, r: 9, fill: '#fff', stroke: '#000', 'stroke-width': 4 }), el('text', { x: +px - 14, y: +py - 16 }, n)); } });
   });
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc', fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
+    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : go ? ' gos' : ''), fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff3d6e', 'stroke-width': 4 }));
     g.append(el('text', { x: x + dx, y: y + dy }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }

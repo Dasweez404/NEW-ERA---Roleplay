@@ -308,6 +308,47 @@ h3{color:var(--acc2);text-shadow:0 0 8px rgba(0,240,255,.5);font-size:.82rem}h3:
 @media(max-width:640px){.sg .fi{min-width:60px}.sg .fn{font-size:.5rem}}
 .stage .side{flex:0 1 auto}.sg .fi{min-width:0;max-width:96px}.stage{overflow:hidden}.sg.foe .spr{max-width:100%;height:auto}
 .combat .sg.foe{clip-path:none;background:none;border:0;padding:0;margin:0;box-shadow:none;border-radius:0}
+/* ═════════ VERSION PLATE : moins de dégradés, plus de lueurs ═════════ */
+*{text-shadow:none!important}
+.card,.hud,.scene,.side,.ch,.pill,.chip,.ibtn,.tab,.dicebox,.transit,.dock,.sh-pan,.tiles .ch,.stage,.pop{box-shadow:none!important}
+body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-shadow:none}
+.card{background:#0e0e18;border:1px solid #2c2c44}
+.scene{background:#0e0e18}
+.hud{background:#0e0e18;border:1px solid #34344f}.hud::before{background:var(--acc);height:2px;opacity:1}
+.scene .title{background:none;-webkit-background-clip:initial;background-clip:initial;color:#fff}
+.nm{color:var(--acc)}
+.avatar{background:hsl(var(--hue),45%,32%)}.avatar.sp{background:#1a1a2c;box-shadow:inset 0 0 0 2px hsl(var(--hue),50%,55%)!important;overflow:hidden;display:grid;place-items:start center}.avatar.sp .spr{width:auto!important;height:auto!important;object-fit:none;margin:0}
+.bar{background:#050509;border-color:#3a3a56}.stat.hp .bar>i,.bar.hp>i{background:#ff2a6d}.stat.en .bar>i{background:#00e5ff}
+.pill{background:#14141f;border-color:#34344f}.pill.cash{border-color:var(--acc)}.pill.wanted{background:#3a1020;animation:none}
+.ticker{background:#14141f}
+.ch{background:#12121e;border-color:#2c2c44;border-left-color:var(--acc2)}.ch:hover:not(:disabled){background:#191927;border-color:var(--acc);border-left-color:var(--acc);transform:translateX(2px)}
+.ch:hover:not(:disabled) .l{animation:none}
+.ch.cta{background:var(--acc);animation:none}.ch.cta:hover:not(:disabled){filter:brightness(1.08)}
+.tiles .ch{background:#12121e;border-top-color:var(--acc2)}.tiles .tic{filter:none}
+.chip{background:#12121e}.dicebox{background:#12121e;border-color:#34344f}
+.dsq{box-shadow:none!important}.dicebox.ok .dsq{background:rgba(5,255,161,.1)}.dicebox.ko .dsq{background:rgba(255,42,109,.12)}.dicebox.crit{background:#1c1a08}
+.tab.on{background:var(--acc)}.dock{background:#0b0b14;border-top:1px solid #34344f}.dk.on{background:#191927;text-shadow:none}.sh-pan{background:#0e0e18;box-shadow:none}
+.stage{background:#10101c;border-bottom:2px solid #34344f}.sg .spr,.side.R .sg .spr,.cimg .spr,.portrait{filter:none!important}
+.portwrap{background:#14141f;border:1px solid #34344f}.portwrap::after{display:none}
+.splash{background:rgba(5,5,10,.88)}.sp-ic{filter:none}.splash .sp-t{text-shadow:none}.particle{box-shadow:none}
+.kicker,h3{text-shadow:none}.pct{text-shadow:none}
+.logo2{text-shadow:none;-webkit-text-stroke:0;color:#fff;animation:none}.logo2::before,.logo2::after{display:none}.logo2 span+span{color:var(--acc);text-shadow:none}
+.atom{filter:none}
+.hero{display:flex;flex-direction:column;align-items:center;min-height:calc(100vh - 20px);padding:0 14px 30px;margin:-10px -12px}.hero>.env{margin:0 -14px;width:calc(100% + 28px)}
+.brand{margin-top:18px}.tagline{text-shadow:none;margin-top:10px}.hero .menu .ch.go{background:var(--acc);box-shadow:none;animation:none}
+.cityhead{background:none;border:1px solid #34344f}
+/* ── décors ── */
+.env{position:relative;overflow:hidden;border:1px solid #34344f;background:#090b1c;margin:8px 0}.env .envsvg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero>.env{border:0;border-bottom:1px solid #34344f;margin:0 -14px}
+.envtag{position:absolute;left:12px;bottom:8px;display:flex;flex-direction:column;background:rgba(5,5,12,.72);padding:3px 9px;border-left:3px solid var(--acc)}.envtag b{font-family:var(--fd);font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;color:#fff;line-height:1.2}.envtag span{font-family:var(--fm);font-size:.62rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.fly{animation:flyx var(--d,14s) linear infinite}.fly.slow{--d:26s}@keyframes flyx{from{transform:translateX(-80px)}to{transform:translateX(900px)}}
+.blade{animation:spin 7s linear infinite;transform-box:view-box}@keyframes spin{to{transform:rotate(360deg)}}
+.mapscroll{background:#0a0a14;border:1px solid #34344f;border-radius:0}.map{background:#0a0a14}
+.map text{fill:#e9ebff;stroke:#0a0a14;stroke-width:4px}
+.map .stc{fill:#0a0a14;stroke:#e9ebff}
+.map .stc.here{fill:#fcee09}.map .stc.gos{fill:#05ffa1}
+.stage{overflow:visible}.stage .vs{font-size:.9rem}.sg .fi{max-width:84px}.stage .side{gap:2px}
+.env .envtag b{font-size:.78rem}.env .envtag span{font-size:.56rem}
 </style>
 </head>
 <body>
@@ -744,6 +785,7 @@ function powerTags() {
 function gearTags() {
   const t = new Set(); const pc = G.pc;
   Object.keys(pc.inv).forEach(id => { const it = ITEMS[id]; if (it && it.t === 'gadget' && it.tags) it.tags.forEach(x => t.add(x)); });
+  Object.keys(pc.inv).forEach(id => { const it = ITEMS[id]; if (it && it.t === 'vehicule' && it.v.armed) { t.add('combat'); t.add('ranged'); } });
   const w = weaponOf(); if (w) (w.tags || []).forEach(x => t.add(x));
   const a = armorOf(); if (a) (a.tags || []).forEach(x => t.add(x));
   return t;
@@ -924,7 +966,7 @@ function show(sc) {
 }
 function paragraphs(t) { return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => typeof x === 'string' ? h('p', { class: 'rv', style: `--i:${i}`, html: x }) : x); }
 
-function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; const sp = pcSprite(); if (sp && hasSpr(sp)) return h('div', { class: 'avatar sp', style: `--hue:${hue}` }, sprFit(sp, 64)); return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
+function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; const sp = pcSprite(); if (sp && hasSpr(sp)) return h('div', { class: 'avatar sp', style: `--hue:${hue}` }, sprFit(sp, 80)); return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
 function hudEl() {
   const pc = G.pc; const st = wantedStars(); const f = F[pc.faction]; const pv = UI.prev || { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   const hpP = pc.hp / pc.hpMax * 100, enP = pc.enMax ? pc.en / pc.enMax * 100 : 0;
@@ -971,7 +1013,7 @@ function render(quiet) {
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
-  if (live) { app.append(hudEl()); const tk = tickerEl(); if (tk) app.append(tk); }
+  if (live) { app.append(hudEl()); if (!sc.banner) app.append(envBanner(G.loc, innerWidth < 640 ? 70 : 92)); const tk = tickerEl(); if (tk) app.append(tk); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
   if (live) app.append(dockEl());
@@ -1107,17 +1149,22 @@ function tabAide() {
 // ───────── Carte de l'Orbitrail (SVG) ─────────
 function mapEl(o = {}) {
   const NS = 'http://www.w3.org/2000/svg'; const el = (t, a, ...k) => { const e = document.createElementNS(NS, t); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => e.append(c.nodeType ? c : document.createTextNode(c))); return e; };
-  const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map' + (o.dark ? ' dark' : '') });
+  const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map dark' });
+  const CONTS = ['60,230 130,170 300,150 420,200 520,270 540,330 500,360 470,400 420,440 420,520 470,560 520,640 450,650 380,620 300,600 220,560 150,520 90,430 60,330', '470,640 560,650 640,690 660,780 620,880 560,960 500,940 470,870 440,800 420,720', '640,60 760,40 1100,30 1500,50 1800,150 1900,240 1850,330 1700,400 1640,440 1520,470 1400,520 1300,470 1180,420 1130,360 1000,330 900,330 820,300 760,320 700,260 640,200', '700,390 840,350 1000,370 1100,420 1160,520 1110,640 1090,760 1010,860 900,960 780,960 740,880 720,760 690,620 640,520', '1400,540 1500,560 1600,620 1560,680 1450,690 1380,640', '1560,740 1700,720 1830,760 1840,850 1760,900 1640,880 1580,830', '1690,300 1760,290 1790,350 1730,380'];
+  svg.append(el('rect', { x: 0, y: 0, width: 2000, height: 975, fill: '#0a0a14' }));
+  for (let gx = 0; gx <= 2000; gx += 100) svg.append(el('line', { x1: gx, y1: 0, x2: gx, y2: 975, stroke: '#171726', 'stroke-width': 1 }));
+  for (let gy = 0; gy <= 975; gy += 100) svg.append(el('line', { x1: 0, y1: gy, x2: 2000, y2: gy, stroke: '#171726', 'stroke-width': 1 }));
+  CONTS.forEach(c => svg.append(el('polygon', { points: c, fill: '#12121f', stroke: '#2a2a44', 'stroke-width': 2, 'stroke-linejoin': 'round' })));
   const pt = x => typeof x === 'string' ? (x.startsWith('@') ? x.slice(1).split('|').slice(1).map(Number) : [OT_ST[x][0], OT_ST[x][1]]) : x;
   for (const [ln, L] of Object.entries(OT_LINES)) L.p.forEach(path => {
     const pts = path.map(pt).map(p => p.join(',')).join(' ');
-    svg.append(el('polyline', { points: pts, fill: 'none', stroke: o.dark && L.c === '#151515' ? '#cfd3e6' : L.c, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    svg.append(el('polyline', { points: pts, fill: 'none', stroke: L.c === '#151515' ? '#cfd3e6' : L.c, opacity: (o.hl && o.hl !== +ln) ? 0.13 : 1, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
     path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); svg.append(el('circle', { cx: px, cy: py, r: 9, fill: '#fff', stroke: '#000', 'stroke-width': 4 }), el('text', { x: +px - 14, y: +py - 16 }, n)); } });
   });
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc', fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
+    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : go ? ' gos' : ''), fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff3d6e', 'stroke-width': 4 }));
     g.append(el('text', { x: x + dx, y: y + dy }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
@@ -1232,8 +1279,10 @@ const SPR = SPR_DATA;
 const FOE_SPR = { soldat: '0001', droide: '0002', centaure: '0003', gorgone: '0004', cyclope: '0005', atlas: '0005', prometh: '0005', epimeth: '0005', menet: '0005' };
 const hasSpr = id => !!(id && SPR[id]);
 function sprFit(id, hpx, cls) {
-  const s = SPR[id]; if (!s) return null; const k = hpx / s[1];
-  return h('img', { class: 'spr ' + (cls || ''), src: s[2], width: Math.max(1, Math.round(s[0] * k)), height: hpx, alt: '', draggable: 'false' });
+  // échelle ENTIÈRE et identique pour tous les sprites d'un même contexte : proportions fidèles, pixels nets
+  const s = SPR[id]; if (!s) return null; let k = Math.max(1, Math.round(hpx / 40));
+  const maxW = Math.max(hpx * 1.9, 110); while (k > 1 && s[0] * k > maxW) k--;
+  return h('img', { class: 'spr ' + (cls || ''), src: s[2], width: s[0] * k, height: s[1] * k, alt: '', draggable: 'false' });
 }
 const pcSprite = () => (G && G.pc && (G.pc.charId || G.pc.sprite)) || null;
 const foeSprite = f => f.cid || FOE_SPR[f.tid] || null;
@@ -1267,6 +1316,7 @@ function edgeGeom(a, b, line) {
   return [toEdge(a), toEdge(b).reverse()];
 }
 function routeGeom(r) {
+  if (r.custom) { const pts = r.custom.slice(); let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return { pts, stops: [{ id: r.steps[0].from, at: 0, i: 0 }, { id: r.steps[0].to, at: len, i: pts.length - 1 }], len, jumps: [] }; }
   const pts = [], stops = [], jumps = []; let len = 0;
   const add = p => { const l = pts[pts.length - 1]; if (l) len += Math.hypot(p[0] - l[0], p[1] - l[1]); pts.push(p); };
   r.steps.forEach((s, n) => {
@@ -1288,7 +1338,7 @@ function transit(r, from, to, done) {
   svg.append(trail, halo, dot);
   const cap = h('div', { class: 'tcap' }); const bar = h('div', { class: 'tbar' }, h('i'));
   const view = h('div', { class: 'transit' }, svg, h('div', { class: 'tover' }, cap, bar), h('div', { class: 'tskip' }, 'toucher pour passer ›'));
-  const lineChip = ln => `<span class="lchip" style="background:${OT_LINES[ln].c === '#151515' ? '#e8e8f0' : OT_LINES[ln].c}">${ln}</span>`;
+  const lineChip = ln => ln && OT_LINES[ln] ? `<span class="lchip" style="background:${OT_LINES[ln].c === '#151515' ? '#e8e8f0' : OT_LINES[ln].c}">${ln}</span>` : `<span class="lchip" style="background:#fff">${r.vehicle || '•'}</span>`;
   const sc = { kicker: 'ORBITRAIL', title: `${capName(from)} → ${capName(to)}`, text: [], extra: view, choices: [C('Passer ›', finish, { cls: 'back' })] };
   show(sc); sfx('train');
   let W0 = 2000, cx = 1000, cy = 487, camW = W0; let s = 0, state = 'zoom', t0 = performance.now(), last = t0, pause = 0, visited = 0; const total = G_.len;
@@ -1343,7 +1393,7 @@ function skylineURL(seed, hue, layer) {
 }
 const CONT_HUE = { Europe: 200, 'Amérique': 300, Afrique: 38, Asie: 335, 'Océanie': 165 };
 function fixDrift(root) { (root || document).querySelectorAll('.drift').forEach(e => { const hh = e.getBoundingClientRect().height || 118; e.style.setProperty('--tw', Math.round(1200 * hh / 200) + 'px'); e.style.backgroundSize = 'auto 100%'; }); }
-function cityHead() {
+function cityHeadOld() {
   const st = S[G.loc]; const hue = CONT_HUE[st.continent] || 200;
   const el = h('div', { class: 'cityhead', style: `--h:${hue}` },
     h('div', { class: 'l1 drift', style: `background-image:${skylineURL(G.loc, hue, 0)}` }), h('div', { class: 'l2 drift', style: `background-image:${skylineURL(G.loc, hue, 1)}` }),
@@ -1351,6 +1401,96 @@ function cityHead() {
   UI.after.push(() => fixDrift(el)); return el;
 }
 const atomSVG = () => { const d = document.createElement('div'); d.innerHTML = '<svg class="atom" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="5"><g class="o"><ellipse cx="50" cy="50" rx="44" ry="15" stroke="#00f0ff"/></g><g class="o o2"><ellipse cx="50" cy="50" rx="44" ry="15" transform="rotate(60 50 50)" stroke="#00f0ff"/></g><g class="o"><ellipse cx="50" cy="50" rx="44" ry="15" transform="rotate(120 50 50)" stroke="#fcee09"/></g><circle cx="50" cy="50" r="7" fill="#fff" stroke="none"/></svg>'; return d.firstChild; };
+function cityHead() { return envBanner(G.loc, innerWidth < 640 ? 140 : 190); }
+
+// ───────── Décors vectoriels : un environnement futuriste propre à chaque État (aplats, sans dégradés) ─────────
+const ENV_META = {
+  albion: ['city', 'clock'], benelux: ['plains', 'windmill'], baltovi: ['arctic', 'none'], carpodav: ['plains', 'onion'], scandor: ['arctic', 'dome'], iberico: ['plains', 'solar'], gallica: ['city', 'eiffel'], alpomare: ['mountain', 'colosseum'], isgarde: ['arctic', 'volcano'], balka: ['island', 'columns'], mitropa: ['city', 'needle'],
+  australis: ['island', 'sails'], avaiki: ['island', 'huts'], aotea: ['mountain', 'none'], kalimai: ['jungle', 'none'],
+  andina: ['canyon', 'none'], amazonia: ['jungle', 'bigtree'], aymaro: ['mountain', 'terraces'], polaris: ['arctic', 'needle'], atlante: ['city', 'statue'], tropicana: ['jungle', 'towers'], pacifica: ['island', 'none'], caribana: ['island', 'none'], centro: ['jungle', 'none'], meso: ['canyon', 'steppyramid'], antille: ['island', 'huts'],
+  ubunye: ['canyon', 'tablemtn'], maghreb: ['desert', 'minaret'], okavango: ['plains', 'none'], ekatori: ['jungle', 'bigtree'], mandesia: ['jungle', 'none'], saha: ['desert', 'pyramids'], nubie: ['desert', 'none'], creocean: ['island', 'none'], westrian: ['desert', 'none'], sahel: ['desert', 'slum'], swahilis: ['plains', 'tablemtn'], nyasa: ['jungle', 'none'],
+  machrek: ['desert', 'spire'], siamar: ['jungle', 'goldspire'], annam: ['island', 'karst'], sinotan: ['city', 'pagoda'], koryo: ['city', 'pagoda'], bengal: ['city', 'stupa'], banda: ['island', 'volcano'], khora: ['desert', 'minaret'], levant: ['desert', 'dome'], yamato: ['city', 'torii'], turkestan: ['mountain', 'none'], sunda: ['city', 'spire'], slavo: ['arctic', 'onion'], caucase: ['mountain', 'minaret'],
+};
+const ENV_SKY = { night: { s1: '#090b1c', s2: '#131a3b', sun: '#dfe6ff', ov: .42 }, dusk: { s1: '#23123a', s2: '#6b2d5c', sun: '#ff7a4a', ov: .14 }, day: { s1: '#183a5c', s2: '#2f6d93', sun: '#ffe58a', ov: 0 } };
+const ENV_BIO = {
+  city: { far: '#222a55', mid: '#171d3f', near: '#0d1128', gr: '#080a1a' }, desert: { far: '#97513d', mid: '#703a33', near: '#472230', gr: '#2d1823' },
+  arctic: { far: '#46679a', mid: '#2f4d82', near: '#1d3560', gr: '#cfe6fb' }, jungle: { far: '#226052', mid: '#17463f', near: '#0e2d2e', gr: '#09201f' },
+  island: { far: '#2a5483', mid: '#1b4068', near: '#102b4a', gr: '#0c2540' }, mountain: { far: '#555b96', mid: '#393e78', near: '#23275a', gr: '#161a40' },
+  canyon: { far: '#a85a42', mid: '#7e3d33', near: '#512329', gr: '#381820' }, plains: { far: '#3b6377', mid: '#294e5f', near: '#1b3a48', gr: '#12293a' },
+};
+const ENV_CACHE = {};
+function envRng(seed) { let s = (hashStr(seed) || 7) >>> 0; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return (s % 100000) / 100000; }; }
+const NEON = ['#fcee09', '#00e5ff', '#ff2a6d'];
+function twr(R, y, hMin, hMax, wMin, wMax, fill, L, dens) {
+  let x = -10, o = '';
+  while (x < 820) {
+    const w = wMin + R() * (wMax - wMin), hh = hMin + R() * (hMax - hMin);
+    o += `<rect x="${x | 0}" y="${(y - hh) | 0}" width="${w | 0}" height="${hh | 0}" fill="${fill}"/>`;
+    if (R() < .2) o += `<rect x="${(x + w / 2 - 1) | 0}" y="${(y - hh - 14) | 0}" width="2" height="14" fill="${fill}"/>`;
+    if (L && dens) for (let j = 0; j < (hh / 11 | 0) - 1; j++) for (let i = 0; i < (w / 9 | 0) - 1; i++) if (R() < dens) L.push(`<rect x="${(x + 4 + i * 9) | 0}" y="${(y - hh + 8 + j * 11) | 0}" width="4" height="5" fill="${NEON[R() < .55 ? 0 : R() < .6 ? 1 : 2]}" opacity="${(.5 + R() * .5).toFixed(2)}"/>`);
+    x += w + (R() < .25 ? R() * 12 : 1);
+  }
+  return o;
+}
+function ridge(R, g, hMin, hMax, step, fill, jag) {
+  let p = `M-10,${g + 40} `, x = -10; while (x < 830) { const hh = hMin + R() * (hMax - hMin); p += `L${x | 0},${(g - hh) | 0} `; x += step * (.6 + R() * (jag || .8)); } return `<path d="${p}L830,${g + 40}Z" fill="${fill}"/>`;
+}
+function dunes(R, g, amp, fill, ph) { let p = `M-10,${g + 50} `; for (let x = -10; x <= 830; x += 20) p += `L${x},${(g - amp * (.5 + .5 * Math.sin(x / 90 + ph + R() * .2))) | 0} `; return `<path d="${p}L830,${g + 50}Z" fill="${fill}"/>`; }
+const LM = {
+  eiffel: (x, g, c) => `<path d="M${x - 34},${g} L${x - 7},${g - 100} L${x - 3},${g - 140} L${x},${g - 170} L${x + 3},${g - 140} L${x + 7},${g - 100} L${x + 34},${g}" fill="none" stroke="${c}" stroke-width="6"/><path d="M${x - 20},${g - 48} H${x + 20} M${x - 11},${g - 100} H${x + 11}" stroke="${c}" stroke-width="5"/><circle cx="${x}" cy="${g - 172}" r="3" fill="#ff2a6d"/>`,
+  clock: (x, g, c) => `<rect x="${x - 14}" y="${g - 130}" width="28" height="130" fill="${c}"/><polygon points="${x - 18},${g - 130} ${x},${g - 168} ${x + 18},${g - 130}" fill="${c}"/><circle cx="${x}" cy="${g - 108}" r="9" fill="#fcee09"/><path d="M${x} ${g - 108} V${g - 114} M${x} ${g - 108} H${x + 5}" stroke="#222" stroke-width="2"/><rect x="${x - 40}" y="${g - 36}" width="26" height="36" fill="${c}"/>`,
+  statue: (x, g, c) => `<rect x="${x - 18}" y="${g - 34}" width="36" height="34" fill="${c}"/><polygon points="${x - 10},${g - 34} ${x - 8},${g - 90} ${x + 8},${g - 90} ${x + 10},${g - 34}" fill="${c}"/><path d="M${x + 6} ${g - 86} L${x + 22} ${g - 120}" stroke="${c}" stroke-width="7"/><polygon points="${x + 18},${g - 120} ${x + 26},${g - 120} ${x + 22},${g - 140}" fill="#fcee09"/><circle cx="${x}" cy="${g - 98}" r="9" fill="${c}"/>`,
+  pyramids: (x, g, c) => `<polygon points="${x - 70},${g} ${x - 20},${g - 80} ${x + 30},${g}" fill="${c}"/><polygon points="${x - 20},${g} ${x + 40},${g - 105} ${x + 100},${g}" fill="${c}" opacity=".9"/><polygon points="${x + 70},${g} ${x + 100},${g - 45} ${x + 130},${g}" fill="${c}"/><polygon points="${x + 40},${g - 105} ${x + 34},${g - 92} ${x + 46},${g - 92}" fill="#00e5ff"/>`,
+  torii: (x, g, c) => `<rect x="${x - 36}" y="${g - 80}" width="9" height="80" fill="#ff2a6d"/><rect x="${x + 27}" y="${g - 80}" width="9" height="80" fill="#ff2a6d"/><rect x="${x - 46}" y="${g - 90}" width="92" height="9" fill="#ff2a6d"/><rect x="${x - 38}" y="${g - 70}" width="76" height="6" fill="#ff2a6d"/><rect x="${x - 8}" y="${g - 150}" width="16" height="150" fill="${c}"/><circle cx="${x}" cy="${g - 150}" r="10" fill="${c}"/>`,
+  pagoda: (x, g, c) => [0, 1, 2, 3, 4].map(i => { const w = 62 - i * 11, y = g - i * 30; return `<rect x="${x - w / 2 + 6}" y="${y - 26}" width="${w - 12}" height="26" fill="${c}"/><polygon points="${x - w / 2 - 10},${y - 24} ${x},${y - 38} ${x + w / 2 + 10},${y - 24} ${x + w / 2},${y - 20} ${x - w / 2},${y - 20}" fill="${c}"/><rect x="${x - 4}" y="${y - 20}" width="8" height="12" fill="#fcee09"/>`; }).join('') + `<rect x="${x - 1}" y="${g - 175}" width="2" height="24" fill="${c}"/>`,
+  stupa: (x, g, c) => `<rect x="${x - 50}" y="${g - 12}" width="100" height="12" fill="${c}"/><rect x="${x - 40}" y="${g - 24}" width="80" height="12" fill="${c}"/><path d="M${x - 34},${g - 24} A34,34 0 0 1 ${x + 34},${g - 24}Z" fill="${c}"/><rect x="${x - 7}" y="${g - 78}" width="14" height="14" fill="${c}"/><polygon points="${x - 9},${g - 78} ${x},${g - 130} ${x + 9},${g - 78}" fill="${c}"/><circle cx="${x}" cy="${g - 134}" r="3" fill="#fcee09"/>`,
+  spire: (x, g, c) => `<polygon points="${x - 16},${g} ${x - 4},${g - 150} ${x},${g - 190} ${x + 4},${g - 150} ${x + 16},${g}" fill="${c}"/><path d="M${x - 40},${g} Q${x - 18},${g - 70} ${x - 6},${g - 100} M${x + 40},${g} Q${x + 18},${g - 70} ${x + 6},${g - 100}" fill="none" stroke="${c}" stroke-width="6"/><rect x="${x - 12}" y="${g - 95}" width="24" height="4" fill="#00e5ff"/><circle cx="${x}" cy="${g - 192}" r="3" fill="#ff2a6d"/>`,
+  bigtree: (x, g, c) => `<path d="M${x - 14},${g} Q${x - 10},${g - 60} ${x - 8},${g - 100} H${x + 8} Q${x + 10},${g - 60} ${x + 14},${g}Z" fill="${c}"/><ellipse cx="${x}" cy="${g - 118}" rx="70" ry="30" fill="${c}"/><ellipse cx="${x - 42}" cy="${g - 100}" rx="34" ry="18" fill="${c}"/><ellipse cx="${x + 44}" cy="${g - 102}" rx="36" ry="18" fill="${c}"/><rect x="${x - 40}" y="${g - 70}" width="80" height="4" fill="${c}"/><rect x="${x - 6}" y="${g - 72}" width="12" height="8" fill="#fcee09"/>`,
+  dome: (x, g, c) => `<path d="M${x - 60},${g} A60,60 0 0 1 ${x + 60},${g}Z" fill="${c}"/><path d="M${x} ${g - 60} V${g} M${x - 30} ${g - 52} V${g} M${x + 30} ${g - 52} V${g}" stroke="#0004" stroke-width="2"/><rect x="${x - 88}" y="${g - 70}" width="8" height="70" fill="${c}"/><polygon points="${x - 90},${g - 70} ${x - 84},${g - 90} ${x - 78},${g - 70}" fill="${c}"/><rect x="${x + 80}" y="${g - 70}" width="8" height="70" fill="${c}"/><polygon points="${x + 78},${g - 70} ${x + 84},${g - 90} ${x + 90},${g - 70}" fill="${c}"/>`,
+  needle: (x, g, c) => `<rect x="${x - 4}" y="${g - 140}" width="8" height="140" fill="${c}"/><ellipse cx="${x}" cy="${g - 112}" rx="22" ry="7" fill="${c}"/><rect x="${x - 1.5}" y="${g - 185}" width="3" height="46" fill="${c}"/><circle cx="${x}" cy="${g - 186}" r="3" fill="#ff2a6d"/>`,
+  steppyramid: (x, g, c) => [0, 1, 2, 3, 4].map(i => `<rect x="${x - 70 + i * 12}" y="${g - (i + 1) * 20}" width="${140 - i * 24}" height="20" fill="${c}"/>`).join('') + `<rect x="${x - 10}" y="${g - 118}" width="20" height="18" fill="${c}"/><rect x="${x - 3}" y="${g - 110}" width="6" height="10" fill="#fcee09"/>`,
+  terraces: (x, g, c) => [0, 1, 2, 3, 4, 5].map(i => `<rect x="${x - 80 + i * 10}" y="${g - 16 - i * 16}" width="${160 - i * 20}" height="14" fill="${c}"/>`).join('') + `<rect x="${x - 8}" y="${g - 118}" width="16" height="14" fill="#00e5ff" opacity=".7"/>`,
+  onion: (x, g, c) => [-36, 0, 36].map((d, i) => `<rect x="${x + d - 9}" y="${g - 60 - (i === 1 ? 24 : 0)}" width="18" height="${60 + (i === 1 ? 24 : 0)}" fill="${c}"/><circle cx="${x + d}" cy="${g - 72 - (i === 1 ? 24 : 0)}" r="13" fill="${c}"/><polygon points="${x + d - 9},${g - 78 - (i === 1 ? 24 : 0)} ${x + d},${g - 104 - (i === 1 ? 24 : 0)} ${x + d + 9},${g - 78 - (i === 1 ? 24 : 0)}" fill="${c}"/>`).join(''),
+  minaret: (x, g, c) => `<rect x="${x - 5}" y="${g - 130}" width="10" height="130" fill="${c}"/><rect x="${x - 9}" y="${g - 100}" width="18" height="6" fill="${c}"/><polygon points="${x - 7},${g - 130} ${x},${g - 156} ${x + 7},${g - 130}" fill="${c}"/><path d="M${x + 24},${g} A28,28 0 0 1 ${x + 80},${g}Z" fill="${c}"/><circle cx="${x}" cy="${g - 158}" r="2.5" fill="#fcee09"/>`,
+  colosseum: (x, g, c) => `<path d="M${x - 80},${g} V${g - 50} Q${x},${g - 70} ${x + 80},${g - 50} V${g}Z" fill="${c}"/>` + Array.from({ length: 9 }, (_, i) => `<path d="M${x - 70 + i * 17.5},${g} v-14 a5,5 0 0 1 10,0 v14Z M${x - 70 + i * 17.5},${g - 28} v-12 a5,5 0 0 1 10,0 v12Z" fill="#0b0b1c"/>`).join(''),
+  columns: (x, g, c) => `<polygon points="${x - 70},${g - 74} ${x},${g - 102} ${x + 70},${g - 74}" fill="${c}"/>` + [0, 1, 2, 3, 4, 5].map(i => `<rect x="${x - 62 + i * 24}" y="${g - 70}" width="9" height="70" fill="${c}"/>`).join('') + `<rect x="${x - 74}" y="${g - 8}" width="148" height="8" fill="${c}"/>`,
+  tablemtn: (x, g, c) => `<polygon points="${x - 120},${g} ${x - 80},${g - 70} ${x + 90},${g - 70} ${x + 130},${g}" fill="${c}"/><rect x="${x - 40}" y="${g - 86}" width="46" height="16" fill="${c}"/><rect x="${x - 30}" y="${g - 80}" width="26" height="4" fill="#00e5ff"/>`,
+  sails: (x, g, c) => `<path d="M${x - 70},${g} Q${x - 70},${g - 80} ${x - 20},${g - 100} Q${x - 18},${g - 40} ${x - 20},${g}Z" fill="${c}"/><path d="M${x - 20},${g} Q${x - 20},${g - 100} ${x + 40},${g - 120} Q${x + 40},${g - 50} ${x + 36},${g}Z" fill="${c}" opacity=".92"/><path d="M${x + 36},${g} Q${x + 36},${g - 80} ${x + 84},${g - 96} Q${x + 86},${g - 40} ${x + 84},${g}Z" fill="${c}"/>`,
+  goldspire: (x, g, c) => [0, 1, 2, 3].map(i => `<polygon points="${x - 30 + i * 6},${g - i * 38} ${x},${g - 60 - i * 38} ${x + 30 - i * 6},${g - i * 38}" fill="#d9a83a"/>`).join('') + `<rect x="${x - 36}" y="${g - 10}" width="72" height="10" fill="${c}"/>`,
+  volcano: (x, g, c) => `<polygon points="${x - 110},${g} ${x - 20},${g - 100} ${x + 20},${g - 100} ${x + 110},${g}" fill="${c}"/><polygon points="${x - 20},${g - 100} ${x - 8},${g - 84} ${x},${g - 100} ${x + 10},${g - 80} ${x + 20},${g - 100}" fill="#ff2a6d"/><ellipse cx="${x + 14}" cy="${g - 122}" rx="22" ry="12" fill="${c}" opacity=".6"/><ellipse cx="${x + 34}" cy="${g - 146}" rx="26" ry="13" fill="${c}" opacity=".4"/>`,
+  windmill: (x, g, c) => `<polygon points="${x - 10},${g} ${x - 5},${g - 90} ${x + 5},${g - 90} ${x + 10},${g}" fill="${c}"/><g class="blade" style="transform-origin:${x}px ${g - 92}px"><rect x="${x - 2}" y="${g - 150}" width="4" height="58" fill="${c}"/><rect x="${x - 2}" y="${g - 92}" width="4" height="58" fill="${c}"/><rect x="${x - 58}" y="${g - 94}" width="58" height="4" fill="${c}"/><rect x="${x}" y="${g - 94}" width="58" height="4" fill="${c}"/></g>`,
+  solar: (x, g, c) => [0, 1, 2, 3, 4].map(i => `<polygon points="${x - 70 + i * 30},${g} ${x - 52 + i * 30},${g - 36} ${x - 24 + i * 30},${g - 36} ${x - 42 + i * 30},${g}" fill="${c}"/>`).join('') + `<rect x="${x - 4}" y="${g - 150}" width="8" height="150" fill="${c}"/><circle cx="${x}" cy="${g - 152}" r="12" fill="#fcee09"/>`,
+  huts: (x, g, c) => [0, 1, 2, 3].map(i => `<rect x="${x - 64 + i * 34}" y="${g - 22}" width="22" height="16" fill="${c}"/><polygon points="${x - 68 + i * 34},${g - 22} ${x - 53 + i * 34},${g - 38} ${x - 38 + i * 34},${g - 22}" fill="${c}"/><rect x="${x - 58 + i * 34}" y="${g - 8}" width="3" height="14" fill="${c}"/><rect x="${x - 46 + i * 34}" y="${g - 8}" width="3" height="14" fill="${c}"/>`).join('') + `<rect x="${x - 70}" y="${g - 6}" width="140" height="4" fill="${c}"/>`,
+  karst: (x, g, c) => [[-60, 90], [-10, 130], [44, 100]].map(([d, hh]) => `<path d="M${x + d - 22},${g} Q${x + d - 18},${g - hh} ${x + d},${g - hh - 6} Q${x + d + 18},${g - hh} ${x + d + 22},${g}Z" fill="${c}"/>`).join(''),
+  slum: (x, g, c) => Array.from({ length: 9 }, (_, i) => `<rect x="${x - 80 + i * 18}" y="${g - 20 - ((i * 37) % 5) * 12}" width="20" height="${20 + ((i * 37) % 5) * 12}" fill="${c}"/>`).join(''),
+  towers: (x, g, c) => `<rect x="${x - 40}" y="${g - 150}" width="26" height="150" fill="${c}"/><rect x="${x + 14}" y="${g - 130}" width="26" height="130" fill="${c}"/><rect x="${x - 14}" y="${g - 100}" width="28" height="8" fill="${c}"/><rect x="${x - 40}" y="${g - 152}" width="26" height="4" fill="#00e5ff"/><rect x="${x + 14}" y="${g - 132}" width="26" height="4" fill="#ff2a6d"/>`,
+};
+function buildEnv(stateId, time) {
+  const meta = ENV_META[stateId] || ['city', 'none']; const [biome, lm] = meta; const R = envRng(stateId + time); const sky = ENV_SKY[time] || ENV_SKY.night; const B = ENV_BIO[biome];
+  const W = 800, H = 220, g = 176; const L = []; let o = '';
+  o += `<rect width="${W}" height="${H}" fill="${sky.s1}"/><rect y="70" width="${W}" height="150" fill="${sky.s2}"/><rect y="124" width="${W}" height="100" fill="${sky.s2}" opacity=".6"/>`;
+  if (time === 'night') for (let i = 0; i < 34; i++) o += `<rect x="${(R() * W) | 0}" y="${(R() * 90) | 0}" width="2" height="2" fill="#fff" opacity="${(.3 + R() * .6).toFixed(2)}"/>`;
+  const sx = 120 + R() * 560; o += `<circle cx="${sx | 0}" cy="${time === 'day' ? 52 : 62}" r="${time === 'dusk' ? 34 : 22}" fill="${sky.sun}" opacity="${time === 'night' ? .85 : 1}"/>`;
+  if (biome === 'arctic') o += `<polygon points="0,60 220,22 420,70 640,18 800,58 800,90 0,96" fill="#05ffa1" opacity=".22"/><polygon points="0,84 260,50 520,92 800,44 800,70 0,110" fill="#b026ff" opacity=".2"/>`;
+  const dark = c => c;
+  if (biome === 'city') { o += twr(R, 150, 50, 120, 16, 36, B.far, null) + (LM[lm] ? LM[lm](sx > 400 ? 220 + R() * 100 : 520 + R() * 120, 170, '#3a4590') : '') + twr(R, 176, 55, 135, 22, 48, B.mid, L, .2) + twr(R, 206, 30, 100, 32, 74, B.near, L, .28); }
+  else if (biome === 'desert') { o += dunes(R, 150, 40, B.far, 0) + (LM[lm] ? LM[lm](240 + R() * 320, 156, B.mid) : '') + dunes(R, 176, 38, B.mid, 2) + (R() < .8 ? `<path d="M${(R() * 500 + 100) | 0},176 a26,26 0 0 1 52,0Z" fill="${B.near}"/>` : '') + dunes(R, 206, 34, B.near, 4); for (let i = 0; i < 9; i++) { const x = 40 + i * 84 + R() * 30; o += `<polygon points="${x | 0},192 ${(x + 12) | 0},182 ${(x + 30) | 0},182 ${(x + 18) | 0},192" fill="${B.mid}"/>`; } }
+  else if (biome === 'arctic') { o += ridge(R, 150, 30, 80, 46, B.far, .7) + (LM[lm] ? LM[lm](200 + R() * 400, 158, B.mid) : '') + ridge(R, 176, 20, 54, 56, B.mid, .8) + `<rect y="${g}" width="${W}" height="${H - g}" fill="${B.gr}"/>` + Array.from({ length: 4 }, () => { const x = 60 + R() * 680; return `<path d="M${x | 0},186 a26,22 0 0 1 52,0Z" fill="${B.near}"/><rect x="${(x + 22) | 0}" y="176" width="6" height="10" fill="#fcee09"/>`; }).join('') + ridge(R, 214, 14, 36, 70, B.near, .8); }
+  else if (biome === 'jungle') { o += ridge(R, 150, 20, 60, 52, B.far, .9) + (LM[lm] ? LM[lm](260 + R() * 280, 176, B.mid) : ''); for (let i = 0; i < 9; i++) { const x = R() * 800, hh = 90 + R() * 80, w = 10 + R() * 14; o += `<rect x="${x | 0}" y="${176 - hh | 0}" width="${w | 0}" height="${hh | 0}" fill="${B.mid}"/><ellipse cx="${(x + w / 2) | 0}" cy="${176 - hh | 0}" rx="${34 + R() * 30 | 0}" ry="${16 + R() * 10 | 0}" fill="${B.mid}"/>`; if (R() < .5) L.push(`<rect x="${x | 0}" y="${176 - hh * .5 | 0}" width="${70 | 0}" height="3" fill="#00e5ff" opacity=".7"/>`); } o += `<rect y="${g}" width="${W}" height="${H - g}" fill="${B.gr}"/>`; for (let i = 0; i < 16; i++) { const x = R() * 800; o += `<ellipse cx="${x | 0}" cy="${196 + R() * 18 | 0}" rx="${20 + R() * 30 | 0}" ry="${10 + R() * 10 | 0}" fill="${B.near}"/>`; L.push(`<circle cx="${R() * 800 | 0}" cy="${100 + R() * 100 | 0}" r="1.8" fill="${R() < .5 ? '#05ffa1' : '#00e5ff'}"/>`); } }
+  else if (biome === 'island') { o += `<rect y="150" width="${W}" height="${H - 150}" fill="${B.far}"/>` + `<rect y="176" width="${W}" height="${H - 176}" fill="${B.mid}"/>` + (LM[lm] ? LM[lm](200 + R() * 400, 168, B.near) : '') + Array.from({ length: 3 }, () => { const x = R() * 800; return `<ellipse cx="${x | 0}" cy="158" rx="${40 + R() * 50 | 0}" ry="9" fill="${B.near}"/>`; }).join(''); for (let i = 0; i < 4; i++) { const x = 40 + R() * 720; o += `<rect x="${x | 0}" y="116" width="26" height="6" fill="${B.near}"/><rect x="${(x + 6) | 0}" y="122" width="3" height="40" fill="${B.near}"/><rect x="${(x + 17) | 0}" y="122" width="3" height="40" fill="${B.near}"/>`; L.push(`<rect x="${(x + 9) | 0}" y="109" width="8" height="7" fill="#fcee09"/>`); } for (let i = 0; i < 22; i++) o += `<rect x="${R() * 790 | 0}" y="${178 + R() * 38 | 0}" width="${14 + R() * 24 | 0}" height="2" fill="#ffffff" opacity=".12"/>`; o += `<rect y="204" width="${W}" height="16" fill="${B.near}"/>`; }
+  else if (biome === 'mountain') { o += ridge(R, 140, 40, 100, 70, B.far, .6) + (LM[lm] ? LM[lm](220 + R() * 360, 178, B.mid) : '') + ridge(R, 176, 30, 80, 64, B.mid, .7) + `<path d="M40,60 L760,100" stroke="#8a8fc0" stroke-width="1.5"/><g class="fly slow"><rect x="0" y="78" width="12" height="9" fill="#fcee09"/></g>` + ridge(R, 212, 20, 50, 60, B.near, .8); for (let i = 0; i < 12; i++) { const x = R() * 780; L.push(`<rect x="${x | 0}" y="${190 + R() * 16 | 0}" width="4" height="5" fill="${NEON[(R() * 3) | 0]}"/>`); } }
+  else if (biome === 'canyon') { o += Array.from({ length: 6 }, (_, i) => { const x = i * 150 + R() * 60, w = 70 + R() * 70, hh = 60 + R() * 70; return `<polygon points="${x | 0},150 ${(x + 10) | 0},${150 - hh | 0} ${(x + w - 10) | 0},${150 - hh | 0} ${(x + w) | 0},150" fill="${B.far}"/>`; }).join('') + (LM[lm] ? LM[lm](220 + R() * 360, 176, B.mid) : '') + Array.from({ length: 5 }, (_, i) => { const x = i * 170 + R() * 80, w = 90 + R() * 80, hh = 50 + R() * 90; return `<polygon points="${x | 0},180 ${(x + 14) | 0},${180 - hh | 0} ${(x + w - 14) | 0},${180 - hh | 0} ${(x + w) | 0},180" fill="${B.mid}"/>`; }).join('') + `<rect y="${g + 6}" width="${W}" height="${H}" fill="${B.near}"/>`; for (let i = 0; i < 26; i++) L.push(`<rect x="${R() * 790 | 0}" y="${100 + R() * 90 | 0}" width="4" height="5" fill="${NEON[(R() * 3) | 0]}" opacity=".8"/>`); }
+  else { o += `<rect y="160" width="${W}" height="${H}" fill="${B.far}"/>` + ridge(R, 160, 6, 22, 80, B.far, .9) + (LM[lm] ? LM[lm](260 + R() * 300, 176, B.mid) : '') + `<rect y="176" width="${W}" height="${H}" fill="${B.mid}"/>`; for (let i = 0; i < 6; i++) { const x = 30 + R() * 740; o += `<rect x="${x | 0}" y="108" width="4" height="70" fill="${B.near}"/><g class="blade" style="transform-origin:${(x + 2) | 0}px 108px"><rect x="${(x + 1) | 0}" y="76" width="2" height="32" fill="${B.near}"/><rect x="${(x - 22) | 0}" y="107" width="24" height="2" fill="${B.near}"/><rect x="${(x + 4) | 0}" y="107" width="24" height="2" fill="${B.near}"/></g>`; } for (let i = 0; i < 8; i++) { const x = i * 100; o += `<polygon points="${x},214 ${x + 22},196 ${x + 88},196 ${x + 66},214" fill="${B.near}"/>`; } o += `<rect y="214" width="${W}" height="8" fill="${B.near}"/>`; }
+  o += `<rect width="${W}" height="${H}" fill="#04040c" opacity="${sky.ov}"/>` + L.join('');
+  for (let i = 0; i < 4; i++) { const y = 40 + R() * 90, d = 8 + R() * 14; o += `<g class="fly" style="--d:${d.toFixed(1)}s;animation-delay:-${(R() * d).toFixed(1)}s"><rect x="0" y="${y | 0}" width="${10 + R() * 8 | 0}" height="3" fill="#0a0a14"/><rect x="0" y="${(y + 1) | 0}" width="3" height="1.5" fill="${NEON[(R() * 3) | 0]}"/></g>`; }
+  return `<svg class="envsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+}
+function envTime() { return G ? ['night', 'dusk', 'day', 'dusk'][Math.floor(G.wk / 3) % 4] : 'night'; }
+function envBanner(stateId, hpx, forceTime) {
+  const t = forceTime || envTime(); const k = stateId + t; const svg = ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t));
+  const st = S[stateId]; const el = h('div', { class: 'env', style: `height:${hpx}px`, html: svg });
+  el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${st.continent}`))); return el;
+}
 
 // ───────── Combat tour par tour ─────────
 const FOE = {
@@ -1415,14 +1555,13 @@ const powName = tag => { const p = pcPowers().find(p => p.tags.includes(tag)); r
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc;
   CB.prev = CB.prev || {}; const bars = [];
-  const nAl = Math.min(innerWidth < 640 ? 2 : 3, pc.party.length); const K = innerWidth < 640 ? Math.max(0.5, 1 - 0.1 * (CB.foes.length + nAl)) : 1;
-  const big = f => Math.round((f.hpMax > 50 ? 150 : 112) * K);
+  const nAl = Math.min(innerWidth < 640 ? (CB.foes.length >= 2 ? 1 : 2) : 3, pc.party.length); const hp_ = innerWidth < 640 ? (CB.foes.length + nAl > 4 ? 80 : 80) : 120; const big = () => hp_;
   const pick_ = i => { if (!CB.foes[i].dead) { sfx('click'); CB.tgt = i; renderCombat(); } };
   const hpbar = (f, i) => { const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : Math.max(0, f.hp)) / f.hpMax * 100}%` }); bars.push([bi, Math.max(0, f.hp) / f.hpMax * 100]); CB.prev[i] = Math.max(0, f.hp); return h('div', { class: 'bar hp mini' }, bi); };
   const emo = f => h('div', { class: 'emo' }, f.m ? '🤖' : '🧑'); const ps = pcSprite();
   const stage = h('div', { class: 'stage' },
-    h('div', { class: 'side' }, h('div', { class: 'sg me' + (pc.hp <= 0 ? ' dead' : ''), 'data-k': 'pc' }, (ps && sprFit(ps, Math.round(112 * K))) || h('div', { class: 'emo' }, '🧍')),
-      ...pc.party.slice(0, nAl).map(a => h('div', { class: 'sg ally' + (a.inj > 0 ? ' dead' : '') }, sprFit(a.id, Math.round(86 * K)) || h('div', { class: 'emo' }, '🧍')))),
+    h('div', { class: 'side' }, h('div', { class: 'sg me' + (pc.hp <= 0 ? ' dead' : ''), 'data-k': 'pc' }, (ps && sprFit(ps, hp_)) || h('div', { class: 'emo' }, '🧍')),
+      ...pc.party.slice(0, nAl).map(a => h('div', { class: 'sg ally' + (a.inj > 0 ? ' dead' : '') }, sprFit(a.id, hp_) || h('div', { class: 'emo' }, '🧍')))),
     h('div', { class: 'vs' }, 'VS'),
     h('div', { class: 'side R' }, ...CB.foes.map((f, i) => h('div', { class: 'sg foe' + (f.dead ? ' dead' : '') + (i === CB.tgt && !f.dead ? ' tgt' : ''), 'data-k': 'f' + i, onclick: () => pick_(i) },
       sprFit(foeSprite(f), big(f)) || emo(f), h('div', { class: 'fi' }, h('div', { class: 'fn' }, f.name.replace(/\s*\(.*\)/, '')), hpbar(f, i), (f.stun > 0 || f.shield || f.weak) ? h('div', { class: 'fs' }, [f.stun > 0 ? '⚡ étourdi' : '', f.shield ? '🛡' : '', f.weak ? '🎯' : ''].filter(Boolean).join(' ')) : null)))));
@@ -1591,6 +1730,7 @@ function endPlayerTurn() {
   if (!aliveFoes().length) return finishCombat('win');
   foeTurn();
   if (G.pc.hp <= 0) return loseCombat(false);
+  if (!aliveFoes().length) return finishCombat('win');
   CB.round++; CB.defend = false; if (CB.buff > 0) CB.buff--; if (CB.fore > 0) CB.fore--; if (CB.guard > 0) CB.guard--; if (CB.stunPc > 0) CB.stunPc--; if (CB.counter) CB.counter = 0; CB.rebound = false;
   CB.foes.forEach(f => { if (f.buff > 0) { f.buff--; if (!f.buff) f.dmg -= 1; } });
   G.pc.en = Math.min(G.pc.enMax, G.pc.en + 1);
@@ -1657,6 +1797,7 @@ function actionsMenu() {
   L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
   L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno (+2 dégâts, +1 défense).' }));
+  L.push(C('Debug : Orbitrail', orbitrailDebug, { ic: '🛠', sub: 'Stations, lignes, correspondances.' }));
   L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
   L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
   show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
@@ -1673,7 +1814,7 @@ function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt (les traversées du Pacifique comptent triple). Un scout-hover permet de voyager hors du réseau.'],
     extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
-    choices: [C('Choisir dans la liste', travelList), hasItem('hover') ? C('Voyager en scout-hover (hors Orbitrail)', travelHover, { sub: 'Non tracé, mais exposé aux dérèglements climatiques.' }) : null, C('← Retour', actionsMenu)] });
+    choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu)] });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -1854,7 +1995,7 @@ function dealCard() {
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
   pool.push({ w: 26, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
-  pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard });
+  pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
   if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
@@ -1949,6 +2090,75 @@ function arcScene(a) {
   const pc = G.pc; pc.flags['arc_' + a.id] = true;
   const o = genOffer(a.fac, clamp(Math.max(2, pc.grade + 1), 2, 5), { arch: a.arch, place: a.state }); o.feed = true; o.pay = Math.round(o.pay * 1.3); o.xp += 20; o.empName = F[a.fac].name;
   show({ kicker: 'ÉVÉNEMENT', title: a.title, text: [`À ${esc(capName(a.state))}, quelque chose se prépare. ${esc(F[a.fac].name)} y est mêlé. Tu es sur place : tu peux t’en mêler.`], choices: [C('S’en mêler', () => missionApproach(o), { ic: '🎯', cls: 'risk' }), C('Passer ton chemin', hub, { cls: 'back' })] });
+}
+
+// ───────── Se déplacer autrement qu'en Orbitrail : véhicules à se procurer (légaux ou non, armés ou non) ─────────
+const ISLANDS = new Set(['avaiki', 'aotea', 'kalimai', 'australis', 'sunda', 'banda', 'yamato', 'isgarde', 'antille', 'caribana', 'creocean']);
+const COLD = new Set(['isgarde', 'scandor', 'polaris', 'slavo', 'baltovi', 'turkestan', 'aotea', 'sinotan']);
+Object.assign(ITEMS, {
+  trott: { n: 'Trottinette électrique', t: 'vehicule', price: 140, desc: 'Courts trajets (2 arrêts max) dans le même continent. Légale, silencieuse.', v: { ic: '🛴', spd: 1.5, max: 2, scope: 'continent', legal: 1 } },
+  velo: { n: 'Vélo volant', t: 'vehicule', price: 380, desc: 'Trajets de 3 arrêts max, même continent, y compris au-dessus de l’eau. Légal.', v: { ic: '🚲', spd: 2, max: 3, scope: 'continent', legal: 1 } },
+  board: { n: 'Hoverboard', t: 'vehicule', price: 650, desc: 'Rapide : 4 arrêts max dans le même continent. Toléré, mais interdit dans les zones de la F.A.', v: { ic: '🛹', spd: 3, max: 4, scope: 'continent', legal: 1 } },
+  skis: { n: 'Skis cybernétiques', t: 'vehicule', price: 520, desc: 'Entre régions froides uniquement (Isgarde, Scandor, Polaris, Slavo, Baltovi, Turkestan, Aotea, Sinotan). Non traçable.', v: { ic: '⛷', spd: 2.5, max: 8, scope: 'cold', legal: 1 } },
+  voiture: { n: 'Voiture électrique', t: 'vehicule', price: 1800, desc: 'Sur terre, dans le même continent (pas d’îles). Légale.', v: { ic: '🚗', spd: 4, max: 8, scope: 'land', legal: 1 } },
+  voiture_b: { n: 'Voiture blindée armée', t: 'vehicule', price: 3300, black: true, desc: 'Illégale (armement lourd). Blindage et mitrailleuses : +2 en combat.', v: { ic: '🚙', spd: 4, max: 8, scope: 'land', legal: 0, armed: 1 } },
+  vaisseau: { n: 'Vaisseau civil', t: 'vehicule', price: 5200, desc: 'Immatriculé et autorisé : n’importe où, vite, sans l’Orbitrail.', v: { ic: '🛸', spd: 8, max: 99, scope: 'any', legal: 1 } },
+  hover: { n: 'Scout-hover sans plaque', t: 'vehicule', price: 3200, black: true, desc: 'Vaisseau léger non déclaré : n’importe où, non tracé, mais illégal.', v: { ic: '🛸', spd: 8, max: 99, scope: 'any', legal: 0 } },
+  vaisseau_a: { n: 'Vaisseau armé', t: 'vehicule', price: 6800, black: true, desc: 'Canons à plasma, blindage : n’importe où, +2 en combat. Illégal.', v: { ic: '🚀', spd: 9, max: 99, scope: 'any', legal: 0, armed: 1 } },
+});
+SHOP_LEGAL.push('trott', 'velo', 'board', 'skis', 'voiture', 'vaisseau'); SHOP_BLACK.push('voiture_b', 'vaisseau_a', 'hover');
+const SHOP_BLACK_FIX = SHOP_BLACK.filter((x, i, a) => a.indexOf(x) === i); SHOP_BLACK.length = 0; SHOP_BLACK.push(...SHOP_BLACK_FIX);
+const myVehicles = () => Object.keys(G.pc.inv).filter(id => ITEMS[id] && ITEMS[id].t === 'vehicule');
+function vehicleOk(vid, from, to) {
+  const v = ITEMS[vid].v; if (from === to) return null; const r = otRoute(from, to); if (!r) return null; if (r.hops > v.max) return null;
+  const a = S[from], b = S[to];
+  if (v.scope === 'continent' && a.continent !== b.continent) return null;
+  if (v.scope === 'land' && (a.continent !== b.continent || ISLANDS.has(from) || ISLANDS.has(to))) return null;
+  if (v.scope === 'cold' && !(COLD.has(from) && COLD.has(to))) return null;
+  return r;
+}
+function vehicleMenu() {
+  const vs = myVehicles(); const L = vs.map(id => { const v = ITEMS[id].v; return C(`${v.ic} ${ITEMS[id].n}`, () => vehicleDest(id), { sub: `${v.legal ? 'Légal' : 'ILLÉGAL'}${v.armed ? ' · armé' : ''} · ${ITEMS[id].desc}` }); });
+  if (!vs.length) L.push(Object.assign(C('Aucun véhicule', () => { }), { lock: 'Achète-en un au Marché (trottinette, vélo volant, hoverboard, skis, voiture, vaisseau… ou au Marché Noir)' }));
+  L.push(C('← Retour', travelMenu)); show({ kicker: 'Véhicules', title: 'Voyager autrement', text: ['Un véhicule te libère de l’Orbitrail : pas de contrôle de gare, mais d’autres risques sur la route. Les illégaux attirent la F.A. ; les armés dissuadent les pillards.'], choices: L });
+}
+function vehicleDest(vid) {
+  const v = ITEMS[vid].v; const L = [];
+  DATA.states.forEach(s => { const r = vehicleOk(vid, G.loc, s.id); if (r) { const wk = Math.max(1, Math.ceil(r.hops / v.spd)); const fuel = 10 + r.hops * 6; L.push(C(`${s.capital} — ${s.name}`, () => vehicleGo(vid, s.id, wk, fuel, r), { sub: `${r.hops} arrêt(s) · ${wk} sem. · carburant ${fuel} ¢`, req: { money: fuel } })); } });
+  if (!L.length) L.push(Object.assign(C('Aucune destination accessible', () => { }), { lock: 'Ce véhicule ne peut pas aller plus loin d’ici (portée, mer ou climat)' }));
+  L.push(C('← Retour', vehicleMenu)); show({ kicker: ITEMS[vid].n, title: 'Destination', text: [`Depuis ${esc(capName(G.loc))}. ${ITEMS[vid].desc}`], extra: mapBox({ here: G.loc, pick: new Set(DATA.states.filter(s => vehicleOk(vid, G.loc, s.id)).map(s => s.id)), onPick: s => { const r = vehicleOk(vid, G.loc, s); const wk = Math.max(1, Math.ceil(r.hops / v.spd)); vehicleGo(vid, s, wk, 10 + r.hops * 6, r); } }), choices: L });
+}
+function vehicleGo(vid, to, wk, fuel, r) {
+  const pc = G.pc; const v = ITEMS[vid].v; pc.money -= fuel; const from = G.loc;
+  const a = OT_ST[stationOf(from)], b = OT_ST[stationOf(to)]; const mid = [(a[0] + b[0]) / 2 + (b[1] - a[1]) * 0.08, (a[1] + b[1]) / 2 - (b[0] - a[0]) * 0.08];
+  const fake = { steps: [{ from: stationOf(from), to: stationOf(to), line: 0 }], custom: [[a[0], a[1]], mid, [b[0], b[1]]], vehicle: v.ic };
+  const ctl = !v.legal && chance(clamp(detectChance() + 0.12, 0.1, 0.8));
+  transit(fake, from, to, () => {
+    G.loc = to; advance(wk); if (G.status !== 'play') return; logEntry(`Voyage en ${ITEMS[vid].n} : ${capName(from)} → ${capName(to)}.`);
+    const L = !v.legal ? fx({ heat: 2 }) : [];
+    if (ctl) return controleFA(r);
+    if (chance(0.32)) return (v.scope === 'any' || v.scope === 'cold' || chance(0.5)) ? (v.armed && chance(0.6) ? show({ kicker: 'Route', title: 'Pillards en vue', text: ['Des maraudeurs t’attendent… puis aperçoivent tes canons et décampent.'], fx: fx({ xp: 12 }), choices: [C('Continuer', hub)] }) : climateEvent()) : banditEvent();
+    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Continuer', hub)] });
+  });
+}
+function vehicleCard() {
+  const pool = ['velo', 'board', 'voiture', 'trott', 'skis'].filter(id => !hasItem(id)); if (!pool.length) return missionCard(); const id = pick(pool); const it = ITEMS[id];
+  show({ kicker: 'OPPORTUNITÉ', title: `Un(e) ${it.n.toLowerCase()} sans surveillance`, text: ['Garé(e) dans une ruelle, verrou électronique sommaire. Personne en vue… sauf une caméra.'], choices: [C('Le/la fracturer (jet d’agilité)', () => { const r = check('agilite', dcOf(2), ['stealth', 'tech']); if (r.ok) show({ title: 'Volé', text: [`Le moteur ronronne : ${esc(it.n)} est à toi.`], fx: [...fx({ item: { [id]: 1 }, heat: 3 })], choices: [C('Continuer', hub)] }); else show({ title: 'Alarme !', text: ['La caméra t’a filmé.'], fx: fx({ heat: 5 }), choices: [C('Continuer', hub)] }); }, { odds: ['agilite', dcOf(2), ['stealth', 'tech']], cls: 'risk' }), C('Passer', hub, { cls: 'back' })] });
+}
+
+// ───────── Debug de l'Orbitrail : stations, lignes, correspondances, connexité ─────────
+function lineStations(ln) { const seen = []; OT_LINES[ln].p.forEach(path => path.forEach(x => { if (typeof x === 'string' && !x.startsWith('@') && !seen.includes(x)) seen.push(x); })); return seen; }
+function orbitrailDebug(sel) {
+  const lines = Object.keys(OT_LINES).map(Number); const ids = Object.keys(OT_ST);
+  const seen = new Set([ids[0]]); const q = [ids[0]]; while (q.length) { const a = q.pop(); (OT.adj[a] || []).forEach(e => { if (!seen.has(e.to)) { seen.add(e.to); q.push(e.to); } }); }
+  const lns = id => lines.filter(l => lineStations(l).includes(id));
+  const back = () => G && G.status === 'play' ? actionsMenu() : titleScreen();
+  const chips = h('div', { class: 'row', style: 'margin:6px 0' }, lines.map(l => h('button', { class: 'tab' + (sel === l ? ' on' : ''), style: `border-color:${OT_LINES[l].c === '#151515' ? '#cfd3e6' : OT_LINES[l].c};${sel === l ? '' : `color:${OT_LINES[l].c === '#151515' ? '#cfd3e6' : OT_LINES[l].c}`}`, onclick: () => orbitrailDebug(sel === l ? null : l) }, 'L' + l + ' · ' + lineStations(l).length)));
+  const tb = h('table', { class: 't' }, h('tr', {}, ['Station', 'État', 'Lignes', 'Voisins'].map(x => h('th', {}, x))));
+  (sel ? lineStations(sel) : ids).forEach(id => tb.append(h('tr', {}, h('td', {}, OT_ST[id][2] + (OT_ST[id][4] ? ' ▮' : '')), h('td', {}, OT_ST[id][3]), h('td', {}, lns(id).join(' · ')), h('td', {}, [...new Set((OT.adj[id] || []).map(e => OT_ST[e.to][2]))].join(', ')))));
+  const sum = `${ids.length} stations · ${OT.edges.length} tronçons · ${lines.length} lignes · réseau connexe : ${seen.size === ids.length ? 'OUI' : 'NON (' + (ids.length - seen.size) + ' isolées)'} · stations « stub » (▮) : ${ids.filter(i => OT_ST[i][4]).map(i => OT_ST[i][2]).join(', ')} · traversées du Pacifique : ${OT_WRAP.map(w => OT_ST[w[0]][2] + '↔' + OT_ST[w[1]][2] + ' (L' + w[2] + ')').join(', ')}.`;
+  const ord = sel ? `<b>Ligne ${sel}</b> (${lineStations(sel).map(i => esc(OT_ST[i][2])).join(' → ')})` : 'Choisis une ligne pour la mettre en évidence.';
+  show({ kicker: 'DEBUG', title: 'Orbitrail', text: [esc(sum), ord], extra: h('div', {}, chips, mapBox({ hl: sel || null }), h('div', { class: 'scroll', style: 'margin-top:8px;max-height:340px' }, tb)), choices: [C('← Retour', back)] });
 }
 
 // ───────── Missions : générateur d'archétypes + résolution par approches ─────────
@@ -2697,24 +2907,15 @@ const randName = () => cap(pick(NAME_A).toLowerCase() + pick(NAME_B) + (chance(0
 let CR = null;
 
 function titleScreen() {
-  G = null; const sc = hasSave(); const mob = innerWidth < 700; const k = mob ? 3 : 4;
-  const fig = (id, kk, i, cls) => { const c = CH[id]; const s = SPR[id]; if (!s) return null; const hue = (hashStr(c.faction) * 7) % 360;
-    return h('div', { class: 'fig ' + (cls || ''), style: `--hue:${hue};--i:${i}` }, h('div', { class: 'pose' }, h('img', { class: 'spr', src: s[2], width: s[0] * kk, height: s[1] * kk, alt: '', draggable: 'false' })), h('div', { class: 'pad' }), h('div', { class: 'nt' }, `${c.name} // ${F[c.faction].name}`)); };
-  const order = mob ? [['275', k], ['274', k + 1], ['277', k]] : [['021', k - 1], ['275', k], ['274', k + 1], ['277', k], ['300', k - 1]];
-  const ghost = h('div', { class: 'fig ghost', style: '--hue:350' }, h('div', { class: 'pose' }, h('img', { class: 'spr', src: SPR['000'][2], width: SPR['000'][0] * (k + 2), height: SPR['000'][1] * (k + 2), alt: '' })));
-  const sky = h('div', { class: 'sky' }, h('i', { class: 'a drift', style: `background-image:${skylineURL('title', 280, 0)}` }), h('i', { class: 'b drift', style: `background-image:${skylineURL('title', 190, 1)}` }));
-  const logo = h('h1', { class: 'logo2', 'data-t': 'NEW\n   ERA' }, h('span', {}, 'NEW'), h('span', {}, 'ERA'));
-  UI.scene = { bare: true, extra: h('div', { class: 'hero' }, h('div', { class: 'sun' }), sky, h('div', { class: 'floor' }), h('div', { class: 'vig' }),
-    h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Let justice begin'),
-    h('p', { class: 'lore' }, 'Cratès, 2071. Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
-    h('div', { class: 'lineup' }, ghost, order.map(([id, kk], i) => fig(id, kk, i, i === (mob ? 1 : 2) ? 'big' : ''))),
-    h('div', { class: 'menu' },
-      sc ? h('button', { class: 'ch go', onclick: () => { sfx('click'); if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Continuer la partie'))) : null,
-      h('button', { class: 'ch' + (sc ? '' : ' go'), onclick: () => { sfx('click'); newGameMenu(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Nouvelle partie'))),
-      h('button', { class: 'ch', onclick: () => { sfx('click'); scoresScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Meilleurs scores'))),
-      h('button', { class: 'ch', onclick: () => { sfx('click'); aboutScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'À propos & sources')))),
-    h('div', { class: 'foot' }, 'Jeu non officiel · 52 États · 31 factions · 441 personnages')) };
-  UI.after = []; render(); UI.after.push(() => fixDrift()); runAfter(); setTimeout(() => fixDrift(), 60);
+  G = null; const sc = hasSave(); const city = pick(DATA.states).id;
+  const logo = h('h1', { class: 'logo2' }, h('span', {}, 'NEW'), h('span', {}, 'ERA'));
+  const btn = (t, f, go) => h('button', { class: 'ch' + (go ? ' go' : ''), onclick: () => { sfx('click'); f(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, t)));
+  UI.scene = { bare: true, extra: h('div', { class: 'hero' }, envBanner(city, 260, 'night'),
+    h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Cratès · 2071'),
+    h('p', { class: 'lore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
+    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('À propos & sources', aboutScreen), btn('Debug : Orbitrail', orbitrailDebug)),
+    h('div', { class: 'foot' }, '52 États · 31 factions · 441 personnages')) };
+  UI.after = []; render(); runAfter();
 }
 function aboutScreen() {
   show({ kicker: 'À propos', title: 'Fidélité et libertés prises', text: [

@@ -61,14 +61,13 @@ const powName = tag => { const p = pcPowers().find(p => p.tags.includes(tag)); r
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc;
   CB.prev = CB.prev || {}; const bars = [];
-  const nAl = Math.min(innerWidth < 640 ? 2 : 3, pc.party.length); const K = innerWidth < 640 ? Math.max(0.5, 1 - 0.1 * (CB.foes.length + nAl)) : 1;
-  const big = f => Math.round((f.hpMax > 50 ? 150 : 112) * K);
+  const nAl = Math.min(innerWidth < 640 ? (CB.foes.length >= 2 ? 1 : 2) : 3, pc.party.length); const hp_ = innerWidth < 640 ? (CB.foes.length + nAl > 4 ? 80 : 80) : 120; const big = () => hp_;
   const pick_ = i => { if (!CB.foes[i].dead) { sfx('click'); CB.tgt = i; renderCombat(); } };
   const hpbar = (f, i) => { const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : Math.max(0, f.hp)) / f.hpMax * 100}%` }); bars.push([bi, Math.max(0, f.hp) / f.hpMax * 100]); CB.prev[i] = Math.max(0, f.hp); return h('div', { class: 'bar hp mini' }, bi); };
   const emo = f => h('div', { class: 'emo' }, f.m ? '🤖' : '🧑'); const ps = pcSprite();
   const stage = h('div', { class: 'stage' },
-    h('div', { class: 'side' }, h('div', { class: 'sg me' + (pc.hp <= 0 ? ' dead' : ''), 'data-k': 'pc' }, (ps && sprFit(ps, Math.round(112 * K))) || h('div', { class: 'emo' }, '🧍')),
-      ...pc.party.slice(0, nAl).map(a => h('div', { class: 'sg ally' + (a.inj > 0 ? ' dead' : '') }, sprFit(a.id, Math.round(86 * K)) || h('div', { class: 'emo' }, '🧍')))),
+    h('div', { class: 'side' }, h('div', { class: 'sg me' + (pc.hp <= 0 ? ' dead' : ''), 'data-k': 'pc' }, (ps && sprFit(ps, hp_)) || h('div', { class: 'emo' }, '🧍')),
+      ...pc.party.slice(0, nAl).map(a => h('div', { class: 'sg ally' + (a.inj > 0 ? ' dead' : '') }, sprFit(a.id, hp_) || h('div', { class: 'emo' }, '🧍')))),
     h('div', { class: 'vs' }, 'VS'),
     h('div', { class: 'side R' }, ...CB.foes.map((f, i) => h('div', { class: 'sg foe' + (f.dead ? ' dead' : '') + (i === CB.tgt && !f.dead ? ' tgt' : ''), 'data-k': 'f' + i, onclick: () => pick_(i) },
       sprFit(foeSprite(f), big(f)) || emo(f), h('div', { class: 'fi' }, h('div', { class: 'fn' }, f.name.replace(/\s*\(.*\)/, '')), hpbar(f, i), (f.stun > 0 || f.shield || f.weak) ? h('div', { class: 'fs' }, [f.stun > 0 ? '⚡ étourdi' : '', f.shield ? '🛡' : '', f.weak ? '🎯' : ''].filter(Boolean).join(' ')) : null)))));
@@ -237,6 +236,7 @@ function endPlayerTurn() {
   if (!aliveFoes().length) return finishCombat('win');
   foeTurn();
   if (G.pc.hp <= 0) return loseCombat(false);
+  if (!aliveFoes().length) return finishCombat('win');
   CB.round++; CB.defend = false; if (CB.buff > 0) CB.buff--; if (CB.fore > 0) CB.fore--; if (CB.guard > 0) CB.guard--; if (CB.stunPc > 0) CB.stunPc--; if (CB.counter) CB.counter = 0; CB.rebound = false;
   CB.foes.forEach(f => { if (f.buff > 0) { f.buff--; if (!f.buff) f.dmg -= 1; } });
   G.pc.en = Math.min(G.pc.enMax, G.pc.en + 1);

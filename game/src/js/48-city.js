@@ -16,7 +16,7 @@ function skylineURL(seed, hue, layer) {
 }
 const CONT_HUE = { Europe: 200, 'Amérique': 300, Afrique: 38, Asie: 335, 'Océanie': 165 };
 function fixDrift(root) { (root || document).querySelectorAll('.drift').forEach(e => { const hh = e.getBoundingClientRect().height || 118; e.style.setProperty('--tw', Math.round(1200 * hh / 200) + 'px'); e.style.backgroundSize = 'auto 100%'; }); }
-function cityHead() {
+function cityHeadOld() {
   const st = S[G.loc]; const hue = CONT_HUE[st.continent] || 200;
   const el = h('div', { class: 'cityhead', style: `--h:${hue}` },
     h('div', { class: 'l1 drift', style: `background-image:${skylineURL(G.loc, hue, 0)}` }), h('div', { class: 'l2 drift', style: `background-image:${skylineURL(G.loc, hue, 1)}` }),
@@ -24,3 +24,4 @@ function cityHead() {
   UI.after.push(() => fixDrift(el)); return el;
 }
 const atomSVG = () => { const d = document.createElement('div'); d.innerHTML = '<svg class="atom" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="5"><g class="o"><ellipse cx="50" cy="50" rx="44" ry="15" stroke="#00f0ff"/></g><g class="o o2"><ellipse cx="50" cy="50" rx="44" ry="15" transform="rotate(60 50 50)" stroke="#00f0ff"/></g><g class="o"><ellipse cx="50" cy="50" rx="44" ry="15" transform="rotate(120 50 50)" stroke="#fcee09"/></g><circle cx="50" cy="50" r="7" fill="#fff" stroke="none"/></svg>'; return d.firstChild; };
+function cityHead() { return envBanner(G.loc, innerWidth < 640 ? 140 : 190); }

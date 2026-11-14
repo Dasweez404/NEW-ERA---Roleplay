@@ -297,3 +297,44 @@ h3{color:var(--acc2);text-shadow:0 0 8px rgba(0,240,255,.5);font-size:.82rem}h3:
 @media(max-width:640px){.sg .fi{min-width:60px}.sg .fn{font-size:.5rem}}
 .stage .side{flex:0 1 auto}.sg .fi{min-width:0;max-width:96px}.stage{overflow:hidden}.sg.foe .spr{max-width:100%;height:auto}
 .combat .sg.foe{clip-path:none;background:none;border:0;padding:0;margin:0;box-shadow:none;border-radius:0}
+/* ═════════ VERSION PLATE : moins de dégradés, plus de lueurs ═════════ */
+*{text-shadow:none!important}
+.card,.hud,.scene,.side,.ch,.pill,.chip,.ibtn,.tab,.dicebox,.transit,.dock,.sh-pan,.tiles .ch,.stage,.pop{box-shadow:none!important}
+body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-shadow:none}
+.card{background:#0e0e18;border:1px solid #2c2c44}
+.scene{background:#0e0e18}
+.hud{background:#0e0e18;border:1px solid #34344f}.hud::before{background:var(--acc);height:2px;opacity:1}
+.scene .title{background:none;-webkit-background-clip:initial;background-clip:initial;color:#fff}
+.nm{color:var(--acc)}
+.avatar{background:hsl(var(--hue),45%,32%)}.avatar.sp{background:#1a1a2c;box-shadow:inset 0 0 0 2px hsl(var(--hue),50%,55%)!important;overflow:hidden;display:grid;place-items:start center}.avatar.sp .spr{width:auto!important;height:auto!important;object-fit:none;margin:0}
+.bar{background:#050509;border-color:#3a3a56}.stat.hp .bar>i,.bar.hp>i{background:#ff2a6d}.stat.en .bar>i{background:#00e5ff}
+.pill{background:#14141f;border-color:#34344f}.pill.cash{border-color:var(--acc)}.pill.wanted{background:#3a1020;animation:none}
+.ticker{background:#14141f}
+.ch{background:#12121e;border-color:#2c2c44;border-left-color:var(--acc2)}.ch:hover:not(:disabled){background:#191927;border-color:var(--acc);border-left-color:var(--acc);transform:translateX(2px)}
+.ch:hover:not(:disabled) .l{animation:none}
+.ch.cta{background:var(--acc);animation:none}.ch.cta:hover:not(:disabled){filter:brightness(1.08)}
+.tiles .ch{background:#12121e;border-top-color:var(--acc2)}.tiles .tic{filter:none}
+.chip{background:#12121e}.dicebox{background:#12121e;border-color:#34344f}
+.dsq{box-shadow:none!important}.dicebox.ok .dsq{background:rgba(5,255,161,.1)}.dicebox.ko .dsq{background:rgba(255,42,109,.12)}.dicebox.crit{background:#1c1a08}
+.tab.on{background:var(--acc)}.dock{background:#0b0b14;border-top:1px solid #34344f}.dk.on{background:#191927;text-shadow:none}.sh-pan{background:#0e0e18;box-shadow:none}
+.stage{background:#10101c;border-bottom:2px solid #34344f}.sg .spr,.side.R .sg .spr,.cimg .spr,.portrait{filter:none!important}
+.portwrap{background:#14141f;border:1px solid #34344f}.portwrap::after{display:none}
+.splash{background:rgba(5,5,10,.88)}.sp-ic{filter:none}.splash .sp-t{text-shadow:none}.particle{box-shadow:none}
+.kicker,h3{text-shadow:none}.pct{text-shadow:none}
+.logo2{text-shadow:none;-webkit-text-stroke:0;color:#fff;animation:none}.logo2::before,.logo2::after{display:none}.logo2 span+span{color:var(--acc);text-shadow:none}
+.atom{filter:none}
+.hero{display:flex;flex-direction:column;align-items:center;min-height:calc(100vh - 20px);padding:0 14px 30px;margin:-10px -12px}.hero>.env{margin:0 -14px;width:calc(100% + 28px)}
+.brand{margin-top:18px}.tagline{text-shadow:none;margin-top:10px}.hero .menu .ch.go{background:var(--acc);box-shadow:none;animation:none}
+.cityhead{background:none;border:1px solid #34344f}
+/* ── décors ── */
+.env{position:relative;overflow:hidden;border:1px solid #34344f;background:#090b1c;margin:8px 0}.env .envsvg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero>.env{border:0;border-bottom:1px solid #34344f;margin:0 -14px}
+.envtag{position:absolute;left:12px;bottom:8px;display:flex;flex-direction:column;background:rgba(5,5,12,.72);padding:3px 9px;border-left:3px solid var(--acc)}.envtag b{font-family:var(--fd);font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;color:#fff;line-height:1.2}.envtag span{font-family:var(--fm);font-size:.62rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.fly{animation:flyx var(--d,14s) linear infinite}.fly.slow{--d:26s}@keyframes flyx{from{transform:translateX(-80px)}to{transform:translateX(900px)}}
+.blade{animation:spin 7s linear infinite;transform-box:view-box}@keyframes spin{to{transform:rotate(360deg)}}
+.mapscroll{background:#0a0a14;border:1px solid #34344f;border-radius:0}.map{background:#0a0a14}
+.map text{fill:#e9ebff;stroke:#0a0a14;stroke-width:4px}
+.map .stc{fill:#0a0a14;stroke:#e9ebff}
+.map .stc.here{fill:#fcee09}.map .stc.gos{fill:#05ffa1}
+.stage{overflow:visible}.stage .vs{font-size:.9rem}.sg .fi{max-width:84px}.stage .side{gap:2px}
+.env .envtag b{font-size:.78rem}.env .envtag span{font-size:.56rem}

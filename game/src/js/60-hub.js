@@ -26,6 +26,7 @@ function actionsMenu() {
   L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
   L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno (+2 dégâts, +1 défense).' }));
+  L.push(C('Debug : Orbitrail', orbitrailDebug, { ic: '🛠', sub: 'Stations, lignes, correspondances.' }));
   L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
   L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
   show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
@@ -42,7 +43,7 @@ function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt (les traversées du Pacifique comptent triple). Un scout-hover permet de voyager hors du réseau.'],
     extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
-    choices: [C('Choisir dans la liste', travelList), hasItem('hover') ? C('Voyager en scout-hover (hors Orbitrail)', travelHover, { sub: 'Non tracé, mais exposé aux dérèglements climatiques.' }) : null, C('← Retour', actionsMenu)] });
+    choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu)] });
 }
 function travelList() {
   const here = G.loc; const L = [];

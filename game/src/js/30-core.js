@@ -8,6 +8,7 @@ function powerTags() {
 function gearTags() {
   const t = new Set(); const pc = G.pc;
   Object.keys(pc.inv).forEach(id => { const it = ITEMS[id]; if (it && it.t === 'gadget' && it.tags) it.tags.forEach(x => t.add(x)); });
+  Object.keys(pc.inv).forEach(id => { const it = ITEMS[id]; if (it && it.t === 'vehicule' && it.v.armed) { t.add('combat'); t.add('ranged'); } });
   const w = weaponOf(); if (w) (w.tags || []).forEach(x => t.add(x));
   const a = armorOf(); if (a) (a.tags || []).forEach(x => t.add(x));
   return t;

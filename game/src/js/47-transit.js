@@ -15,6 +15,7 @@ function edgeGeom(a, b, line) {
   return [toEdge(a), toEdge(b).reverse()];
 }
 function routeGeom(r) {
+  if (r.custom) { const pts = r.custom.slice(); let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return { pts, stops: [{ id: r.steps[0].from, at: 0, i: 0 }, { id: r.steps[0].to, at: len, i: pts.length - 1 }], len, jumps: [] }; }
   const pts = [], stops = [], jumps = []; let len = 0;
   const add = p => { const l = pts[pts.length - 1]; if (l) len += Math.hypot(p[0] - l[0], p[1] - l[1]); pts.push(p); };
   r.steps.forEach((s, n) => {
@@ -36,7 +37,7 @@ function transit(r, from, to, done) {
   svg.append(trail, halo, dot);
   const cap = h('div', { class: 'tcap' }); const bar = h('div', { class: 'tbar' }, h('i'));
   const view = h('div', { class: 'transit' }, svg, h('div', { class: 'tover' }, cap, bar), h('div', { class: 'tskip' }, 'toucher pour passer ›'));
-  const lineChip = ln => `<span class="lchip" style="background:${OT_LINES[ln].c === '#151515' ? '#e8e8f0' : OT_LINES[ln].c}">${ln}</span>`;
+  const lineChip = ln => ln && OT_LINES[ln] ? `<span class="lchip" style="background:${OT_LINES[ln].c === '#151515' ? '#e8e8f0' : OT_LINES[ln].c}">${ln}</span>` : `<span class="lchip" style="background:#fff">${r.vehicle || '•'}</span>`;
   const sc = { kicker: 'ORBITRAIL', title: `${capName(from)} → ${capName(to)}`, text: [], extra: view, choices: [C('Passer ›', finish, { cls: 'back' })] };
   show(sc); sfx('train');
   let W0 = 2000, cx = 1000, cy = 487, camW = W0; let s = 0, state = 'zoom', t0 = performance.now(), last = t0, pause = 0, visited = 0; const total = G_.len;
