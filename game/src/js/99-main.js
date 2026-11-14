@@ -5,18 +5,24 @@ const randName = () => cap(pick(NAME_A).toLowerCase() + pick(NAME_B) + (chance(0
 let CR = null;
 
 function titleScreen() {
-  G = null; const sc = hasSave();
-  UI.scene = { bare: true, extra: h('div', { class: 'title-screen' },
-    h('h1', { class: 'logo' }, 'NEW', h('br'), 'ERA'),
-    h('p', {}, 'Cratès, 2071. Les météorites de 2048, la génotite, l’ogénite, les géno-porteurs… et le Nouveau Régime qui les traque. Un jeu à choix dans l’univers de New Era : personnage customisé ou existant, 31 factions, 52 États, l’Orbitrail et 16 pierres antiques.'),
-    h('div', { class: 'choices' },
-      sc ? h('button', { class: 'ch safe', onclick: () => { if (loadGame()) { restoreOwn(); hub(); } } }, h('div', { class: 'l' }, 'Continuer la partie')) : null,
-      h('button', { class: 'ch', onclick: newGameMenu }, h('div', { class: 'l' }, 'Nouvelle partie')),
-      h('button', { class: 'ch', onclick: scoresScreen }, h('div', { class: 'l' }, 'Meilleurs scores')),
-      h('button', { class: 'ch', onclick: aboutScreen }, h('div', { class: 'l' }, 'À propos : fidélité, sources et libertés prises'))),
-    h('div', { class: 'parade' }, shuffle(DATA.chars).slice(0, 14).map((c, i) => h('div', { class: 'pg', style: `--i:${i}` }, sprFit(c.id, 96)))),
-    h('p', { class: 'small' }, 'Jeu non officiel inspiré de l’univers New Era. Tout est jouable hors-ligne dans ce fichier.')) };
-  render();
+  G = null; const sc = hasSave(); const mob = innerWidth < 700; const k = mob ? 3 : 4;
+  const fig = (id, kk, i, cls) => { const c = CH[id]; const s = SPR[id]; if (!s) return null; const hue = (hashStr(c.faction) * 7) % 360;
+    return h('div', { class: 'fig ' + (cls || ''), style: `--hue:${hue};--i:${i}` }, h('div', { class: 'pose' }, h('img', { class: 'spr', src: s[2], width: s[0] * kk, height: s[1] * kk, alt: '', draggable: 'false' })), h('div', { class: 'pad' }), h('div', { class: 'nt' }, `${c.name} // ${F[c.faction].name}`)); };
+  const order = mob ? [['275', k], ['274', k + 1], ['277', k]] : [['021', k - 1], ['275', k], ['274', k + 1], ['277', k], ['300', k - 1]];
+  const ghost = h('div', { class: 'fig ghost', style: '--hue:350' }, h('div', { class: 'pose' }, h('img', { class: 'spr', src: SPR['000'][2], width: SPR['000'][0] * (k + 2), height: SPR['000'][1] * (k + 2), alt: '' })));
+  const sky = h('div', { class: 'sky' }, h('i', { class: 'a drift', style: `background-image:${skylineURL('title', 280, 0)}` }), h('i', { class: 'b drift', style: `background-image:${skylineURL('title', 190, 1)}` }));
+  const logo = h('h1', { class: 'logo2', 'data-t': 'NEW\n   ERA' }, h('span', {}, 'NEW'), h('span', {}, 'ERA'));
+  UI.scene = { bare: true, extra: h('div', { class: 'hero' }, h('div', { class: 'sun' }), sky, h('div', { class: 'floor' }), h('div', { class: 'vig' }),
+    h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Let justice begin'),
+    h('p', { class: 'lore' }, 'Cratès, 2071. Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
+    h('div', { class: 'lineup' }, ghost, order.map(([id, kk], i) => fig(id, kk, i, i === (mob ? 1 : 2) ? 'big' : ''))),
+    h('div', { class: 'menu' },
+      sc ? h('button', { class: 'ch go', onclick: () => { sfx('click'); if (loadGame()) { restoreOwn(); hub(); } } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Continuer la partie'))) : null,
+      h('button', { class: 'ch' + (sc ? '' : ' go'), onclick: () => { sfx('click'); newGameMenu(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Nouvelle partie'))),
+      h('button', { class: 'ch', onclick: () => { sfx('click'); scoresScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Meilleurs scores'))),
+      h('button', { class: 'ch', onclick: () => { sfx('click'); aboutScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'À propos & sources')))),
+    h('div', { class: 'foot' }, 'Jeu non officiel · 52 États · 31 factions · 441 personnages')) };
+  UI.after = []; render(); UI.after.push(() => fixDrift()); runAfter(); setTimeout(() => fixDrift(), 60);
 }
 function aboutScreen() {
   show({ kicker: 'À propos', title: 'Fidélité et libertés prises', text: [

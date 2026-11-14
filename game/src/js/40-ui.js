@@ -92,7 +92,7 @@ function render(quiet) {
   const d = sc.roll && !quiet ? 1.05 : 0;
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
-    h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
+    sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
   if (live) { app.append(hudEl()); const tk = tickerEl(); if (tk) app.append(tk); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));

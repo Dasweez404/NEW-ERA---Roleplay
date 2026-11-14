@@ -28,7 +28,7 @@ function hub() {
   L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno.' }));
   L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
-  show({ kicker: dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true });
+  show({ kicker: dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
