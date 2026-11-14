@@ -40,15 +40,15 @@ const EVENT_FN = {};
 
 // ───────── Voyager ─────────
 function travelMenu(pre) {
-  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box;
+  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates();
   const info = h('div', { class: 'travelinfo' }, h('span', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
   const select = to => {
     const r = otRoute(here, to); if (!r) return; const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
     sel = to; sfx('click'); box.setRoute(r);
-    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
+    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), reco.has(to) ? h('div', { class: 'recotxt2' }, '★ Conseillé : ' + reco.get(to).join(' · ')) : null, h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select });
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco });
   if (pre) setTimeout(() => select(pre), 30);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu, { cls: 'back' })] });
 }

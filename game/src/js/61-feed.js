@@ -56,6 +56,7 @@ function travelCard() {
 }
 function joinCard() {
   const pc = G.pc; const ids = Object.keys(F).filter(k => !['civils', 'fallen', 'noir', 'own', 'omega'].includes(k) && !(k === 'fa' && pc.ptype !== 'aucun') && (pc.rep[k] || 0) > -20);
+  if (!ids.length) return missionCard();
   const fid = pick(ids); const f = F[fid]; const dc = (f.secret ? 19 : 14) - Math.floor((pc.rep[fid] || 0) / 10);
   show({ kicker: f.name.toUpperCase(), title: 'On t’a remarqué', text: [`Quelqu’un de <b>${esc(f.name)}</b> t’aborde : « ${esc(f.goal)} Ça t’intéresse ? »`], choices: [C(`Les rejoindre`, () => joinFaction(fid, dc), { odds: ['charisme', dc, ['social']], ic: '🏴' }), C('Décliner', hub, { cls: 'back' })] });
 }

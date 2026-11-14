@@ -335,7 +335,7 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .mapscroll{background:#0a0a14;border:1px solid #34344f;border-radius:0}.map{background:#0a0a14}
 .map text{fill:#e9ebff;stroke:#0a0a14;stroke-width:4px}
 .map .stc{fill:#0a0a14;stroke:#e9ebff}
-.map .stc.here{fill:#fcee09}.map .stc.gos{fill:#05ffa1}
+
 .stage{overflow:visible}.stage .vs{font-size:.9rem}.sg .fi{max-width:84px}.stage .side{gap:2px}
 .env .envtag b{font-size:.78rem}.env .envtag span{font-size:.56rem}
 .mapscroll{height:min(62vh,520px);min-height:300px;overflow:hidden;max-height:none}.mapin{display:none}
@@ -352,3 +352,11 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .frow .fn{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.frow .fv{font-family:var(--fm);font-size:.72rem;color:var(--mut)}.frow .fs{font-size:.8rem}
 .frow.hit,[data-k=pc].hit{animation:foehit .45s}
 .combat [data-k=pc]{position:relative}
+
+/* stations : blanches ; conseillées : jaunes ; toi : cyan */
+.map .stc{fill:#f2f3ff;stroke:#0a0a14}.map .stc.reco{fill:#fcee09}.map .stc.here{fill:#00e5ff}.map .stc.stub{stroke:none}
+.map text.recotxt{fill:#fcee09}
+.map .recoring{transform-box:fill-box;transform-origin:center;animation:ring 1.6s infinite;pointer-events:none}
+.map .st.go:hover .stc{stroke:#fcee09}
+.maplegend{display:flex;gap:14px;margin-top:6px;font-family:var(--fm);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}.maplegend .y{color:#fcee09}.maplegend .w{color:#f2f3ff}.maplegend .c{color:#00e5ff}
+.recotxt2{color:#fcee09;font-weight:700}

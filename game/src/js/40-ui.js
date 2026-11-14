@@ -240,14 +240,15 @@ function mapEl(o = {}) {
   for (const [ln, L] of Object.entries(OT_LINES)) L.p.forEach(path => {
     const pts = path.map(pt).map(p => p.join(',')).join(' ');
     svg.append(el('polyline', { points: pts, fill: 'none', stroke: L.c === '#151515' ? '#cfd3e6' : L.c, opacity: (o.hl && o.hl !== +ln) ? 0.13 : 1, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); const sid = WRAPNAME[n]; const go = !!(o.pick && o.pick.has(sid)); const gg = el('g', { class: 'st' + (go ? ' go' : '') }, el('circle', { cx: px, cy: py, r: 12, class: 'stc' + (go ? ' gos' : '') + (o.here === sid ? ' here' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }), el('text', { x: +px - 14, y: +py - 18 }, n + ' ↺')); if (go) { gg.addEventListener('click', () => o.onPick(sid)); gg.append(el('circle', { cx: px, cy: py, r: 22, fill: 'transparent' })); } svg.append(gg); } });
+    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); const sid = WRAPNAME[n]; const go = !!(o.pick && o.pick.has(sid)); const gg = el('g', { class: 'st' + (go ? ' go' : '') }, el('circle', { cx: px, cy: py, r: 12, class: 'stc' + (o.here === sid ? ' here' : '') + (o.reco && o.reco.has(sid) ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }), el('text', { x: +px - 14, y: +py - 18, class: o.reco && o.reco.has(sid) ? 'recotxt' : '' }, n + ' ↺')); if (go) { gg.addEventListener('click', () => o.onPick(sid)); gg.append(el('circle', { cx: px, cy: py, r: 22, fill: 'transparent' })); } svg.append(gg); } });
   });
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
-    const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : go ? ' gos' : ''), fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
-    if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff3d6e', 'stroke-width': 4 }));
-    g.append(el('text', { x: x + dx, y: y + dy }, name));
+    const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
+    if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
+    if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
+    if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
+    g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : '' }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
@@ -295,6 +296,7 @@ function mapBox(o = {}) {
   svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
+    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), h('span', { class: 'lg c' }, '● toi')) : null,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
@@ -302,7 +304,16 @@ function mapBox(o = {}) {
   return box;
 }
 function tabCarte() {
-  const box = h('div'); box.append(mapBox({ here: G.loc }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
+  const box = h('div'); box.append(mapBox({ here: G.loc, reco: recoStates() }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
   const legend = h('div', { class: 'row small', style: 'margin-top:6px' }); Object.entries(OT_LINES).forEach(([n, L]) => legend.append(h('span', {}, h('span', { style: `display:inline-block;width:14px;height:8px;background:${L.c};border:1px solid #000;margin-right:3px` }), n))); box.append(legend);
   return box;
+}
+
+// ───────── Destinations conseillées (jaune sur la carte) ─────────
+function recoStates() {
+  const m = new Map(); const pc = G.pc, W = G.world; const add = (st, why) => { if (!st || !S[st]) return; (m.get(st) || m.set(st, []).get(st)).push(why); };
+  DATA.stones.forEach(s => { if (!pc.stones[s.id] && W.stoneClue[s.id]) add(W.stoneLoc[s.id], `Pierre de ${s.name} (${holderName(W.stoneHolder[s.id])})`); });
+  (W.arcs || []).forEach(a => { if (!pc.flags['arc_' + a.id]) add(a.state, `Événement : ${a.title}`); });
+  if (G.settings.canon) { const mm = dateOf(G.wk); const ym = mm.y * 12 + mm.m; DATA.arcs.forEach((arc, i) => { const [y, mo] = arc.date.split('-').map(Number); const am = y * 12 + mo - 1; if (am <= ym && ym - am <= 1 && !pc.flags['canon_' + i]) add(arc.state, `Canon : ${arc.title}`); }); }
+  return m;
 }

@@ -37,7 +37,7 @@ function vehicleDest(vid) {
   const pickIt = s => { const r = vehicleOk(vid, G.loc, s); if (!r) return; const wk = Math.max(1, Math.ceil(r.hops / v.spd)); const fuel = 10 + r.hops * 6;
     if (sel === s) { if (G.pc.money < fuel) { toast('Carburant insuffisant (' + fuel + ' ¢)'); return; } return vehicleGo(vid, s, wk, fuel, r); }
     sel = s; sfx('click'); box.setRoute(r); info.innerHTML = ''; info.append(h('b', {}, `${capName(G.loc)} → ${capName(s)}`), h('div', {}, `${r.hops} arrêt(s) · ${wk} sem. · carburant `, h('b', { class: 'acc' }, fuel + ' ¢')), h('div', { class: 'acc' }, '▶ Touche encore ' + capName(s) + ' pour partir')); };
-  box = mapBox({ here: G.loc, pick: new Set(DATA.states.filter(s => vehicleOk(vid, G.loc, s.id)).map(s => s.id)), onPick: pickIt });
+  box = mapBox({ here: G.loc, reco: recoStates(), pick: new Set(DATA.states.filter(s => vehicleOk(vid, G.loc, s.id)).map(s => s.id)), onPick: pickIt });
   show({ kicker: ITEMS[vid].n, title: 'Destination', text: [`Depuis ${esc(capName(G.loc))}. ${ITEMS[vid].desc}`], extra: h('div', {}, box, info), choices: L });
 }
 function vehicleGo(vid, to, wk, fuel, r) {

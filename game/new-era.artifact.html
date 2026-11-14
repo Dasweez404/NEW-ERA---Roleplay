@@ -336,7 +336,7 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .mapscroll{background:#0a0a14;border:1px solid #34344f;border-radius:0}.map{background:#0a0a14}
 .map text{fill:#e9ebff;stroke:#0a0a14;stroke-width:4px}
 .map .stc{fill:#0a0a14;stroke:#e9ebff}
-.map .stc.here{fill:#fcee09}.map .stc.gos{fill:#05ffa1}
+
 .stage{overflow:visible}.stage .vs{font-size:.9rem}.sg .fi{max-width:84px}.stage .side{gap:2px}
 .env .envtag b{font-size:.78rem}.env .envtag span{font-size:.56rem}
 .mapscroll{height:min(62vh,520px);min-height:300px;overflow:hidden;max-height:none}.mapin{display:none}
@@ -353,6 +353,14 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .frow .fn{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.frow .fv{font-family:var(--fm);font-size:.72rem;color:var(--mut)}.frow .fs{font-size:.8rem}
 .frow.hit,[data-k=pc].hit{animation:foehit .45s}
 .combat [data-k=pc]{position:relative}
+
+/* stations : blanches ; conseillées : jaunes ; toi : cyan */
+.map .stc{fill:#f2f3ff;stroke:#0a0a14}.map .stc.reco{fill:#fcee09}.map .stc.here{fill:#00e5ff}.map .stc.stub{stroke:none}
+.map text.recotxt{fill:#fcee09}
+.map .recoring{transform-box:fill-box;transform-origin:center;animation:ring 1.6s infinite;pointer-events:none}
+.map .st.go:hover .stc{stroke:#fcee09}
+.maplegend{display:flex;gap:14px;margin-top:6px;font-family:var(--fm);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}.maplegend .y{color:#fcee09}.maplegend .w{color:#f2f3ff}.maplegend .c{color:#00e5ff}
+.recotxt2{color:#fcee09;font-weight:700}
 </style>
 <div id="app"></div>
 <script>
@@ -1162,14 +1170,15 @@ function mapEl(o = {}) {
   for (const [ln, L] of Object.entries(OT_LINES)) L.p.forEach(path => {
     const pts = path.map(pt).map(p => p.join(',')).join(' ');
     svg.append(el('polyline', { points: pts, fill: 'none', stroke: L.c === '#151515' ? '#cfd3e6' : L.c, opacity: (o.hl && o.hl !== +ln) ? 0.13 : 1, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); const sid = WRAPNAME[n]; const go = !!(o.pick && o.pick.has(sid)); const gg = el('g', { class: 'st' + (go ? ' go' : '') }, el('circle', { cx: px, cy: py, r: 12, class: 'stc' + (go ? ' gos' : '') + (o.here === sid ? ' here' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }), el('text', { x: +px - 14, y: +py - 18 }, n + ' ↺')); if (go) { gg.addEventListener('click', () => o.onPick(sid)); gg.append(el('circle', { cx: px, cy: py, r: 22, fill: 'transparent' })); } svg.append(gg); } });
+    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); const sid = WRAPNAME[n]; const go = !!(o.pick && o.pick.has(sid)); const gg = el('g', { class: 'st' + (go ? ' go' : '') }, el('circle', { cx: px, cy: py, r: 12, class: 'stc' + (o.here === sid ? ' here' : '') + (o.reco && o.reco.has(sid) ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }), el('text', { x: +px - 14, y: +py - 18, class: o.reco && o.reco.has(sid) ? 'recotxt' : '' }, n + ' ↺')); if (go) { gg.addEventListener('click', () => o.onPick(sid)); gg.append(el('circle', { cx: px, cy: py, r: 22, fill: 'transparent' })); } svg.append(gg); } });
   });
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
-    const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : go ? ' gos' : ''), fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
-    if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff3d6e', 'stroke-width': 4 }));
-    g.append(el('text', { x: x + dx, y: y + dy }, name));
+    const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
+    if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
+    if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
+    if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
+    g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : '' }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
@@ -1217,6 +1226,7 @@ function mapBox(o = {}) {
   svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
+    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), h('span', { class: 'lg c' }, '● toi')) : null,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
@@ -1224,9 +1234,18 @@ function mapBox(o = {}) {
   return box;
 }
 function tabCarte() {
-  const box = h('div'); box.append(mapBox({ here: G.loc }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
+  const box = h('div'); box.append(mapBox({ here: G.loc, reco: recoStates() }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
   const legend = h('div', { class: 'row small', style: 'margin-top:6px' }); Object.entries(OT_LINES).forEach(([n, L]) => legend.append(h('span', {}, h('span', { style: `display:inline-block;width:14px;height:8px;background:${L.c};border:1px solid #000;margin-right:3px` }), n))); box.append(legend);
   return box;
+}
+
+// ───────── Destinations conseillées (jaune sur la carte) ─────────
+function recoStates() {
+  const m = new Map(); const pc = G.pc, W = G.world; const add = (st, why) => { if (!st || !S[st]) return; (m.get(st) || m.set(st, []).get(st)).push(why); };
+  DATA.stones.forEach(s => { if (!pc.stones[s.id] && W.stoneClue[s.id]) add(W.stoneLoc[s.id], `Pierre de ${s.name} (${holderName(W.stoneHolder[s.id])})`); });
+  (W.arcs || []).forEach(a => { if (!pc.flags['arc_' + a.id]) add(a.state, `Événement : ${a.title}`); });
+  if (G.settings.canon) { const mm = dateOf(G.wk); const ym = mm.y * 12 + mm.m; DATA.arcs.forEach((arc, i) => { const [y, mo] = arc.date.split('-').map(Number); const am = y * 12 + mo - 1; if (am <= ym && ym - am <= 1 && !pc.flags['canon_' + i]) add(arc.state, `Canon : ${arc.title}`); }); }
+  return m;
 }
 
 // ───────── Juiciness : sons, dé animé, cartons plein écran, particules, retours haptiques ─────────
@@ -1934,15 +1953,15 @@ const EVENT_FN = {};
 
 // ───────── Voyager ─────────
 function travelMenu(pre) {
-  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box;
+  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates();
   const info = h('div', { class: 'travelinfo' }, h('span', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
   const select = to => {
     const r = otRoute(here, to); if (!r) return; const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
     sel = to; sfx('click'); box.setRoute(r);
-    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
+    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), reco.has(to) ? h('div', { class: 'recotxt2' }, '★ Conseillé : ' + reco.get(to).join(' · ')) : null, h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select });
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco });
   if (pre) setTimeout(() => select(pre), 30);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu, { cls: 'back' })] });
 }
@@ -2155,6 +2174,7 @@ function travelCard() {
 }
 function joinCard() {
   const pc = G.pc; const ids = Object.keys(F).filter(k => !['civils', 'fallen', 'noir', 'own', 'omega'].includes(k) && !(k === 'fa' && pc.ptype !== 'aucun') && (pc.rep[k] || 0) > -20);
+  if (!ids.length) return missionCard();
   const fid = pick(ids); const f = F[fid]; const dc = (f.secret ? 19 : 14) - Math.floor((pc.rep[fid] || 0) / 10);
   show({ kicker: f.name.toUpperCase(), title: 'On t’a remarqué', text: [`Quelqu’un de <b>${esc(f.name)}</b> t’aborde : « ${esc(f.goal)} Ça t’intéresse ? »`], choices: [C(`Les rejoindre`, () => joinFaction(fid, dc), { odds: ['charisme', dc, ['social']], ic: '🏴' }), C('Décliner', hub, { cls: 'back' })] });
 }
@@ -2256,7 +2276,7 @@ function vehicleDest(vid) {
   const pickIt = s => { const r = vehicleOk(vid, G.loc, s); if (!r) return; const wk = Math.max(1, Math.ceil(r.hops / v.spd)); const fuel = 10 + r.hops * 6;
     if (sel === s) { if (G.pc.money < fuel) { toast('Carburant insuffisant (' + fuel + ' ¢)'); return; } return vehicleGo(vid, s, wk, fuel, r); }
     sel = s; sfx('click'); box.setRoute(r); info.innerHTML = ''; info.append(h('b', {}, `${capName(G.loc)} → ${capName(s)}`), h('div', {}, `${r.hops} arrêt(s) · ${wk} sem. · carburant `, h('b', { class: 'acc' }, fuel + ' ¢')), h('div', { class: 'acc' }, '▶ Touche encore ' + capName(s) + ' pour partir')); };
-  box = mapBox({ here: G.loc, pick: new Set(DATA.states.filter(s => vehicleOk(vid, G.loc, s.id)).map(s => s.id)), onPick: pickIt });
+  box = mapBox({ here: G.loc, reco: recoStates(), pick: new Set(DATA.states.filter(s => vehicleOk(vid, G.loc, s.id)).map(s => s.id)), onPick: pickIt });
   show({ kicker: ITEMS[vid].n, title: 'Destination', text: [`Depuis ${esc(capName(G.loc))}. ${ITEMS[vid].desc}`], extra: h('div', {}, box, info), choices: L });
 }
 function vehicleGo(vid, to, wk, fuel, r) {
