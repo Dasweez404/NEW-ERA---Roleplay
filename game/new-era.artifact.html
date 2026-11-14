@@ -412,6 +412,14 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const S = {}; DATA.states.forEach(s => S[s.id] = s);
 const F = {}; DATA.factions.forEach(f => F[f.id] = f);
 const CH = {}; DATA.chars.forEach(c => CH[c.id] = c);
+// Décalage des rangs : le plus fort d'une faction en est le chef (5★) ; si son maximum est 4★ (ou 3★…), tous les rangs montent d'autant
+DATA.factions.forEach(f => {
+  const ms = DATA.chars.filter(c => c.faction === f.id); if (!ms.length) return;
+  const mx = Math.max(...ms.map(c => c.stars)); if (mx <= 0) return;
+  const sh = 5 - mx; if (sh > 0) ms.forEach(c => { if (c.stars > 0) c.stars = Math.min(5, c.stars + sh); });
+  const keep = (f.leaders || []).filter(l => CH[l] && CH[l].faction === f.id && CH[l].stars === 5);
+  if (keep.length) f.leaders = keep; else { const top = ms.filter(c => c.stars === 5); if (top.length) f.leaders = [top[0].id]; }
+});
 const PW = {}; DATA.powers.forEach(p => PW[p.id] = p);
 const STONE = {}; DATA.stones.forEach(s => STONE[s.id] = s);
 const CONT = ['Europe', 'Amérique', 'Afrique', 'Asie', 'Océanie'];
