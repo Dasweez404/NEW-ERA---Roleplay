@@ -102,6 +102,8 @@ function startGame(spec) {
   G.world = initWorld(); G.fresh = true;
   if (pc.charId) { G.world.npc[pc.charId].alive = false; G.world.npc[pc.charId].st = 'pc'; const lead = Object.values(F).find(f => f.leaders.includes(pc.charId)); if (lead) G.world.leader[lead.id] = 'pc'; }
   const f0 = F[pc.faction]; G.loc = (pc.charId && f0 && f0.leaders.includes(pc.charId)) ? f0.hq : pc.origin;
+  { const mem = DATA.chars.filter(c => c.faction === pc.faction && c.id !== pc.charId && G.world.npc[c.id].alive && !F[pc.faction].leaders.includes(c.id)); // la moitié de ta faction est dans les parages dès le départ
+    shuffle(mem.slice()).slice(0, Math.ceil(mem.length / 2)).forEach(c => { G.world.npc[c.id].loc = G.loc; }); }
   pc.inv = { capsule: 2, kit: 2 }; startKit(pc);
   if (G.settings.mode === 'libre') setupLibre();
   initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type));

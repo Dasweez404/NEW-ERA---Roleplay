@@ -144,10 +144,17 @@ function recruitPrice(c) { return Math.round((100 + c.stars * 180 + Math.min(c.r
 function recruitMenu() {
   const pc = G.pc; const here = npcsHere().filter(c => !Object.values(F).some(f => f.leaders.includes(c.id) && G.world.leader[f.id] === c.id && f.id !== pc.faction) || true);
   const L = [];
+  if (pc.faction !== 'civils' && F[pc.faction]) { const roster = DATA.chars.filter(c => c.faction === pc.faction && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free'); if (roster.length) L.push(C(`Annuaire de ${F[pc.faction].name} (${roster.length} membres)`, () => factionRoster(0), { ic: '📇', sub: 'Tous les membres vivants de ta faction, où qu’ils soient.' })); }
   here.slice(0, 12).forEach(c => { const lead = Object.values(F).some(f => G.world.leader[f.id] === c.id); L.push(C(`${c.name} — ${F[c.faction].name}`, () => meetNpc(c.id), { img: c.id, sub: `${c.stars ? 'Prestige ' + '★'.repeat(c.stars) : 'Anonyme'} · ${STYLES[c.style || 'brawler'].name} · ${charPowerText(c)}${lead ? ' · CHEF DE FACTION' : ''}` })); });
   if (!here.length) L.push(Object.assign(C('Personne de remarquable ici', () => { }), { lock: 'Essaie une autre ville, ou le QG d’une faction' }));
   L.push(C('Chercher des rumeurs et des visages (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const ev = randomHubEvent(true); if (ev) ev(); else show({ title: 'Rien', text: ['Une semaine à traîner dans les bars et les marchés. Rien de neuf.'], choices: [C('Continuer', hub)] }); }));
   L.push(C('← Retour', actionsMenu)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
+}
+function factionRoster(page) {
+  const pc = G.pc; const all = DATA.chars.filter(c => c.faction === pc.faction && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free').sort((a, b) => b.stars - a.stars); const per = 8; const pages = Math.max(1, Math.ceil(all.length / per)); page = clamp(page, 0, pages - 1);
+  const L = all.slice(page * per, page * per + per).map(c => C(`${c.name}${G.world.npc[c.id].loc === G.loc ? ' · ici' : ' · ' + capName(G.world.npc[c.id].loc)}`, () => meetNpc(c.id), { img: c.id, sub: `${c.stars ? 'Prestige ' + '★'.repeat(c.stars) : 'Anonyme'} · ${STYLES[c.style || 'brawler'].name} · ${charPowerText(c)}` }));
+  if (page > 0) L.push(C('← Page précédente', () => factionRoster(page - 1), { cls: 'back' })); if (page < pages - 1) L.push(C('Page suivante →', () => factionRoster(page + 1)));
+  L.push(C('← Retour', recruitMenu)); show({ kicker: F[pc.faction].name, title: 'Annuaire de la faction', text: [`${all.length} membres vivants. Page ${page + 1}/${pages}.`], choices: L });
 }
 function meetNpc(cid) {
   const c = CH[cid]; const pc = G.pc; const price = recruitPrice(c); const rep = pc.rep[c.faction] || 0;
