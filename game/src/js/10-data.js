@@ -148,7 +148,7 @@ function otRoute(fromState, toState) {
     if (last && last.line === seq[i].ln) { last.to = seq[i].st; last.stops++; }
     else legs.push({ line: seq[i].ln, from: seq[i - 1].st, to: seq[i].st, stops: 1 });
   }
-  return { hops, legs, cost: hops * 18 };
+  return { hops, legs, cost: hops * 18, path: seq.map(s => s.st) };
 }
 
 // ───────── Objets ─────────

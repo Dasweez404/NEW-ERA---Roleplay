@@ -5,7 +5,7 @@ function capturedScene(text) {
   pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4));
   pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : 20), tartare: st >= 4 };
   pc.stash = { inv: pc.inv, eq: pc.eq }; pc.inv = { kit: 0 }; delete pc.inv.kit; pc.eq = { arme: null, armure: null };
-  G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par la Force d’Autorité.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
+  splash({ title: 'CAPTURÉ', sub: pc.flags.cap.tartare ? 'Direction le Tartare' : 'Derrière les barreaux', icon: '⛓', color: '#ff3d7f' }); shake('shake-big'); G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par la Force d’Autorité.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
   show({ kicker: 'CAPTURÉ', title: pc.flags.cap.tartare ? 'Le Tartare' : 'Cellule', text: [text || 'On te passe les menottes.', st >= 4 ? 'Tu es un multirécidiviste, « représentant » de ta faction, recherché sur tout le globe : direction le <b>Tartare</b>, la plus grande prison du monde, sous la garde de Gaia, Erebe, Nyx et Eros.' : st >= 3 ? 'Prison continentale. Ils ne comptent pas te relâcher de sitôt.' : st >= 2 ? 'Prison d’État. Quelques mois derrière les barreaux t’attendent.' : 'Garde à vue. Pour des infractions mineures, tu n’en as pas pour longtemps.', 'Ton équipement est confisqué. Les captifs vivants peuvent être interrogés, emprisonnés, torturés, exécutés ou vendus selon leur mise à prix.'], choices: [C('Continuer', hub)] });
 }
 function capturedMenu() {
@@ -33,7 +33,7 @@ function release(text, repFx, extra, interrogated) {
   pc.hp = Math.max(pc.hp, Math.round(pc.hpMax * 0.5)); pc.en = pc.enMax; if (!interrogated) addHeat(-10, L);
   if (repFx) L.push(...fx({ rep: repFx }));
   G.loc = G.loc === 'swahilis' && wantedStars() >= 4 ? 'swahilis' : G.loc; recalc(); logEntry('Libéré.'); G.board = null;
-  show({ kicker: 'LIBÉRÉ', title: 'Tu es libre', text: [text], fx: L, choices: [C('Continuer', hub)] });
+  splash({ title: 'LIBRE', icon: '🗝', color: '#35f0a0' }); show({ kicker: 'LIBÉRÉ', title: 'Tu es libre', text: [text], fx: L, choices: [C('Continuer', hub)] });
 }
 function escapeMenu() {
   const pc = G.pc; const cap = pc.flags.cap; if (!cap) return hub(); const tier = clamp(cap.stars + 1, 1, 5); const dc = dcOf(tier); const L = [];
@@ -51,7 +51,7 @@ function becomeFallenScene() {
 function becomeFallen(forced) {
   const pc = G.pc; const old = pc.faction; const L = []; pc.flags.cap = null; if (pc.stash) { pc.inv = pc.stash.inv; pc.eq = pc.stash.eq; pc.stash = null; }
   L.push(...fx({ rep: { [old]: -30 }, spill: true })); pc.faction = 'fallen'; pc.merit = 0; pc.grade = Math.max(0, Math.min(pc.grade, 2)); pc.heat = 0; pc.implant = { deadline: G.wk + 12 }; pc.rep.fallen = 30; pc.rep.fa = 5;
-  recalc(); pc.hp = pc.hpMax; logEntry('Tu es devenu Fallen : implant explosif posé.'); G.board = null;
+  splash({ title: 'FALLEN', sub: 'Implant explosif posé', icon: '💥', color: '#ff3d7f' }); recalc(); pc.hp = pc.hpMax; logEntry('Tu es devenu Fallen : implant explosif posé.'); G.board = null;
   show({ kicker: 'FALLEN', title: 'L’implant', text: ['L’aiguille s’enfonce dans ta nuque. Une petite lumière clignote : douze semaines pour livrer une prime.', 'Dans le menu « Missions », ton contrat de chasseur apparaît en rouge. Tu peux aussi chercher à faire retirer l’implant (menu « Ta faction »).'], fx: L, choices: [C('Continuer', hub)] });
 }
 function queueFallenForced() { show({ kicker: 'VENTE', title: 'Vendu', text: ['On ne te garde pas : on te vend. Le Marché Noir te propose l’implant plutôt que la mine.'], choices: [C('Accepter l’implant', () => becomeFallen(true)), C('Refuser', () => endGame('dead', 'Mort dans les mines du Marché Noir.'), { cls: 'danger' })] }); }

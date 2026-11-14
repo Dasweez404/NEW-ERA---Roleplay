@@ -1,5 +1,5 @@
 // ───────── Interface ─────────
-const UI = { tab: 'perso', scene: null, tabOpen: true };
+const UI = { tab: 'perso', scene: null, sheetOpen: false, after: [], prev: null, roll: null };
 const PCN = () => esc(G.pc.name);
 
 // Conditions d'accès (choix verrouillés mais visibles)
@@ -32,56 +32,96 @@ function reqReason(rq) {
 }
 // fabrique de choix
 function C(label, go, o = {}) {
-  const lock = reqReason(o.req);
-  let sub = o.sub || '';
-  if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; const p = odds(a, dc, tags || [], ex || 0); sub = `${AT[a].short} contre difficulté ${dc} — environ ${Math.round(p * 100)} % de réussite` + (sub ? ' · ' + sub : ''); }
-  return { label, go, sub, cls: o.cls || (o.odds ? (odds(...[o.odds[0], o.odds[1], o.odds[2] || [], o.odds[3] || 0]) < .4 ? 'risk' : '') : ''), lock };
+  const lock = reqReason(o.req); let sub = o.sub || ''; let pct = null;
+  if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; pct = Math.round(odds(a, dc, tags || [], ex || 0) * 100); sub = `${AT[a].short} contre ${dc}` + (sub ? ' · ' + sub : ''); }
+  return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, ic: o.ic };
 }
-const fxHTML = L => L && L.length ? h('div', { class: 'fx' }, L.map(l => h('div', { class: l.c || '' }, l.t))) : null;
+const fxHTML = L => L && L.length ? h('div', { class: 'chips' }, L.map((l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t))) : null;
 
-function show(sc) { if (G && G.status !== 'play' && !sc.final) return; UI.scene = sc; render(); window.scrollTo({ top: 0 }); }
-function paragraphs(t) { return [].concat(t || []).map(x => typeof x === 'string' ? h('p', { html: x }) : x); }
+function show(sc) {
+  if (G && G.status !== 'play' && !sc.final) return;
+  const roll = UI.roll; UI.roll = null;
+  if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).filter(t => !(typeof t === 'string' && t.startsWith('🎲'))); }
+  UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
+}
+function paragraphs(t) { return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => typeof x === 'string' ? h('p', { class: 'rv', style: `--i:${i}`, html: x }) : x); }
 
+function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
 function hudEl() {
-  const pc = G.pc; const st = wantedStars(); const f = F[pc.faction];
-  return h('div', { class: 'hud' },
-    h('div', {}, h('div', { class: 'nm' }, pc.name, pc.ownFaction ? '' : ''), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
-    h('div', { class: 'pill' }, '📍 ' + stateName(G.loc) + ' (' + capName(G.loc) + ')'),
-    h('div', { class: 'pill' }, '🗓 ' + dateStr()),
-    h('div', { class: 'pill' }, '💰 ' + fmt(pc.money) + ' ¢'),
-    h('div', { class: 'pill', title: WANTED_TXT[st] }, st ? 'Prime ' + starStr(st) : 'Prime : aucune'),
-    h('div', { class: 'pill' }, '💎 ' + stoneCount() + '/16'),
-    h('div', { class: 'hudbars' },
-      h('div', {}, `PV ${pc.hp}/${pc.hpMax}`, h('div', { class: 'bar hp' }, h('i', { style: `width:${pc.hp / pc.hpMax * 100}%` }))),
-      h('div', {}, `Énergie ${pc.en}/${pc.enMax}`, h('div', { class: 'bar en' }, h('i', { style: `width:${pc.enMax ? pc.en / pc.enMax * 100 : 0}%` })))),
-    h('div', { style: 'margin-left:auto' }, h('button', { class: 'btn alt', onclick: () => { saveGame(); toast('Partie sauvegardée.'); } }, '💾'), ' ', h('button', { class: 'btn alt', onclick: () => { if (confirm('Quitter vers le menu ? (la partie est sauvegardée)')) { saveGame(); titleScreen(); } } }, '☰')));
+  const pc = G.pc; const st = wantedStars(); const f = F[pc.faction]; const pv = UI.prev || { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
+  const hpP = pc.hp / pc.hpMax * 100, enP = pc.enMax ? pc.en / pc.enMax * 100 : 0;
+  const hpBar = h('i', { style: `width:${pv.hp / pc.hpMax * 100}%` }), enBar = h('i', { style: `width:${pv.en / (pc.enMax || 1) * 100}%` });
+  const money = h('b', { class: 'num' }, fmt(pv.money)); const hpN = h('b', {}, pv.hp);
+  UI.after.push(() => { requestAnimationFrame(() => { hpBar.style.width = hpP + '%'; enBar.style.width = enP + '%'; }); countUp(money, pv.money, pc.money); countUp(hpN, pv.hp, pc.hp); });
+  const cls = 'hud' + (pc.hp < pv.hp ? ' dmg' : pc.hp > pv.hp ? ' heal' : '') + (pc.money > pv.money ? ' gain' : '');
+  if (pc.hp < pv.hp) UI.after.push(() => { shake(); });
+  UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
+  return h('div', { class: cls },
+    h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
+      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { if (confirm('Quitter vers le menu ? (la partie est sauvegardée)')) { saveGame(); titleScreen(); } } }, '☰'))),
+    h('div', { class: 'hud-bars' },
+      h('div', { class: 'stat hp' }, h('span', { class: 'lab' }, 'SANTÉ'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
+      h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
+    h('div', { class: 'hud-pills' },
+      h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('span', { class: 'pill gem' }, '💎 ' + stoneCount() + '/16'),
+      h('span', { class: 'pill' }, '📍 ' + capName(G.loc)), h('span', { class: 'pill' }, '🗓 ' + dateStr())));
 }
-function toast(t) { const el = h('div', { style: 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--acc);padding:8px 16px;border-radius:10px;z-index:99' }, t); document.body.append(el); setTimeout(() => el.remove(), 1600); }
+function toast(t) { const el = h('div', { class: 'toast' }, t); document.body.append(el); setTimeout(() => el.remove(), 1800); }
 
-function choicesEl(list) {
-  return h('div', { class: 'choices' }, list.filter(Boolean).map(c => h('button', { class: 'ch ' + (c.cls || ''), disabled: !!c.lock, onclick: () => { if (!c.lock) c.go(); } },
-    h('div', { class: 'l' }, c.label), c.sub ? h('div', { class: 's' }, c.sub) : null, c.lock ? h('div', { class: 'lockwhy' }, c.lock) : null)));
+function choicesEl(list, tiles) {
+  const items = list.filter(Boolean); const ctaIdx = items.length <= 3 ? items.findIndex(c => /^(Continuer|Commencer|Suivant|Partir|Accepter|Jouer)/.test(c.label)) : -1;
+  return h('div', { class: 'choices' + (tiles ? ' tiles' : '') }, items.map((c, i) => {
+    const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
+    return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); c.go(); } } },
+      !cta && !back && !tiles ? h('span', { class: 'key' }, i + 1) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
+      h('span', { class: 'body' }, h('span', { class: 'l' }, c.label), c.sub ? h('span', { class: 's' }, c.sub) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
+      c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%') : null, cta ? h('span', { class: 'arrow' }, '›') : null);
+  }));
 }
 
-function render() {
-  const app = $('#app'); app.innerHTML = '';
+function tickerEl() {
+  const n = G.world.news[0]; if (!n || G.wk - n.wk > 5 || UI.tickerWk === n.wk + n.t) return null;
+  return h('div', { class: 'ticker', onclick: () => { UI.tickerWk = n.wk + n.t; render(true); } }, h('span', { class: 'tk' }, '⚡ ACTU'), h('span', { class: 'tt' }, n.t), h('span', { class: 'x' }, '✕'));
+}
+function render(quiet) {
+  const app = $('#app'); app.innerHTML = ''; app.className = quiet ? 'quiet' : ''; UI.after = [];
   const sc = UI.scene; if (!sc) return;
-  if (sc.bare) { app.append(h('div', {}, sc.extra)); return; }
-  const main = h('div', { class: 'card scene' },
-    sc.kicker ? h('div', { class: 'kicker' }, sc.kicker) : null,
-    h('div', { class: 'title' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices) : null);
+  if (sc.bare) { app.append(h('div', {}, sc.extra)); runAfter(); return; }
   const live = G && G.status === 'play';
-  if (live) app.append(hudEl());
-  app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, live ? sideEl() : null));
+  const rollEl = sc.roll ? diceEl(sc.roll, quiet || sc.rolled) : null; if (sc.roll) sc.rolled = true;
+  const d = sc.roll && !quiet ? 1.05 : 0;
+  const main = h('div', { class: 'card scene', style: `--d:${d}s` },
+    sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
+    h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
+  if (live) { app.append(hudEl()); const tk = tickerEl(); if (tk) app.append(tk); }
+  const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
+  app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
+  if (live) app.append(dockEl());
+  if (live && UI.sheetOpen) fillSheet();
+  if (sc.after && !sc.afterRan) { sc.afterRan = true; UI.after.push(sc.after); }
+  if (d && !quiet) { const ch = $('.choices', main); if (ch) { ch.style.pointerEvents = 'none'; setTimeout(() => { ch.style.pointerEvents = ''; }, d * 1000 + 200); } }
+  runAfter();
 }
+function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
-// ───────── Panneau latéral ─────────
-const TABS = [['perso', '🧍 Perso'], ['inv', '🎒 Sac'], ['groupe', '👥 Groupe'], ['factions', '🏴 Factions'], ['pierres', '💎 Pierres'], ['carte', '🗺 Carte'], ['journal', '📜 Journal'], ['aide', '❓ Règles']];
+// ───────── Panneau latéral (bureau) / tiroir + dock (mobile) ─────────
+const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions'], ['pierres', '💎', 'Pierres'], ['carte', '🗺', 'Carte'], ['journal', '📜', 'Journal'], ['aide', '❓', 'Règles']];
+const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
-  box.append(h('div', { class: 'tabs' }, TABS.map(([k, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { UI.tab = k; render(); } }, n))));
-  box.append(({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide }[UI.tab])());
-  return box;
+  box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { UI.tab = k; sfx('click'); render(true); } }, ic + ' ' + n))));
+  box.append(TABFN()[UI.tab]()); return box;
+}
+function dockEl() {
+  return h('nav', { class: 'dock' }, TABS.filter(t => t[0] !== 'aide' && t[0] !== 'factions' || true).map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
+}
+function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i][0] === tab)); }
+function closeSheet() { UI.sheetOpen = false; const s = $('#sheet'); if (s) s.classList.remove('open'); document.querySelectorAll('.dk').forEach(b => b.classList.remove('on')); }
+function fillSheet() {
+  let s = $('#sheet'); if (!s) { s = h('div', { id: 'sheet' }); document.body.append(s); }
+  s.innerHTML = ''; const t = TABS.find(x => x[0] === UI.tab);
+  s.append(h('div', { class: 'sh-bg', onclick: closeSheet }), h('div', { class: 'sh-pan' }, h('div', { class: 'sh-head' }, h('b', {}, t[1] + ' ' + t[2]), h('button', { class: 'ibtn', onclick: closeSheet }, '✕')), h('div', { class: 'sh-body side' }, TABFN()[UI.tab]())));
+  requestAnimationFrame(() => s.classList.add('open'));
 }
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
@@ -96,7 +136,7 @@ function tabPerso() {
   box.append(h('h3', {}, 'Attributs' + (pc.pts ? ` — ${pc.pts} point(s) à répartir` : '')));
   ATTRS.forEach(a => {
     const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' }));
-    box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v), pc.pts > 0 && pc.attrs[a.id] < 12 ? h('button', { class: 'tab', onclick: () => { pc.attrs[a.id]++; pc.pts--; recalc(); render(); } }, '+') : null));
+    box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v), pc.pts > 0 && pc.attrs[a.id] < 12 ? h('button', { class: 'tab', onclick: () => { pc.attrs[a.id]++; pc.pts--; recalc(); render(true); } }, '+') : null));
   });
   box.append(h('h3', {}, 'Progression'));
   const nxt = MERIT_STEPS[pc.grade + 1];
@@ -113,8 +153,8 @@ function tabInv() {
   ids.forEach(id => {
     const it = ITEMS[id]; const row = h('div', { style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, h('b', {}, it.n + (pc.inv[id] > 1 ? ' ×' + pc.inv[id] : '')), h('div', { class: 'small mut' }, it.desc));
     const btns = h('div', { class: 'row', style: 'margin-top:3px' });
-    if (it.t === 'arme' || it.t === 'armure') { const slot = it.t === 'arme' ? 'arme' : 'armure'; btns.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
-    if (it.t === 'conso' && ['en8', 'hp15', 'hp40'].includes(it.use)) btns.append(h('button', { class: 'tab', onclick: () => { useItem(id); render(); } }, 'Utiliser'));
+    if (it.t === 'arme' || it.t === 'armure') { const slot = it.t === 'arme' ? 'arme' : 'armure'; btns.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(true); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
+    if (it.t === 'conso' && ['en8', 'hp15', 'hp40'].includes(it.use)) btns.append(h('button', { class: 'tab', onclick: () => { useItem(id); render(true); } }, 'Utiliser'));
     row.append(btns); box.append(row);
   });
   return box;
@@ -130,7 +170,7 @@ function tabGroupe() {
   const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, `Groupe : ${pc.party.length}/${partyMax()} (le grade et le rôle de Leader augmentent la taille).`));
   if (!pc.party.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Tu voyages seul. Recrute des gens dans le menu « Recruter ».'));
   pc.party.forEach(a => { const c = CH[a.id]; box.append(h('div', { style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, h('b', {}, c.name), ` — ${F[c.faction].name}`, h('div', { class: 'small' }, `${STYLES[a.style].name} · PV ${a.hp}/${a.hpMax} · loyauté ${a.loy}${a.inj > 0 ? ' · blessé (' + a.inj + ' sem.)' : ''}`),
-    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: () => { if (confirm('Renvoyer ' + c.name + ' ?')) { removeAlly(a.id); addRep(c.faction, -3); render(); } } }, 'Renvoyer'))); });
+    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: () => { if (confirm('Renvoyer ' + c.name + ' ?')) { removeAlly(a.id); addRep(c.faction, -3); render(true); } } }, 'Renvoyer'))); });
   return box;
 }
 function charPowerText(c) { const ps = (c.powers.length ? c.powers : fallbackPowers(c)).map(id => PW[id].name); return ps.length ? ps.join(' + ') : 'sans pouvoir'; }
@@ -204,10 +244,20 @@ function mapEl(o = {}) {
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
+  if (o.route && o.route.length > 1) {
+    const rp = o.route.map(id => OT_ST[id][0] + ',' + OT_ST[id][1]).join(' ');
+    svg.append(el('polyline', { points: rp, fill: 'none', stroke: '#000', 'stroke-width': 16, 'stroke-opacity': .25, 'stroke-linejoin': 'round' }), el('polyline', { points: rp, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '4 14', 'stroke-linecap': 'round', class: 'routeline' }));
+    o.route.forEach(id => svg.append(el('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 15, fill: 'none', stroke: '#ff3d7f', 'stroke-width': 4, class: 'pulse' })));
+  }
   return svg;
 }
+function mapBox(o = {}) {
+  UI.zoom = UI.zoom || 1; const svg = mapEl(o); const inner = h('div', { class: 'mapin', style: `width:${UI.zoom * 100}%` }, svg);
+  const z = d => () => { UI.zoom = clamp(UI.zoom + d, 1, 3); inner.style.width = UI.zoom * 100 + '%'; };
+  return h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, h('button', { class: 'ibtn', onclick: z(0.5) }, '＋'), h('button', { class: 'ibtn', onclick: z(-0.5) }, '－')), h('div', { class: 'mapscroll' }, inner));
+}
 function tabCarte() {
-  const box = h('div'); box.append(mapEl({ here: G.loc }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
+  const box = h('div'); box.append(mapBox({ here: G.loc }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
   const legend = h('div', { class: 'row small', style: 'margin-top:6px' }); Object.entries(OT_LINES).forEach(([n, L]) => legend.append(h('span', {}, h('span', { style: `display:inline-block;width:14px;height:8px;background:${L.c};border:1px solid #000;margin-right:3px` }), n))); box.append(legend);
   return box;
 }

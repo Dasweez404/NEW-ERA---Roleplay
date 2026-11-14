@@ -33,9 +33,10 @@ function skill(attrId, tags = []) {
 }
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod;
-  const res = { r, total, dc, mod, parts: s.parts, crit: r === 20, fumble: r === 1 };
+  const res = { r, total, dc, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
   res.ok = res.crit || (!res.fumble && total >= dc);
   if (G.pc.stim > 0) G.pc.stim = 0;
+  UI.roll = res;
   return res;
 }
 function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dc - m)) / 20, 0.05, 0.95); }
@@ -86,6 +87,7 @@ function gainStone(id) {
   const s = STONE[id]; const pc = G.pc; const L = [];
   if (pc.stones[id]) return L;
   pc.stones[id] = G.wk; G.world.stoneHolder[id] = 'pc'; G.world.stoneLoc[id] = G.loc; G.score.stones = Math.max(G.score.stones, stoneCount());
+  splash({ title: 'PIERRE ' + s.name.toUpperCase(), sub: `${stoneCount()}/16 pierres antiques`, color: s.color, icon: '💎', ms: 2300 }); sfx('stone'); buzz([30, 40, 80]);
   L.push({ t: `✨ Pierre antique de ${s.name} obtenue (${stoneCount()}/16) ! +1 ${AT[STONE_ATTR[id]].short}`, c: 'acc' });
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
@@ -107,7 +109,7 @@ function advance(weeks) {
     const pc = G.pc;
     pc.hp = Math.min(pc.hpMax, pc.hp + 1); pc.en = Math.min(pc.enMax, pc.en + 2);
     pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
-    if (G.wk % 4 === 0) monthTick();
+    if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;
   }
 }

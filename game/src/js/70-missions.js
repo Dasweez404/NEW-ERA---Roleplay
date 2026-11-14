@@ -187,7 +187,7 @@ function finishMission(o, quality, lines, extraFx) {
 }
 function promote(L0) {
   const pc = G.pc; pc.grade++; const f = F[pc.faction]; const s0 = wantedStars(); addHeat(0); pc.heat = Math.max(pc.heat, minHeat()); const s1 = wantedStars();
-  recalc(); pc.hp = pc.hpMax; logEntry(`Promotion : ${gradeName()} (${f.name}).`);
+  recalc(); pc.hp = pc.hpMax; splash({ title: 'PROMOTION', sub: `${gradeName()} ${'★'.repeat(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
   const L = [...(L0 || [])]; if (s1 > s0) L.push({ t: `Plus tu es gradé, plus on te cherche : prime ${starStr(s1)} — ${WANTED_TXT[s1]}.`, c: 'badc' });
   const dec = ['aucune décision', 'tu votes dans les décisions de ta faction', 'tu peux proposer des opérations', 'tu décides des opérations locales', 'tu pèses sur les grandes décisions', 'tu décides de tout'][pc.grade];
   show({ kicker: 'PROMOTION', title: `${gradeName()} ${'★'.repeat(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });

@@ -19,16 +19,16 @@ function hub() {
   const pend = pendingEvents(); if (pend) return pend();
   const f = F[pc.faction];
   const L = [];
-  L.push(C('Missions', missionBoard, { sub: 'Contrats, ordres de ta faction, petites et grosses missions.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
-  L.push(C('Voyager (Orbitrail)', travelMenu, { sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
-  L.push(C('Enquêter sur les pierres antiques', stoneMenu, { sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
-  L.push(C('Se reposer', restMenu, { sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', shopMenu, { sub: 'Armes, armures, gadgets, soins. Marché Noir si tu as les contacts.' }));
-  L.push(C('Recruter / rencontrer', recruitMenu, { sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
-  L.push(C(`Ta faction : ${f.name}`, factionMenu, { sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
-  L.push(C('S’entraîner / choisir un rôle', trainMenu, { sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno.' }));
-  L.push(C('Prendre sa retraite', retireConfirm, { sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
-  show({ kicker: dateStr(), title: 'Que fais-tu ?', text: hubText(), choices: L });
+  L.push(C('Missions', missionBoard, { ic: '🎯', sub: 'Contrats, ordres de ta faction, petites et grosses missions.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
+  L.push(C('Voyager (Orbitrail)', travelMenu, { ic: '🚆', sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
+  L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
+  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
+  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins. Marché Noir si tu as les contacts.' }));
+  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
+  L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
+  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno.' }));
+  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
+  show({ kicker: dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -41,7 +41,7 @@ const EVENT_FN = {};
 function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt (les traversées du Pacifique comptent triple). Un scout-hover permet de voyager hors du réseau.'],
-    extra: h('div', {}, mapEl({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
+    extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
     choices: [C('Choisir dans la liste', travelList), hasItem('hover') ? C('Voyager en scout-hover (hors Orbitrail)', travelHover, { sub: 'Non tracé, mais exposé aux dérèglements climatiques.' }) : null, C('← Retour', hub)] });
 }
 function travelList() {
@@ -54,7 +54,7 @@ function travelConfirm(to) {
   const r = otRoute(G.loc, to); if (!r) return travelMenu();
   const weeks = 1 + Math.floor((r.hops - 1) / 4); const chance_ = Math.round(detectChance() * 100);
   show({ kicker: 'Orbitrail', title: `${capName(G.loc)} → ${capName(to)}`, text: [`Trajet : ${esc(routeText(r))}.`, `${r.hops} arrêt(s), ${weeks} semaine(s), <b>${r.cost} ¢</b>.`, `Risque de contrôle : environ <b>${chance_} %</b> ${pc_hasFaux() ? '(faux papiers)' : ''}`],
-    extra: h('div', {}, mapEl({ here: G.loc, pick: new Set([to]), onPick: () => { } })), choices: [C('Partir', () => travelGo(to, r, weeks), { req: { money: r.cost } }), C('Annuler', travelMenu)] });
+    extra: h('div', {}, mapBox({ here: G.loc, pick: new Set([to]), onPick: () => { }, route: r.path })), choices: [C('Partir', () => travelGo(to, r, weeks), { req: { money: r.cost } }), C('Annuler', travelMenu)] });
 }
 const pc_hasFaux = () => G.pc.faux > 0;
 function detectChance() {
@@ -68,6 +68,7 @@ function travelGo(to, r, weeks) {
   const used = [];
   if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
   const ctl = chance(detectChance() + (used.length ? 0 : 0));
+  const ln = r.legs.length ? r.legs[0].line : 1; splash({ title: 'LIGNE ' + ln + (r.legs.length > 1 ? ' …' : ''), sub: `${capName(from)} → ${capName(to)}`, icon: '🚆', color: OT_LINES[ln].c === '#151515' ? '#fff' : OT_LINES[ln].c, cls: 'train', ms: 1300 });
   G.loc = to; advance(weeks); if (G.status !== 'play') return;
   logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
   if (ctl) return controleFA(r);

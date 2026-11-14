@@ -54,7 +54,7 @@ function successionMenu() {
 }
 function becomeLeader(fid, text, how, extra) {
   const pc = G.pc; const W = G.world; W.leader[fid] = 'pc'; pc.grade = 5; pc.merit = Math.max(pc.merit, MERIT_STEPS[5]); delete pc.flags.vacant; recalc(); pc.hp = pc.hpMax; pc.heat = Math.max(pc.heat, minHeat()); G.board = null; G.score.leader = 1;
-  logEntry(`Tu deviens ${how === 'relève' ? 'la relève et ' : ''}le chef de ${F[fid].name}.`); newsPush(`${pc.name} prend la tête de ${F[fid].name}.`);
+  splash({ title: 'CHEF', sub: F[fid].name, icon: '👑', color: '#ffe83a', ms: 2200 }); logEntry(`Tu deviens ${how === 'relève' ? 'la relève et ' : ''}le chef de ${F[fid].name}.`); newsPush(`${pc.name} prend la tête de ${F[fid].name}.`);
   show({ kicker: 'CHEF', title: `Tu diriges ${F[fid].name}`, text: [text, 'Tu décides de tout, tu es recherché sur toute la planète (prime ⭐⭐⭐⭐ pour les factions ANTI), et chaque mois, des décisions t’attendent. Menu « Ta faction → Diriger la faction ».'], fx: extra || [], choices: [C('Continuer', hub)] });
 }
 EVENT_FN.succession = function (fid) { show({ kicker: F[fid].name, title: 'Le chef est mort', text: [`${esc(F[fid].name)} n’a plus de chef. Tu es Bras droit : tu peux prendre la tête (menu Ta faction → Prétendre à la tête).`], choices: [C('Prendre la tête maintenant', () => becomeLeader(fid, 'Le fauteuil est vide. Tu t’y installes.', 'mort')), C('Plus tard', hub)] }); };

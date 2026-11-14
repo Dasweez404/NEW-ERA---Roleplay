@@ -4,94 +4,162 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NEW ERA — Le jeu à choix</title>
-<style>:root{--bg:#0d0e13;--panel:#161822;--panel2:#1d2030;--line:#2b2f45;--tx:#e9e9f0;--mut:#9aa0b8;--acc:#ffd23f;--acc2:#3ee0ff;--bad:#ff4d6d;--ok:#4be38a;--warn:#ff9f43;--lock:#5b6076}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+<style>:root{--bg:#09080f;--panel:#12122a;--panel2:#191a38;--line:#2a2c52;--tx:#ecebf7;--mut:#9a9cc0;--acc:#ffe83a;--acc2:#27f0ff;--bad:#ff3d7f;--ok:#35f0a0;--warn:#ff9f43;--lock:#5b6076;--vi:#a678ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden;max-width:100vw;margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+body{background:radial-gradient(1200px 600px at 80% -10%,#2a1456 0%,transparent 60%),radial-gradient(900px 500px at -10% 110%,#0b3350 0%,transparent 55%),var(--bg);min-height:100vh}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px)}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
 button{font:inherit;color:inherit;cursor:pointer}
-#app{max-width:1280px;margin:0 auto;padding:10px 14px 60px}
-.logo{font-family:Impact,"Arial Black",sans-serif;font-style:italic;text-transform:uppercase;letter-spacing:2px;color:#fff;text-shadow:3px 3px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;-webkit-text-stroke:2px #000;paint-order:stroke fill}
+#app{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:10px 12px calc(96px + env(safe-area-inset-bottom))}
+.logo{font-family:Impact,"Arial Black",sans-serif;font-style:italic;text-transform:uppercase;letter-spacing:2px;color:#fff;text-shadow:3px 3px 0 #000,0 0 28px rgba(255,232,58,.35);-webkit-text-stroke:2px #000;paint-order:stroke fill;animation:glitch 4.5s infinite}
+@keyframes glitch{0%,92%,100%{transform:none;text-shadow:3px 3px 0 #000,0 0 28px rgba(255,232,58,.35)}93%{transform:translate(-3px,1px);text-shadow:-4px 0 #ff3d7f,4px 0 #27f0ff}95%{transform:translate(3px,-1px);text-shadow:4px 0 #ff3d7f,-4px 0 #27f0ff}97%{transform:none}}
 h1,h2,h3{margin:.2em 0 .4em;line-height:1.2}
-h2{font-size:1.35rem}
-h3{font-size:1.05rem;color:var(--acc)}
-.hud{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 14px;position:sticky;top:0;z-index:5}
-.hud .nm{font-weight:800;font-size:1.05rem}
-.hud .sub{color:var(--mut);font-size:.85rem}
-.hud .pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:.85rem;white-space:nowrap}
-.bar{height:9px;background:#0a0b10;border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:90px}
-.bar>i{display:block;height:100%}
-.bar.hp>i{background:linear-gradient(90deg,#ff4d6d,#ff8a5c)}
-.bar.en>i{background:linear-gradient(90deg,#3ee0ff,#6a7bff)}
-.hudbars{display:flex;flex-direction:column;gap:3px;font-size:.72rem;color:var(--mut)}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:14px;margin-top:12px}
-@media(max-width:960px){.layout{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.scene .title{font-size:1.5rem;font-weight:800;margin:0 0 6px}
-.scene .kicker{color:var(--acc2);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
-.scene p{margin:.5em 0}
-.scene .fx{margin:10px 0;padding:8px 10px;border-left:3px solid var(--acc);background:var(--panel2);border-radius:0 8px 8px 0;font-size:.92rem}
-.scene .fx div{padding:1px 0}
-.good{color:var(--ok)}.badc{color:var(--bad)}.mut{color:var(--mut)}.warnc{color:var(--warn)}.acc{color:var(--acc)}
-.choices{display:flex;flex-direction:column;gap:7px;margin-top:12px}
-.ch{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;transition:.12s}
-.ch:hover:not(:disabled){border-color:var(--acc);transform:translateX(2px)}
-.ch .l{font-weight:700}
-.ch .s{font-size:.84rem;color:var(--mut);margin-top:1px}
-.ch.danger{border-left:4px solid var(--bad)}
-.ch.risk{border-left:4px solid var(--warn)}
-.ch.safe{border-left:4px solid var(--ok)}
-.ch:disabled{opacity:.55;cursor:not-allowed;background:#12141c;border-style:dashed}
-.ch:disabled .l::before{content:"🔒 "}
-.ch .lockwhy{color:var(--warn);font-size:.8rem;margin-top:2px}
-.tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.tab{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:.82rem}
-.tab.on{background:var(--acc);color:#000;border-color:var(--acc);font-weight:700}
-.side{font-size:.9rem}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
-.kv b{color:var(--mut);font-weight:600}
-.attr{display:flex;align-items:center;gap:8px;margin:3px 0}
-.attr .n{width:118px}
-.attr .pips{display:flex;gap:2px;flex-wrap:wrap}
-.attr .pip{width:11px;height:11px;border-radius:2px;background:#0a0b10;border:1px solid var(--line)}
-.attr .pip.on{background:var(--acc)}
-.stones{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
-.stone{aspect-ratio:1;border-radius:50%;border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;color:#000;opacity:.25;filter:grayscale(.7)}
-.stone.have{opacity:1;filter:none;box-shadow:0 0 10px currentColor}
-.tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:.75rem;margin:1px 2px 1px 0}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-@media(max-width:640px){.grid2{grid-template-columns:1fr}}
-.opt{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:left}
-.opt:hover{border-color:var(--acc)}
-.opt.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
-.opt .t{font-weight:700}.opt .d{font-size:.8rem;color:var(--mut)}
-input[type=text],input[type=number],select{background:#0a0b10;border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:7px 10px;font:inherit;width:100%}
-.btn{background:var(--acc);color:#000;border:0;border-radius:9px;padding:8px 16px;font-weight:800}
-.btn.alt{background:var(--panel2);color:var(--tx);border:1px solid var(--line);font-weight:600}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.crumbs{font-size:.85rem;color:var(--mut);margin-bottom:6px}
-.crumbs a{color:var(--acc2);cursor:pointer;text-decoration:underline}
-.map{width:100%;height:auto;background:#ececec;border-radius:10px}
-.map .st{cursor:default}
-.map .st.go{cursor:pointer}
-.map text{font:600 13px "Segoe UI",Arial,sans-serif;fill:#222;paint-order:stroke;stroke:#ececec;stroke-width:3px;pointer-events:none}
-.combat .foe{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}
-.combat .foe.dead{opacity:.35}
-.combat .log{background:#0a0b10;border:1px solid var(--line);border-radius:8px;padding:6px 10px;max-height:190px;overflow:auto;font-size:.88rem;margin:8px 0}
-.combat .log div{padding:1px 0}
-.log-hit{color:var(--ok)}.log-miss{color:var(--mut)}.log-dmg{color:var(--bad)}
-.news{font-size:.85rem}
-.news div{padding:3px 0;border-bottom:1px dashed var(--line)}
-.scroll{max-height:420px;overflow:auto}
-.title-screen{text-align:center;padding:40px 10px}
-.title-screen .logo{font-size:min(14vw,110px);line-height:.95;margin:0}
-.title-screen p{max-width:640px;margin:14px auto;color:var(--mut)}
-.title-screen .choices{max-width:420px;margin:20px auto}
-table.t{width:100%;border-collapse:collapse;font-size:.85rem}
-table.t td,table.t th{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left}
-.small{font-size:.82rem}
-.glyph{border-left:3px solid var(--acc2);padding:4px 10px;margin:8px 0;background:var(--panel2);border-radius:0 8px 8px 0;font-style:italic}
-
+h3{font-size:.95rem;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-top:1em}
+/* ───── HUD ───── */
+.hud>*{min-width:0}.hud{grid-template-columns:minmax(0,1fr);position:sticky;top:6px;z-index:6;background:linear-gradient(180deg,rgba(24,22,52,.96),rgba(14,14,32,.96));backdrop-filter:blur(8px);border:1px solid rgba(39,240,255,.22);border-radius:14px;padding:8px 12px 8px;display:grid;gap:6px;box-shadow:0 8px 30px rgba(0,0,0,.45);transition:box-shadow .3s}
+.hud.dmg{animation:hudhit .6s}.hud.heal{animation:hudheal .7s}
+@keyframes hudhit{0%{box-shadow:0 0 0 0 rgba(255,61,127,.9),inset 0 0 40px rgba(255,61,127,.45)}100%{box-shadow:0 8px 30px rgba(0,0,0,.45)}}
+@keyframes hudheal{0%{box-shadow:0 0 0 0 rgba(53,240,160,.8),inset 0 0 30px rgba(53,240,160,.35)}100%{box-shadow:0 8px 30px rgba(0,0,0,.45)}}
+.hud-top{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;flex:none;display:grid;place-items:center;font-weight:900;font-size:1.1rem;color:#000;background:hsl(var(--hue),90%,62%);clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);box-shadow:0 0 12px hsl(var(--hue),90%,62%)}
+.who{min-width:0;flex:1}.nm{font-weight:900;font-size:1.05rem;line-height:1.1;color:var(--acc);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sub{color:var(--mut);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud-btns{display:flex;gap:6px}
+.ibtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);display:grid;place-items:center;padding:0;font-size:1rem;position:relative;overflow:hidden}
+.ibtn:active{transform:scale(.92)}
+.hud-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;font-size:.66rem;letter-spacing:.1em;color:var(--mut)}
+.stat .val{color:var(--tx);font-weight:800;font-size:.8rem;letter-spacing:0;min-width:3.4em;text-align:right}
+.bar{height:8px;background:#05050c;border:1px solid var(--line);border-radius:4px;overflow:hidden;position:relative}
+.bar>i{display:block;height:100%;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.stat.hp .bar>i,.bar.hp>i{background:linear-gradient(90deg,#ff3d7f,#ff8a5c)}
+.stat.en .bar>i{background:linear-gradient(90deg,#27f0ff,#6a7bff)}
+.hud-pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:1px}.hud-pills::-webkit-scrollbar{display:none}
+.pill{flex:none;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-size:.78rem;white-space:nowrap}
+.pill.cash{color:var(--acc);font-weight:800;border-color:rgba(255,232,58,.35)}.hud.gain .pill.cash{animation:pillpop .6s}
+.pill.wanted{color:#fff;border-color:var(--bad);background:rgba(255,61,127,.18)}.pill.gem{border-color:rgba(166,120,255,.5)}
+@keyframes pillpop{40%{transform:scale(1.18);box-shadow:0 0 14px var(--acc)}}
+.ticker{display:flex;gap:8px;align-items:center;margin:8px 0 0;padding:5px 10px;border:1px solid var(--acc);border-radius:6px;background:rgba(255,232,58,.07);font-size:.8rem;cursor:pointer;animation:slidein .5s both}
+.ticker .tk{background:var(--acc);color:#000;font-weight:900;padding:0 6px;border-radius:3px;font-size:.68rem;white-space:nowrap}.ticker .tt{flex:1;color:#fff}.ticker .x{color:var(--mut)}
+@keyframes slidein{from{opacity:0;transform:translateY(-8px)}}
+/* ───── mise en page ───── */
+.layout>*{min-width:0}.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;margin-top:12px}
 .layout.solo{grid-template-columns:minmax(0,820px);justify-content:center}
+.card{background:linear-gradient(160deg,rgba(26,26,58,.94),rgba(15,15,34,.94));border:1px solid rgba(39,240,255,.18);border-radius:14px;padding:14px 16px;position:relative}
+.scene{border-left:3px solid var(--acc);clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+.scene .title{font-size:1.5rem;font-weight:900;margin:2px 0 8px;letter-spacing:.01em}
+.kicker{color:var(--acc2);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;font-weight:800}
+.scene p{margin:.55em 0;font-size:1.02rem}
+.rv{animation:rv .6s both;animation-delay:calc(var(--d,0s) + var(--i,0)*85ms)}
+@keyframes rv{from{opacity:0;transform:translateY(12px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+.quiet .rv,.quiet .card,.quiet .dicebox{animation:none!important}
+.good{color:var(--ok)}.badc{color:var(--bad)}.mut{color:var(--mut)}.warnc{color:var(--warn)}.acc{color:var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}
+.chip{border:1px solid var(--line);background:rgba(39,240,255,.07);border-radius:4px;padding:2px 9px;font-size:.78rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--acc2)}
+.chip.good{border-color:var(--ok);color:var(--ok);background:rgba(53,240,160,.08)}.chip.badc{border-color:var(--bad);color:var(--bad);background:rgba(255,61,127,.1)}.chip.acc{border-color:var(--acc);color:var(--acc);background:rgba(255,232,58,.08)}.chip.warnc{border-color:var(--warn);color:var(--warn)}
+/* ───── dé ───── */
+.dicebox{display:flex;gap:16px;align-items:center;margin:10px 0 6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.28);animation:rv .4s both}
+.dface{width:88px;height:88px;flex:none;display:grid;place-items:center}
+.dsq{width:62px;height:62px;border:3px solid var(--acc2);transform:rotate(45deg);display:grid;place-items:center;background:rgba(39,240,255,.08);box-shadow:0 0 18px rgba(39,240,255,.35)}
+.dnum{transform:rotate(-45deg);font:900 2rem/1 Impact,"Arial Black",sans-serif;color:var(--acc2)}
+.dicebox.rolling .dsq{animation:tumble .5s linear infinite}.dicebox.rolling .dnum{animation:tumbleb .5s linear infinite}
+@keyframes tumble{to{transform:rotate(405deg)}}@keyframes tumbleb{to{transform:rotate(-405deg)}}
+.dinfo{min-width:0}.dlab{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.dres{font:900 1.35rem/1.15 Impact,"Arial Black",sans-serif;letter-spacing:.04em;color:var(--acc2)}.dsub{font-size:.82rem;color:var(--mut)}
+.dparts{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.dp{font-size:.68rem;border:1px solid var(--line);border-radius:3px;padding:0 5px;color:var(--ok)}.dp.neg{color:var(--bad)}
+.dicebox.ok .dsq{border-color:var(--ok);background:rgba(53,240,160,.12);box-shadow:0 0 26px rgba(53,240,160,.55);animation:dpop .5s}.dicebox.ok .dnum,.dicebox.ok .dres{color:var(--ok)}
+.dicebox.ko .dsq{border-color:var(--bad);background:rgba(255,61,127,.12);box-shadow:0 0 26px rgba(255,61,127,.55);animation:dshake .5s}.dicebox.ko .dnum,.dicebox.ko .dres{color:var(--bad)}
+.dicebox.crit{border-color:var(--acc);background:linear-gradient(90deg,rgba(255,232,58,.14),transparent)}.dicebox.crit .dsq{border-color:var(--acc);background:rgba(255,232,58,.2);box-shadow:0 0 40px rgba(255,232,58,.9);animation:dpop .7s}.dicebox.crit .dnum,.dicebox.crit .dres{color:var(--acc)}
+.dicebox.fumble{border-color:var(--bad)}.dicebox.fumble .dsq{border-color:var(--bad);background:rgba(255,61,127,.25);animation:dshake .6s}.dicebox.fumble .dnum,.dicebox.fumble .dres{color:var(--bad)}
+@keyframes dpop{0%{transform:rotate(45deg) scale(.5)}60%{transform:rotate(45deg) scale(1.3)}100%{transform:rotate(45deg) scale(1)}}
+@keyframes dshake{0%,100%{transform:rotate(45deg)}20%{transform:rotate(45deg) translate(-8px,6px)}40%{transform:rotate(45deg) translate(8px,-6px)}60%{transform:rotate(45deg) translate(-5px,4px)}80%{transform:rotate(45deg) translate(5px,-3px)}}
+/* ───── choix ───── */
+.choices{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.ch{position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:linear-gradient(90deg,rgba(32,33,70,.95),rgba(22,23,48,.95));border:1px solid var(--line);border-radius:10px;padding:10px 13px;min-height:54px;transition:transform .12s,border-color .15s,box-shadow .15s}
+.ch:hover:not(:disabled){border-color:var(--acc2);transform:translateX(3px);box-shadow:0 0 16px rgba(39,240,255,.2)}
+.ch:active:not(:disabled){transform:scale(.985)}
+.key{flex:none;width:24px;height:24px;border:1px solid var(--mut);border-radius:5px;display:grid;place-items:center;font-size:.75rem;color:var(--mut);font-weight:800}
+.ch .body{flex:1;min-width:0;display:flex;flex-direction:column}.ch .l{font-weight:800;line-height:1.25}.ch .s{font-size:.8rem;color:var(--mut);margin-top:1px}
+.pct{flex:none;font-size:.78rem;font-weight:900;border:1px solid;border-radius:4px;padding:0 7px}.pct.hi{color:var(--ok);border-color:var(--ok)}.pct.mid{color:var(--acc);border-color:var(--acc)}.pct.lo{color:var(--bad);border-color:var(--bad)}
+.ch.danger{border-left:4px solid var(--bad)}.ch.risk{border-left:4px solid var(--warn)}.ch.safe{border-left:4px solid var(--ok)}
+.ch:disabled{opacity:.5;cursor:not-allowed;background:#0d0d1d;border-style:dashed}.lockwhy{color:var(--warn);font-size:.78rem;margin-top:2px}
+.ch.back{min-height:42px;background:transparent;border-style:dashed;color:var(--mut)}
+.ch.cta{justify-content:center;background:var(--acc);color:#000;border:0;font-weight:900;text-transform:uppercase;letter-spacing:.16em;min-height:58px;clip-path:polygon(3% 0,100% 0,100% 70%,97% 100%,0 100%,0 30%);animation:rv .6s both,ctapulse 2.2s 1s infinite}
+.ch.cta .l{font-weight:900}.ch.cta .body{flex:0 1 auto}.ch.cta .arrow{font-size:1.4rem;line-height:1;margin-left:4px}.ch.cta:hover:not(:disabled){transform:translateX(0) scale(1.015);box-shadow:none;filter:brightness(1.1)}
+@keyframes ctapulse{50%{filter:brightness(1.18)}}
+.rip::after{content:"";position:absolute;left:var(--rx,50%);top:var(--ry,50%);width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.55);transform:translate(-50%,-50%) scale(0);animation:ripple .55s ease-out;pointer-events:none}
+@keyframes ripple{to{transform:translate(-50%,-50%) scale(24);opacity:0}}
+.choices.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.tiles .ch{flex-direction:column;justify-content:center;text-align:center;min-height:112px;padding:12px 8px}.tiles .ch .body{align-items:center}.tiles .tic{font-size:2rem;line-height:1;filter:drop-shadow(0 0 8px rgba(255,232,58,.4))}.tiles .ch .s{font-size:.72rem}.tiles .ch:hover:not(:disabled){transform:translateY(-3px)}
+/* ───── panneaux, onglets ───── */
+.tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}.tab{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:.82rem;position:relative;overflow:hidden}.tab.on{background:var(--acc);color:#000;border-color:var(--acc);font-weight:800}
+.side{font-size:.9rem}.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px}.kv b{color:var(--mut);font-weight:600}
+.attr{display:flex;align-items:center;gap:8px;margin:4px 0}.attr .n{width:92px}.attr .pips{display:flex;gap:2px;flex-wrap:wrap;flex:1}.attr .pip{width:11px;height:11px;border-radius:2px;background:#05050c;border:1px solid var(--line)}.attr .pip.on{background:var(--acc);box-shadow:0 0 6px rgba(255,232,58,.5)}
+.stones{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}.stone{aspect-ratio:1;border-radius:50%;border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;opacity:.25;filter:grayscale(.7)}.stone.have{opacity:1;filter:none;box-shadow:0 0 12px currentColor;animation:glow 2.4s infinite}
+@keyframes glow{50%{box-shadow:0 0 22px currentColor}}
+.tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:.75rem;margin:1px 2px 1px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+input[type=text],input[type=number],select{background:#05050c;border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:9px 11px;font:inherit;width:100%}
+.btn{background:var(--acc);color:#000;border:0;border-radius:9px;padding:8px 16px;font-weight:800;position:relative;overflow:hidden}.btn.alt{background:var(--panel2);color:var(--tx);border:1px solid var(--line);font-weight:600}
+.crumbs{font-size:.85rem;color:var(--mut)}.small{font-size:.82rem}.glyph{border-left:3px solid var(--acc2);padding:4px 10px;margin:8px 0;background:var(--panel2);border-radius:0 8px 8px 0;font-style:italic}
+table.t{width:100%;border-collapse:collapse;font-size:.85rem}table.t td,table.t th{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left}
+.news div{padding:3px 0;border-bottom:1px dashed var(--line)}.news{font-size:.85rem}.scroll{max-height:420px;overflow:auto}
+/* ───── combat ───── */
+.combat .foe{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:7px 0;transition:.2s;cursor:pointer}
+.combat .foe.tgt{border-color:var(--acc);box-shadow:0 0 14px rgba(255,232,58,.25)}.combat .foe.dead{opacity:.3;filter:grayscale(1)}
+.combat .foe.hit,.pcstat.hit{animation:foehit .45s}
+@keyframes foehit{0%,100%{transform:none}20%{transform:translateX(-7px);background:rgba(255,61,127,.35)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.pcstat{position:relative;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.2)}
+.combat .log{background:#05050c;border:1px solid var(--line);border-radius:8px;padding:6px 10px;max-height:150px;overflow:auto;font-size:.86rem;margin:8px 0}.combat .log div{padding:1px 0}
+.log-hit{color:var(--ok)}.log-miss{color:var(--mut)}.log-dmg{color:var(--bad)}
+.pop{position:absolute;top:0;font:900 1.6rem/1 Impact,"Arial Black",sans-serif;pointer-events:none;z-index:4;text-shadow:0 2px 0 #000,0 0 12px currentColor;animation:popup 1.3s ease-out both}
+.pop.dmg{color:#ff5c8a}.pop.crit{color:var(--acc);font-size:2.1rem}.pop.miss{color:var(--mut);font-size:1rem}.pop.heal{color:var(--ok)}.pop.ok{color:var(--acc2);font-size:1.1rem}
+@keyframes popup{0%{transform:translateY(8px) scale(.4);opacity:0}15%{transform:translateY(-8px) scale(1.25);opacity:1}100%{transform:translateY(-52px) scale(1);opacity:0}}
+/* ───── carte ───── */
+.mapbox{position:relative}.mapscroll{overflow:auto;border-radius:10px;background:#ececec;max-height:70vh;-webkit-overflow-scrolling:touch}
+.mapin{min-width:100%}.map{display:block;width:100%;height:auto}
+.mapbtns{position:absolute;right:8px;top:8px;z-index:3;display:flex;flex-direction:column;gap:6px}.mapbtns .ibtn{background:rgba(10,10,30,.85)}
+.map .st.go{cursor:pointer}.map .st.go circle:first-child{animation:stpulse 1.6s infinite}
+@keyframes stpulse{50%{stroke:#27f0ff;stroke-width:8}}
+.map text{font:700 15px "Segoe UI",Arial,sans-serif;fill:#161616;paint-order:stroke;stroke:#ececec;stroke-width:3.5px;pointer-events:none}
+.routeline{animation:dash 1s linear infinite}@keyframes dash{to{stroke-dashoffset:-36}}
+.pulse{transform-box:fill-box;transform-origin:center;animation:ring 1.3s infinite}@keyframes ring{0%{transform:scale(.7);opacity:1}100%{transform:scale(2);opacity:0}}
+/* ───── cartons plein écran, particules ───── */
+.splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle at center,rgba(5,5,15,.88),rgba(5,5,15,.55) 70%,transparent);animation:splfade 1.9s both}
+@keyframes splfade{0%{opacity:0}12%{opacity:1}80%{opacity:1}100%{opacity:0}}
+.sp-in{text-align:center;animation:splin .7s cubic-bezier(.2,1.3,.3,1) both;padding:0 16px}
+@keyframes splin{from{transform:scale(.4) rotate(-4deg);opacity:0;filter:blur(8px)}to{transform:none;opacity:1;filter:none}}
+.sp-ic{font-size:4rem;filter:drop-shadow(0 0 20px var(--c));animation:float 1.2s ease-in-out infinite alternate}@keyframes float{to{transform:translateY(-10px) scale(1.08)}}
+.sp-t{font:900 clamp(2rem,9vw,4.4rem)/1 Impact,"Arial Black",sans-serif;letter-spacing:.05em;color:var(--c);text-shadow:0 0 30px var(--c),3px 3px 0 #000}
+.sp-s{margin-top:8px;color:#fff;letter-spacing:.18em;text-transform:uppercase;font-size:.85rem;font-weight:700}
+.splash.year .sp-t{font-size:clamp(4rem,22vw,10rem);animation:glitch 1s 2}
+.splash.train{background:linear-gradient(90deg,transparent,rgba(5,5,15,.9) 20%,rgba(5,5,15,.9) 80%,transparent)}.splash.train::before{content:"";position:absolute;left:0;right:0;top:50%;height:10px;background:var(--c);box-shadow:0 0 24px var(--c);transform:translateY(60px);animation:trainbar 1.3s ease-in}
+@keyframes trainbar{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.particle{position:fixed;width:var(--s);height:var(--s);background:var(--c);z-index:101;pointer-events:none;border-radius:2px;box-shadow:0 0 8px var(--c);animation:part 1s ease-out both}
+@keyframes part{to{transform:translate(var(--dx),var(--dy)) rotate(260deg);opacity:0}}
+.flash{position:fixed;inset:0;z-index:99;pointer-events:none;background:radial-gradient(circle,transparent 40%,var(--c) 130%);opacity:0;animation:flashit .45s}@keyframes flashit{20%{opacity:.55}100%{opacity:0}}
+.toast{position:fixed;bottom:calc(88px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--acc);padding:8px 16px;border-radius:10px;z-index:120;animation:rv .3s both}
+#app.shake{animation:shk .35s}#app.shake-big{animation:shkb .6s}
+@keyframes shk{0%,100%{transform:none}25%{transform:translate(-5px,2px)}50%{transform:translate(5px,-2px)}75%{transform:translate(-3px,1px)}}
+@keyframes shkb{0%,100%{transform:none}10%{transform:translate(-12px,5px)}30%{transform:translate(11px,-6px)}50%{transform:translate(-9px,4px)}70%{transform:translate(7px,-3px)}90%{transform:translate(-3px,1px)}}
+/* ───── dock + tiroir mobile ───── */
+.dock{display:none}
+#sheet{position:fixed;inset:0;z-index:50;pointer-events:none}.sh-bg{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;transition:opacity .25s}
+.sh-pan{position:absolute;left:0;right:0;bottom:0;max-height:82vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a1a3a,#0f0f22);border-top:2px solid var(--acc);border-radius:18px 18px 0 0;transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.9,.3,1);padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+#sheet.open{pointer-events:auto}#sheet.open .sh-bg{opacity:1}#sheet.open .sh-pan{transform:none}
+.sh-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px 4px;font-size:1.05rem}.sh-body{overflow:auto;padding:6px 16px 16px}
+.title-screen{text-align:center;padding:36px 8px}.title-screen .logo{font-size:min(15vw,110px);line-height:.95;margin:0}.title-screen p{max-width:640px;margin:14px auto;color:var(--mut)}.title-screen .choices{max-width:440px;margin:20px auto}
+.opt{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:left}
+@media(max-width:960px){
+  .combat .log{max-height:96px}
+  .layout{grid-template-columns:minmax(0,1fr);margin-top:8px}.layout>.side{display:none}
+  .dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;background:linear-gradient(180deg,rgba(18,18,40,.96),rgba(8,8,20,.98));border-top:1px solid rgba(39,240,255,.3);padding:4px 4px calc(4px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
+  .dk{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 0;border-radius:10px;position:relative;overflow:hidden;color:var(--mut)}.dk .i{font-size:1.25rem;line-height:1.2}.dk .n{font-size:.6rem;letter-spacing:.04em}.dk.on{color:var(--acc);background:rgba(255,232,58,.1)}
+  #app{padding:8px 8px calc(96px + env(safe-area-inset-bottom))}.scene{padding:12px 13px}.scene .title{font-size:1.3rem}.mapin{min-width:760px}.mapscroll{max-height:60vh}
+  .hud-bars{gap:8px}.dface{width:74px;height:74px}.dsq{width:52px;height:52px}.dnum{font-size:1.7rem}
+}
+@media(min-width:961px){.choices.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}#sheet{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -285,7 +353,7 @@ function otRoute(fromState, toState) {
     if (last && last.line === seq[i].ln) { last.to = seq[i].st; last.stops++; }
     else legs.push({ line: seq[i].ln, from: seq[i - 1].st, to: seq[i].st, stops: 1 });
   }
-  return { hops, legs, cost: hops * 18 };
+  return { hops, legs, cost: hops * 18, path: seq.map(s => s.st) };
 }
 
 // ───────── Objets ─────────
@@ -445,6 +513,7 @@ function startGame(spec) {
   recalc(); pc.hp = pc.hpMax; pc.en = pc.enMax;
   logEntry(`Début de l’aventure : ${pc.name}, ${F[pc.faction].name}.`);
   saveGame();
+  setTimeout(() => splash({ title: '2071', sub: 'Juin · Le protocole ANTI vient d’être lancé', cls: 'year', color: '#ffe83a', ms: 2200 }), 80);
   return G;
 }
 
@@ -550,9 +619,10 @@ function skill(attrId, tags = []) {
 }
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod;
-  const res = { r, total, dc, mod, parts: s.parts, crit: r === 20, fumble: r === 1 };
+  const res = { r, total, dc, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
   res.ok = res.crit || (!res.fumble && total >= dc);
   if (G.pc.stim > 0) G.pc.stim = 0;
+  UI.roll = res;
   return res;
 }
 function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dc - m)) / 20, 0.05, 0.95); }
@@ -603,6 +673,7 @@ function gainStone(id) {
   const s = STONE[id]; const pc = G.pc; const L = [];
   if (pc.stones[id]) return L;
   pc.stones[id] = G.wk; G.world.stoneHolder[id] = 'pc'; G.world.stoneLoc[id] = G.loc; G.score.stones = Math.max(G.score.stones, stoneCount());
+  splash({ title: 'PIERRE ' + s.name.toUpperCase(), sub: `${stoneCount()}/16 pierres antiques`, color: s.color, icon: '💎', ms: 2300 }); sfx('stone'); buzz([30, 40, 80]);
   L.push({ t: `✨ Pierre antique de ${s.name} obtenue (${stoneCount()}/16) ! +1 ${AT[STONE_ATTR[id]].short}`, c: 'acc' });
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
@@ -624,7 +695,7 @@ function advance(weeks) {
     const pc = G.pc;
     pc.hp = Math.min(pc.hpMax, pc.hp + 1); pc.en = Math.min(pc.enMax, pc.en + 2);
     pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
-    if (G.wk % 4 === 0) monthTick();
+    if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;
   }
 }
@@ -656,7 +727,7 @@ function pcDie(cause) {
 }
 
 // ───────── Interface ─────────
-const UI = { tab: 'perso', scene: null, tabOpen: true };
+const UI = { tab: 'perso', scene: null, sheetOpen: false, after: [], prev: null, roll: null };
 const PCN = () => esc(G.pc.name);
 
 // Conditions d'accès (choix verrouillés mais visibles)
@@ -689,56 +760,96 @@ function reqReason(rq) {
 }
 // fabrique de choix
 function C(label, go, o = {}) {
-  const lock = reqReason(o.req);
-  let sub = o.sub || '';
-  if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; const p = odds(a, dc, tags || [], ex || 0); sub = `${AT[a].short} contre difficulté ${dc} — environ ${Math.round(p * 100)} % de réussite` + (sub ? ' · ' + sub : ''); }
-  return { label, go, sub, cls: o.cls || (o.odds ? (odds(...[o.odds[0], o.odds[1], o.odds[2] || [], o.odds[3] || 0]) < .4 ? 'risk' : '') : ''), lock };
+  const lock = reqReason(o.req); let sub = o.sub || ''; let pct = null;
+  if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; pct = Math.round(odds(a, dc, tags || [], ex || 0) * 100); sub = `${AT[a].short} contre ${dc}` + (sub ? ' · ' + sub : ''); }
+  return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, ic: o.ic };
 }
-const fxHTML = L => L && L.length ? h('div', { class: 'fx' }, L.map(l => h('div', { class: l.c || '' }, l.t))) : null;
+const fxHTML = L => L && L.length ? h('div', { class: 'chips' }, L.map((l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t))) : null;
 
-function show(sc) { if (G && G.status !== 'play' && !sc.final) return; UI.scene = sc; render(); window.scrollTo({ top: 0 }); }
-function paragraphs(t) { return [].concat(t || []).map(x => typeof x === 'string' ? h('p', { html: x }) : x); }
+function show(sc) {
+  if (G && G.status !== 'play' && !sc.final) return;
+  const roll = UI.roll; UI.roll = null;
+  if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).filter(t => !(typeof t === 'string' && t.startsWith('🎲'))); }
+  UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
+}
+function paragraphs(t) { return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => typeof x === 'string' ? h('p', { class: 'rv', style: `--i:${i}`, html: x }) : x); }
 
+function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
 function hudEl() {
-  const pc = G.pc; const st = wantedStars(); const f = F[pc.faction];
-  return h('div', { class: 'hud' },
-    h('div', {}, h('div', { class: 'nm' }, pc.name, pc.ownFaction ? '' : ''), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
-    h('div', { class: 'pill' }, '📍 ' + stateName(G.loc) + ' (' + capName(G.loc) + ')'),
-    h('div', { class: 'pill' }, '🗓 ' + dateStr()),
-    h('div', { class: 'pill' }, '💰 ' + fmt(pc.money) + ' ¢'),
-    h('div', { class: 'pill', title: WANTED_TXT[st] }, st ? 'Prime ' + starStr(st) : 'Prime : aucune'),
-    h('div', { class: 'pill' }, '💎 ' + stoneCount() + '/16'),
-    h('div', { class: 'hudbars' },
-      h('div', {}, `PV ${pc.hp}/${pc.hpMax}`, h('div', { class: 'bar hp' }, h('i', { style: `width:${pc.hp / pc.hpMax * 100}%` }))),
-      h('div', {}, `Énergie ${pc.en}/${pc.enMax}`, h('div', { class: 'bar en' }, h('i', { style: `width:${pc.enMax ? pc.en / pc.enMax * 100 : 0}%` })))),
-    h('div', { style: 'margin-left:auto' }, h('button', { class: 'btn alt', onclick: () => { saveGame(); toast('Partie sauvegardée.'); } }, '💾'), ' ', h('button', { class: 'btn alt', onclick: () => { if (confirm('Quitter vers le menu ? (la partie est sauvegardée)')) { saveGame(); titleScreen(); } } }, '☰')));
+  const pc = G.pc; const st = wantedStars(); const f = F[pc.faction]; const pv = UI.prev || { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
+  const hpP = pc.hp / pc.hpMax * 100, enP = pc.enMax ? pc.en / pc.enMax * 100 : 0;
+  const hpBar = h('i', { style: `width:${pv.hp / pc.hpMax * 100}%` }), enBar = h('i', { style: `width:${pv.en / (pc.enMax || 1) * 100}%` });
+  const money = h('b', { class: 'num' }, fmt(pv.money)); const hpN = h('b', {}, pv.hp);
+  UI.after.push(() => { requestAnimationFrame(() => { hpBar.style.width = hpP + '%'; enBar.style.width = enP + '%'; }); countUp(money, pv.money, pc.money); countUp(hpN, pv.hp, pc.hp); });
+  const cls = 'hud' + (pc.hp < pv.hp ? ' dmg' : pc.hp > pv.hp ? ' heal' : '') + (pc.money > pv.money ? ' gain' : '');
+  if (pc.hp < pv.hp) UI.after.push(() => { shake(); });
+  UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
+  return h('div', { class: cls },
+    h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
+      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { if (confirm('Quitter vers le menu ? (la partie est sauvegardée)')) { saveGame(); titleScreen(); } } }, '☰'))),
+    h('div', { class: 'hud-bars' },
+      h('div', { class: 'stat hp' }, h('span', { class: 'lab' }, 'SANTÉ'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
+      h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
+    h('div', { class: 'hud-pills' },
+      h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('span', { class: 'pill gem' }, '💎 ' + stoneCount() + '/16'),
+      h('span', { class: 'pill' }, '📍 ' + capName(G.loc)), h('span', { class: 'pill' }, '🗓 ' + dateStr())));
 }
-function toast(t) { const el = h('div', { style: 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--acc);padding:8px 16px;border-radius:10px;z-index:99' }, t); document.body.append(el); setTimeout(() => el.remove(), 1600); }
+function toast(t) { const el = h('div', { class: 'toast' }, t); document.body.append(el); setTimeout(() => el.remove(), 1800); }
 
-function choicesEl(list) {
-  return h('div', { class: 'choices' }, list.filter(Boolean).map(c => h('button', { class: 'ch ' + (c.cls || ''), disabled: !!c.lock, onclick: () => { if (!c.lock) c.go(); } },
-    h('div', { class: 'l' }, c.label), c.sub ? h('div', { class: 's' }, c.sub) : null, c.lock ? h('div', { class: 'lockwhy' }, c.lock) : null)));
+function choicesEl(list, tiles) {
+  const items = list.filter(Boolean); const ctaIdx = items.length <= 3 ? items.findIndex(c => /^(Continuer|Commencer|Suivant|Partir|Accepter|Jouer)/.test(c.label)) : -1;
+  return h('div', { class: 'choices' + (tiles ? ' tiles' : '') }, items.map((c, i) => {
+    const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
+    return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); c.go(); } } },
+      !cta && !back && !tiles ? h('span', { class: 'key' }, i + 1) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
+      h('span', { class: 'body' }, h('span', { class: 'l' }, c.label), c.sub ? h('span', { class: 's' }, c.sub) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
+      c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%') : null, cta ? h('span', { class: 'arrow' }, '›') : null);
+  }));
 }
 
-function render() {
-  const app = $('#app'); app.innerHTML = '';
+function tickerEl() {
+  const n = G.world.news[0]; if (!n || G.wk - n.wk > 5 || UI.tickerWk === n.wk + n.t) return null;
+  return h('div', { class: 'ticker', onclick: () => { UI.tickerWk = n.wk + n.t; render(true); } }, h('span', { class: 'tk' }, '⚡ ACTU'), h('span', { class: 'tt' }, n.t), h('span', { class: 'x' }, '✕'));
+}
+function render(quiet) {
+  const app = $('#app'); app.innerHTML = ''; app.className = quiet ? 'quiet' : ''; UI.after = [];
   const sc = UI.scene; if (!sc) return;
-  if (sc.bare) { app.append(h('div', {}, sc.extra)); return; }
-  const main = h('div', { class: 'card scene' },
-    sc.kicker ? h('div', { class: 'kicker' }, sc.kicker) : null,
-    h('div', { class: 'title' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices) : null);
+  if (sc.bare) { app.append(h('div', {}, sc.extra)); runAfter(); return; }
   const live = G && G.status === 'play';
-  if (live) app.append(hudEl());
-  app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, live ? sideEl() : null));
+  const rollEl = sc.roll ? diceEl(sc.roll, quiet || sc.rolled) : null; if (sc.roll) sc.rolled = true;
+  const d = sc.roll && !quiet ? 1.05 : 0;
+  const main = h('div', { class: 'card scene', style: `--d:${d}s` },
+    sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
+    h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
+  if (live) { app.append(hudEl()); const tk = tickerEl(); if (tk) app.append(tk); }
+  const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
+  app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
+  if (live) app.append(dockEl());
+  if (live && UI.sheetOpen) fillSheet();
+  if (sc.after && !sc.afterRan) { sc.afterRan = true; UI.after.push(sc.after); }
+  if (d && !quiet) { const ch = $('.choices', main); if (ch) { ch.style.pointerEvents = 'none'; setTimeout(() => { ch.style.pointerEvents = ''; }, d * 1000 + 200); } }
+  runAfter();
 }
+function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
-// ───────── Panneau latéral ─────────
-const TABS = [['perso', '🧍 Perso'], ['inv', '🎒 Sac'], ['groupe', '👥 Groupe'], ['factions', '🏴 Factions'], ['pierres', '💎 Pierres'], ['carte', '🗺 Carte'], ['journal', '📜 Journal'], ['aide', '❓ Règles']];
+// ───────── Panneau latéral (bureau) / tiroir + dock (mobile) ─────────
+const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions'], ['pierres', '💎', 'Pierres'], ['carte', '🗺', 'Carte'], ['journal', '📜', 'Journal'], ['aide', '❓', 'Règles']];
+const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
-  box.append(h('div', { class: 'tabs' }, TABS.map(([k, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { UI.tab = k; render(); } }, n))));
-  box.append(({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide }[UI.tab])());
-  return box;
+  box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { UI.tab = k; sfx('click'); render(true); } }, ic + ' ' + n))));
+  box.append(TABFN()[UI.tab]()); return box;
+}
+function dockEl() {
+  return h('nav', { class: 'dock' }, TABS.filter(t => t[0] !== 'aide' && t[0] !== 'factions' || true).map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
+}
+function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i][0] === tab)); }
+function closeSheet() { UI.sheetOpen = false; const s = $('#sheet'); if (s) s.classList.remove('open'); document.querySelectorAll('.dk').forEach(b => b.classList.remove('on')); }
+function fillSheet() {
+  let s = $('#sheet'); if (!s) { s = h('div', { id: 'sheet' }); document.body.append(s); }
+  s.innerHTML = ''; const t = TABS.find(x => x[0] === UI.tab);
+  s.append(h('div', { class: 'sh-bg', onclick: closeSheet }), h('div', { class: 'sh-pan' }, h('div', { class: 'sh-head' }, h('b', {}, t[1] + ' ' + t[2]), h('button', { class: 'ibtn', onclick: closeSheet }, '✕')), h('div', { class: 'sh-body side' }, TABFN()[UI.tab]())));
+  requestAnimationFrame(() => s.classList.add('open'));
 }
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
@@ -753,7 +864,7 @@ function tabPerso() {
   box.append(h('h3', {}, 'Attributs' + (pc.pts ? ` — ${pc.pts} point(s) à répartir` : '')));
   ATTRS.forEach(a => {
     const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' }));
-    box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v), pc.pts > 0 && pc.attrs[a.id] < 12 ? h('button', { class: 'tab', onclick: () => { pc.attrs[a.id]++; pc.pts--; recalc(); render(); } }, '+') : null));
+    box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v), pc.pts > 0 && pc.attrs[a.id] < 12 ? h('button', { class: 'tab', onclick: () => { pc.attrs[a.id]++; pc.pts--; recalc(); render(true); } }, '+') : null));
   });
   box.append(h('h3', {}, 'Progression'));
   const nxt = MERIT_STEPS[pc.grade + 1];
@@ -770,8 +881,8 @@ function tabInv() {
   ids.forEach(id => {
     const it = ITEMS[id]; const row = h('div', { style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, h('b', {}, it.n + (pc.inv[id] > 1 ? ' ×' + pc.inv[id] : '')), h('div', { class: 'small mut' }, it.desc));
     const btns = h('div', { class: 'row', style: 'margin-top:3px' });
-    if (it.t === 'arme' || it.t === 'armure') { const slot = it.t === 'arme' ? 'arme' : 'armure'; btns.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
-    if (it.t === 'conso' && ['en8', 'hp15', 'hp40'].includes(it.use)) btns.append(h('button', { class: 'tab', onclick: () => { useItem(id); render(); } }, 'Utiliser'));
+    if (it.t === 'arme' || it.t === 'armure') { const slot = it.t === 'arme' ? 'arme' : 'armure'; btns.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(true); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
+    if (it.t === 'conso' && ['en8', 'hp15', 'hp40'].includes(it.use)) btns.append(h('button', { class: 'tab', onclick: () => { useItem(id); render(true); } }, 'Utiliser'));
     row.append(btns); box.append(row);
   });
   return box;
@@ -787,7 +898,7 @@ function tabGroupe() {
   const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, `Groupe : ${pc.party.length}/${partyMax()} (le grade et le rôle de Leader augmentent la taille).`));
   if (!pc.party.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Tu voyages seul. Recrute des gens dans le menu « Recruter ».'));
   pc.party.forEach(a => { const c = CH[a.id]; box.append(h('div', { style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, h('b', {}, c.name), ` — ${F[c.faction].name}`, h('div', { class: 'small' }, `${STYLES[a.style].name} · PV ${a.hp}/${a.hpMax} · loyauté ${a.loy}${a.inj > 0 ? ' · blessé (' + a.inj + ' sem.)' : ''}`),
-    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: () => { if (confirm('Renvoyer ' + c.name + ' ?')) { removeAlly(a.id); addRep(c.faction, -3); render(); } } }, 'Renvoyer'))); });
+    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: () => { if (confirm('Renvoyer ' + c.name + ' ?')) { removeAlly(a.id); addRep(c.faction, -3); render(true); } } }, 'Renvoyer'))); });
   return box;
 }
 function charPowerText(c) { const ps = (c.powers.length ? c.powers : fallbackPowers(c)).map(id => PW[id].name); return ps.length ? ps.join(' + ') : 'sans pouvoir'; }
@@ -861,13 +972,109 @@ function mapEl(o = {}) {
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
+  if (o.route && o.route.length > 1) {
+    const rp = o.route.map(id => OT_ST[id][0] + ',' + OT_ST[id][1]).join(' ');
+    svg.append(el('polyline', { points: rp, fill: 'none', stroke: '#000', 'stroke-width': 16, 'stroke-opacity': .25, 'stroke-linejoin': 'round' }), el('polyline', { points: rp, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '4 14', 'stroke-linecap': 'round', class: 'routeline' }));
+    o.route.forEach(id => svg.append(el('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 15, fill: 'none', stroke: '#ff3d7f', 'stroke-width': 4, class: 'pulse' })));
+  }
   return svg;
 }
+function mapBox(o = {}) {
+  UI.zoom = UI.zoom || 1; const svg = mapEl(o); const inner = h('div', { class: 'mapin', style: `width:${UI.zoom * 100}%` }, svg);
+  const z = d => () => { UI.zoom = clamp(UI.zoom + d, 1, 3); inner.style.width = UI.zoom * 100 + '%'; };
+  return h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, h('button', { class: 'ibtn', onclick: z(0.5) }, '＋'), h('button', { class: 'ibtn', onclick: z(-0.5) }, '－')), h('div', { class: 'mapscroll' }, inner));
+}
 function tabCarte() {
-  const box = h('div'); box.append(mapEl({ here: G.loc }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
+  const box = h('div'); box.append(mapBox({ here: G.loc }), h('div', { class: 'small mut' }, 'Carte de l’Orbitrail (13 lignes). Tu es à ' + capName(G.loc) + '. Les traversées du Pacifique relient Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3).'));
   const legend = h('div', { class: 'row small', style: 'margin-top:6px' }); Object.entries(OT_LINES).forEach(([n, L]) => legend.append(h('span', {}, h('span', { style: `display:inline-block;width:14px;height:8px;background:${L.c};border:1px solid #000;margin-right:3px` }), n))); box.append(legend);
   return box;
 }
+
+// ───────── Juiciness : sons, dé animé, cartons plein écran, particules, retours haptiques ─────────
+const FX = { mute: (() => { try { return localStorage.getItem('newera.mute') === '1'; } catch (e) { return false; } })(), ac: null };
+const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function toggleMute() { FX.mute = !FX.mute; try { localStorage.setItem('newera.mute', FX.mute ? '1' : '0'); } catch (e) { } if (!FX.mute) sfx('click'); }
+function audioCtx() { if (FX.ac) return FX.ac; try { FX.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } return FX.ac; }
+function tone(freq, dur = 0.08, type = 'square', vol = 0.04, delay = 0, slide = 0) {
+  if (FX.mute) return; const ac = audioCtx(); if (!ac) return; if (ac.state === 'suspended') ac.resume();
+  const t = ac.currentTime + delay; const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.03);
+}
+const SFX = {
+  click: () => tone(560, .045, 'square', .025), tick: () => tone(280 + Math.random() * 520, .03, 'square', .02),
+  win: () => [523, 659, 784].forEach((f, i) => tone(f, .13, 'triangle', .06, i * .07)), lose: () => { tone(240, .3, 'sawtooth', .05, 0, -140); tone(160, .3, 'sawtooth', .04, .12, -80); },
+  crit: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, .15, 'triangle', .07, i * .06)), coin: () => { tone(988, .06, 'square', .035); tone(1319, .14, 'square', .035, .06); },
+  hit: () => { tone(150, .13, 'sawtooth', .07, 0, -70); tone(90, .1, 'square', .05, .02); }, miss: () => tone(420, .09, 'triangle', .03, 0, -220), hurt: () => { tone(110, .22, 'sawtooth', .08, 0, -60); },
+  heal: () => [523, 784].forEach((f, i) => tone(f, .1, 'sine', .05, i * .08)), stone: () => [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, .3, 'sine', .07, i * .1)),
+  splash: () => { tone(200, .35, 'sawtooth', .04, 0, 300); tone(400, .3, 'triangle', .05, .1, 400); }, train: () => { tone(120, .5, 'sawtooth', .03, 0, 120); },
+};
+function sfx(n) { try { SFX[n] && SFX[n](); } catch (e) { } }
+function buzz(ms) { try { if (navigator.vibrate && !FX.mute) navigator.vibrate(ms); } catch (e) { } }
+function sceneSfx(sc) {
+  const L = (sc.fx || []); if (L.some(l => /^\+\d[\d\s ]* ¢/.test(l.t))) setTimeout(() => sfx('coin'), sc.roll ? 1000 : 120);
+  if (L.some(l => l.c === 'badc' && /PV/.test(l.t))) setTimeout(() => sfx('hurt'), sc.roll ? 1000 : 120);
+  if (L.some(l => l.c === 'good' && /PV/.test(l.t))) setTimeout(() => sfx('heal'), 120);
+}
+function countUp(el, from, to, ms = 650) {
+  if (REDUCED || from === to) { el.textContent = typeof to === 'number' && to > 999 ? fmt(to) : to; return; }
+  const t0 = performance.now(); const step = t => { const k = Math.min(1, (t - t0) / ms); const e = 1 - Math.pow(1 - k, 3); const v = Math.round(from + (to - from) * e); el.textContent = Math.abs(to) > 999 || Math.abs(from) > 999 ? fmt(v) : v; if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function shake(kind) { const a = $('#app'); if (!a || REDUCED) return; a.classList.remove('shake', 'shake-big'); void a.offsetWidth; a.classList.add(kind || 'shake'); buzz(kind ? 60 : 30); }
+function flash(color) { const f = h('div', { class: 'flash', style: `--c:${color || '#ff3d7f'}` }); document.body.append(f); setTimeout(() => f.remove(), 450); }
+function splash(o) {
+  if (REDUCED && !o.force) return; sfx(o.cls === 'train' ? 'train' : 'splash');
+  const el = h('div', { class: 'splash ' + (o.cls || ''), style: `--c:${o.color || '#ffe83a'}` }, h('div', { class: 'sp-in' }, o.icon ? h('div', { class: 'sp-ic' }, o.icon) : null, h('div', { class: 'sp-t' }, o.title), o.sub ? h('div', { class: 'sp-s' }, o.sub) : null));
+  document.body.append(el); setTimeout(() => el.remove(), o.ms || 1900);
+}
+function burst(x, y, color, n = 22) {
+  if (REDUCED) return; for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 120; const p = h('i', { class: 'particle', style: `left:${x}px;top:${y}px;--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 30}px;--c:${color};--s:${4 + Math.random() * 6}px` });
+    document.body.append(p); setTimeout(() => p.remove(), 1000);
+  }
+}
+function burstAt(el, color, n) { if (!el) return; const r = el.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, color, n); }
+
+// ───────── Dé ─────────
+function diceEl(r, still) {
+  const wrap = h('div', { class: 'dicebox ' + (still ? '' : 'rolling') });
+  const num = h('span', { class: 'dnum' }, still ? r.r : '?'); const face = h('div', { class: 'dface' }, h('div', { class: 'dsq' }, num));
+  const res = h('div', { class: 'dres' }, still ? '' : 'jet en cours…'); const sub = h('div', { class: 'dsub' }, `Difficulté ${r.dc} sur d20`);
+  const parts = h('div', { class: 'dparts' });
+  wrap.append(face, h('div', { class: 'dinfo' }, h('div', { class: 'dlab' }, `Test de ${(AT[r.attr] ? AT[r.attr].short : 'chance').toLowerCase()}`), res, sub, parts));
+  const settle = (quiet) => {
+    wrap.classList.remove('rolling'); wrap.classList.add(r.crit ? 'crit' : r.fumble ? 'fumble' : r.ok ? 'ok' : 'ko'); num.textContent = r.r;
+    res.textContent = r.crit ? 'RÉUSSITE CRITIQUE' : r.fumble ? 'ÉCHEC CRITIQUE' : r.ok ? 'RÉUSSITE' : 'ÉCHEC';
+    sub.textContent = `d20 ${r.r} ${r.mod >= 0 ? '+' : '−'} ${Math.abs(r.mod)} = ${r.total} · il fallait ${r.dc}+`;
+    parts.append(...(r.parts || []).map(p => h('span', { class: 'dp ' + (p[1] < 0 ? 'neg' : '') }, `${p[1] >= 0 ? '+' : ''}${p[1]} ${p[0]}`)));
+    if (!quiet) { sfx(r.crit ? 'crit' : r.ok ? 'win' : 'lose'); buzz(r.ok ? 25 : [40, 30, 60]); if (r.crit) { burstAt(face, '#ffe83a', 30); flash('#ffe83a'); } else if (r.fumble) { shake('shake-big'); flash('#ff3d7f'); } else if (!r.ok) shake(); else burstAt(face, '#35f0a0', 12); }
+  };
+  if (still || REDUCED) { settle(true); return wrap; }
+  UI.after.push(() => {
+    let n = 0; const iv = setInterval(() => { num.textContent = rint(1, 20); sfx('tick'); if (++n >= 13) { clearInterval(iv); settle(false); } }, 65);
+  });
+  return wrap;
+}
+
+// ───────── Entrées : clavier, ondulation tactile ─────────
+document.addEventListener('keydown', e => {
+  if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.key === 'm' || e.key === 'M') { toggleMute(); if (G && G.status === 'play') render(true); return; }
+  if (e.key === 'Escape') { if (UI.sheetOpen) closeSheet(); return; }
+  const bs = [...document.querySelectorAll('.choices .ch')].filter(b => !b.disabled);
+  if (/^[1-9]$/.test(e.key)) { const b = document.querySelector(`.choices .ch[data-k="${e.key}"]`); if (b && !b.disabled) b.click(); }
+  else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === document.body) { const c = document.querySelector('.choices .ch.cta:not([disabled])'); if (c) { e.preventDefault(); c.click(); } }
+});
+document.addEventListener('pointerdown', e => { const b = e.target.closest && e.target.closest('.ch,.btn,.dk,.tab,.ibtn'); if (!b || b.disabled) return; const r = b.getBoundingClientRect(); b.style.setProperty('--rx', (e.clientX - r.left) + 'px'); b.style.setProperty('--ry', (e.clientY - r.top) + 'px'); b.classList.remove('rip'); void b.offsetWidth; b.classList.add('rip'); });
+
+// ───────── Fond animé (pluie d'ogénite) ─────────
+(function bg() {
+  if (REDUCED) return; const cv = document.createElement('canvas'); cv.id = 'bg'; document.body.prepend(cv); const cx = cv.getContext('2d'); let W, Hh, drops = [];
+  const resize = () => { W = cv.width = innerWidth; Hh = cv.height = innerHeight; drops = Array.from({ length: Math.min(70, Math.floor(W / 18)) }, () => ({ x: Math.random() * W, y: Math.random() * Hh, v: 1.2 + Math.random() * 2.2, l: 20 + Math.random() * 60, c: Math.random() < .3 ? '255,232,58' : Math.random() < .5 ? '39,240,255' : '170,120,255' })); };
+  resize(); addEventListener('resize', resize);
+  (function loop() { if (!document.hidden) { cx.clearRect(0, 0, W, Hh); drops.forEach(d => { cx.strokeStyle = `rgba(${d.c},.18)`; cx.lineWidth = 1.2; cx.beginPath(); cx.moveTo(d.x, d.y); cx.lineTo(d.x - d.l * .12, d.y + d.l); cx.stroke(); d.y += d.v; d.x -= d.v * .12; if (d.y > Hh) { d.y = -d.l; d.x = Math.random() * W; } }); } requestAnimationFrame(loop); })();
+})();
 
 // ───────── Combat tour par tour ─────────
 const FOE = {
@@ -910,6 +1117,7 @@ const ANTI = {
   buff: { n: 'Buff', d: 'Force infatigable (+4 dégâts, 3 tours)' }, rebound: { n: 'Rebound', d: 'Dévie les projectiles : bouclier 8 et riposte' }, shield: { n: 'Shield', d: 'Corps protégé d’un bouclier de verre (8)' },
   restore: { n: 'Restore', d: 'Auto-régénération d’énergie et de vie' }, foresight: { n: 'Foresight', d: 'Anticipation : défense +3 (3 tours)' }, shock: { n: 'Shock', d: 'Onde de choc : étourdit tous les ennemis' }, dash: { n: 'Dash', d: 'Esquive aérienne (prochaine attaque)' },
 };
+function pop(k, txt, cls) { if (CB) (CB.pops = CB.pops || []).push({ k, txt, cls }); }
 const aliveFoes = () => CB.foes.filter(f => !f.dead);
 const target = () => { let t = CB.foes[CB.tgt]; if (!t || t.dead) { t = aliveFoes()[0]; CB.tgt = CB.foes.indexOf(t); } return t; };
 const clog = (t, c = '') => { CB.log.push({ t, c }); if (CB.log.length > 40) CB.log.shift(); };
@@ -923,13 +1131,22 @@ function startCombat(cfg) {
 }
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc;
-  const foes = h('div', {}, CB.foes.map((f, i) => h('div', { class: 'foe' + (f.dead ? ' dead' : ''), style: i === CB.tgt && !f.dead ? 'border-color:var(--acc)' : '', onclick: () => { if (!f.dead) { CB.tgt = i; renderCombat(); } } },
+  CB.prev = CB.prev || {}; const bars = [];
+  const foes = h('div', {}, CB.foes.map((f, i) => h('div', { class: 'foe' + (f.dead ? ' dead' : '') + (i === CB.tgt && !f.dead ? ' tgt' : ''), 'data-k': 'f' + i, onclick: () => { if (!f.dead) { sfx('click'); CB.tgt = i; renderCombat(); } } },
     h('b', {}, f.name), ' ', f.stun > 0 ? h('span', { class: 'warnc' }, '[étourdi] ') : null, f.shield ? h('span', { class: 'acc' }, '[bouclier] ') : null, f.weak ? h('span', { class: 'warnc' }, '[affaibli] ') : null,
-    h('div', { class: 'bar hp', style: 'margin-top:3px' }, h('i', { style: `width:${Math.max(0, f.hp) / f.hpMax * 100}%` })), h('div', { class: 'small mut' }, `PV ${Math.max(0, f.hp)}/${f.hpMax} · attaque +${f.atk} · défense ${f.def} · dégâts ${f.dmg}`))));
+    (() => { const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : Math.max(0, f.hp)) / f.hpMax * 100}%` }); bars.push([bi, Math.max(0, f.hp) / f.hpMax * 100]); CB.prev[i] = Math.max(0, f.hp); return h('div', { class: 'bar hp' }, bi); })(), h('div', { class: 'small mut' }, `PV ${Math.max(0, f.hp)}/${f.hpMax} · attaque +${f.atk} · défense ${f.def} · dégâts ${f.dmg}`))));
   const allies = pc.party.length ? h('div', { class: 'small mut' }, 'Alliés : ' + pc.party.map(a => `${CH[a.id].name} (${a.inj > 0 ? 'hors combat' : a.hp + ' PV'})`).join(', ')) : null;
-  const status = h('div', { class: 'small' }, `Toi : ${pc.hp}/${pc.hpMax} PV · ${pc.en}/${pc.enMax} énergie · défense ${pcDef()}${CB.shield ? ' · bouclier ' + CB.shield : ''}${CB.buff > 0 ? ' · Buff' : ''}${CB.rage ? ' · BÊTE FÉROCE' : ''}`);
+  const status = h('div', { class: 'small pcstat', 'data-k': 'pc' }, `Toi : ${pc.hp}/${pc.hpMax} PV · ${pc.en}/${pc.enMax} énergie · défense ${pcDef()}${CB.shield ? ' · bouclier ' + CB.shield : ''}${CB.buff > 0 ? ' · Buff' : ''}${CB.rage ? ' · BÊTE FÉROCE' : ''}`);
   const log = h('div', { class: 'log' }, CB.log.slice(-9).map(l => h('div', { class: l.c }, l.t)));
-  show({ kicker: `COMBAT — tour ${CB.round}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, foes, allies, status, log), choices: combatChoices() });
+  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
+  const hook = () => {
+    requestAnimationFrame(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }));
+    let dmgF = false, dmgP = false, miss = false;
+    pops.forEach((p, n) => { const host = document.querySelector(`.combat [data-k="${p.k}"]`); if (!host) return; if (p.cls === 'dmg' || p.cls === 'crit') { if (p.k === 'pc') dmgP = true; else dmgF = true; host.classList.add('hit'); } if (p.cls === 'miss') miss = true;
+      const el = h('span', { class: 'pop ' + p.cls, style: `animation-delay:${n * 140}ms;left:${20 + Math.random() * 55}%` }, p.txt); host.append(el); if (p.cls === 'crit') burstAt(host, '#ffe83a', 16); setTimeout(() => el.remove(), 1500 + n * 140); });
+    if (dmgF) { sfx('hit'); buzz(20); } else if (miss) sfx('miss'); if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff3d7f'); }, 180); }
+  };
+  show({ after: hook, kicker: `COMBAT — tour ${CB.round}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, foes, allies, status, log), choices: combatChoices() });
 }
 function combatChoices() {
   const pc = G.pc; const st = STYLES[pc.style]; const t = target();
@@ -963,11 +1180,12 @@ function atkMod(tags = ['combat']) { const s = skill(STYLES[G.pc.style].prim ===
 function dmgBase() { const w = weaponOf(); return 3 + Math.floor(A(STYLES[G.pc.style].prim === 'maitrise' ? 'corps' : STYLES[G.pc.style].prim) / 2) + (w ? w.dmg : 0) + (CB.buff > 0 ? 4 : 0) + (CB.rage ? 6 : 0) + (hasRole('combattant') ? 1 : 0); }
 function hitFoe(f, dmg, mod, label, o = {}) {
   const r = rint(1, 20); const total = r + mod; const hit = o.auto || r === 20 || (r !== 1 && total >= 10 + f.def);
-  if (f.dash > 0 && !o.auto) { f.dash = 0; clog(`${f.name} esquive d’un Dash.`, 'log-miss'); return false; }
-  if (!hit) { clog(`${label} ${f.name} : raté (d20 ${r}+${mod}).`, 'log-miss'); return false; }
+  const fi = CB.foes.indexOf(f);
+  if (f.dash > 0 && !o.auto) { f.dash = 0; pop('f' + fi, 'ESQUIVE', 'miss'); clog(`${f.name} esquive d’un Dash.`, 'log-miss'); return false; }
+  if (!hit) { pop('f' + fi, `RATÉ · ${total}`, 'miss'); clog(`${label} ${f.name} : raté (d20 ${r}+${mod}).`, 'log-miss'); return false; }
   let d = Math.max(1, dmg + rint(-1, 2)); if (r === 20 || o.crit) d = Math.round(d * 1.6);
-  if (f.shield) { f.shield = 0; clog(`Le bouclier de ${f.name} absorbe le coup !`, 'log-miss'); return true; }
-  if (f.weak) d += 2; f.hp -= d; clog(`${label} ${f.name} : ${d} dégâts${r === 20 || o.crit ? ' (CRITIQUE)' : ''} (d20 ${r}+${mod}).`, 'log-hit');
+  if (f.shield) { f.shield = 0; pop('f' + fi, 'BLOQUÉ', 'miss'); clog(`Le bouclier de ${f.name} absorbe le coup !`, 'log-miss'); return true; }
+  if (f.weak) d += 2; f.hp -= d; pop('f' + fi, `−${d}`, (r === 20 || o.crit) ? 'crit' : 'dmg'); clog(`${label} ${f.name} : ${d} dégâts${r === 20 || o.crit ? ' (CRITIQUE)' : ''} (d20 ${r}+${mod}).`, 'log-hit');
   if (f.hp <= 0) { f.dead = true; clog(`${f.name} est hors combat.`, 'good'); }
   return true;
 }
@@ -995,7 +1213,7 @@ function usePower(tag) {
     case 'combat': hitFoe(t, Math.round((4 + mm + elem + (CB.buff > 0 ? 3 : 0)) * powMul()), mod, `${pname} — frappe de pouvoir sur`); break;
     case 'control': { const r = rint(1, 20) + mod; if (r >= 10 + t.def - 2 || t.m && false) { t.stun = 1 + (r >= 18 ? 1 : 0); clog(`${t.name} est entravé par ${pname} !`, 'log-hit'); } else clog(`${pname} glisse sur ${t.name}.`, 'log-miss'); break; }
     case 'defense': CB.shield += Math.round((6 + mm + elem) * powMul()); clog(`${pname} t’enveloppe : bouclier ${CB.shield}.`, 'good'); break;
-    case 'heal': { const v = Math.round((8 + mm + elem) * powMul()); pc.hp = Math.min(pc.hpMax, pc.hp + v); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 4); }); clog(`${pname} te régénère (+${v} PV).`, 'good'); break; }
+    case 'heal': { const v = Math.round((8 + mm + elem) * powMul()); pc.hp = Math.min(pc.hpMax, pc.hp + v); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 4); }); pop('pc', `+${v}`, 'heal'); clog(`${pname} te régénère (+${v} PV).`, 'good'); break; }
     case 'mobility': CB.dodge = 1; clog(`${pname} : tu te prépares à esquiver.`, 'good'); break;
     case 'stealth': CB.crit = true; CB.dodge = 1; clog(`${pname} : tu disparais des radars. Ta prochaine frappe sera critique.`, 'good'); break;
     case 'hack': { const r = rint(1, 20) + mod; if (r >= 10 + t.def - 1) { t.stun = 2; t.dead = false; clog(`${t.name} est piraté : il reste figé 2 tours.`, 'log-hit'); } else clog(`Le piratage échoue (pare-feu).`, 'log-miss'); break; }
@@ -1010,7 +1228,7 @@ function useAnti(k) {
   if (k === 'buff') { CB.buff = 3; clog('Buff : une force infatigable te gagne.', 'good'); }
   if (k === 'rebound') { CB.shield += 8; CB.rebound = true; clog('Rebound : les projectiles sont déviés.', 'good'); }
   if (k === 'shield') { CB.shield += 8; clog('Shield : ton corps est protégé d’un bouclier de verre.', 'good'); }
-  if (k === 'restore') { pc.hp = Math.min(pc.hpMax, pc.hp + 10); pc.en = Math.min(pc.enMax, pc.en + 3); clog('Restore : tu te régénères.', 'good'); }
+  if (k === 'restore') { pc.hp = Math.min(pc.hpMax, pc.hp + 10); pc.en = Math.min(pc.enMax, pc.en + 3); pop('pc', '+10', 'heal'); clog('Restore : tu te régénères.', 'good'); }
   if (k === 'foresight') { CB.fore = 3; clog('Foresight : tu anticipes leurs mouvements.', 'good'); }
   if (k === 'shock') { aliveFoes().forEach(f => f.stun = 1); clog('Shock : une onde de choc étourdit tous tes adversaires !', 'log-hit'); }
   if (k === 'dash') { CB.dodge = 1; clog('Dash : tu t’élèves pour esquiver.', 'good'); }
@@ -1072,15 +1290,15 @@ function foeTurn() {
     // cible : toi ou un allié
     const ally = pc.party.filter(a => a.inj <= 0); const onAlly = ally.length && chance(CB.guard > 0 ? 0.05 : 0.25);
     if (onAlly) { const a = pick(ally); const c = CH[a.id]; const r = rint(1, 20) + f.atk; if (r >= 10 + 6) { const d = Math.max(1, f.dmg - 1); a.hp -= d; clog(`${f.name} blesse ${c.name} (${d}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${c.name} est mis hors combat !`, 'log-dmg'); } } else clog(`${f.name} rate ${c.name}.`, 'log-miss'); return; }
-    if (CB.dodge > 0) { CB.dodge--; clog(`${f.name} attaque mais tu esquives.`, 'good'); return; }
+    if (CB.dodge > 0) { CB.dodge--; pop('pc', 'ESQUIVE', 'ok'); clog(`${f.name} attaque mais tu esquives.`, 'good'); return; }
     const r = rint(1, 20); const D = pcDef();
     if (r === 20 || (r !== 1 && r + f.atk >= 10 + D)) {
       let d = Math.max(1, f.dmg + rint(-1, 1) - (armorOf() ? Math.floor(armorOf().def / 2) : 0)); if (r === 20) d = Math.round(d * 1.5);
       if (CB.guard > 0) d = Math.max(1, d - 2);
       if (CB.shield > 0) { const ab = Math.min(CB.shield, d); CB.shield -= ab; d -= ab; clog(`Ton bouclier absorbe ${ab}.`, 'good'); if (CB.rebound && ab) { f.hp -= 4; clog(`Rebound : ${f.name} subit 4 dégâts en retour.`, 'log-hit'); if (f.hp <= 0) f.dead = true; } }
-      if (d > 0) { pc.hp = Math.max(0, pc.hp - d); clog(`${f.name} te touche : ${d} dégâts.`, 'log-dmg'); }
+      if (d > 0) { pc.hp = Math.max(0, pc.hp - d); pop('pc', `−${d}`, r === 20 ? 'crit' : 'dmg'); CB.hurt = true; clog(`${f.name} te touche : ${d} dégâts.`, 'log-dmg'); }
       if (CB.counter && !f.dead) { f.hp -= CB.counter; clog(`Tu ripostes : ${CB.counter} dégâts.`, 'log-hit'); if (f.hp <= 0) f.dead = true; }
-    } else clog(`${f.name} te manque.`, 'log-miss');
+    } else { pop('pc', 'MANQUÉ', 'ok'); clog(`${f.name} te manque.`, 'log-miss'); }
   });
 }
 function endPlayerTurn() {
@@ -1150,16 +1368,16 @@ function hub() {
   const pend = pendingEvents(); if (pend) return pend();
   const f = F[pc.faction];
   const L = [];
-  L.push(C('Missions', missionBoard, { sub: 'Contrats, ordres de ta faction, petites et grosses missions.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
-  L.push(C('Voyager (Orbitrail)', travelMenu, { sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
-  L.push(C('Enquêter sur les pierres antiques', stoneMenu, { sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
-  L.push(C('Se reposer', restMenu, { sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', shopMenu, { sub: 'Armes, armures, gadgets, soins. Marché Noir si tu as les contacts.' }));
-  L.push(C('Recruter / rencontrer', recruitMenu, { sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
-  L.push(C(`Ta faction : ${f.name}`, factionMenu, { sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
-  L.push(C('S’entraîner / choisir un rôle', trainMenu, { sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno.' }));
-  L.push(C('Prendre sa retraite', retireConfirm, { sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
-  show({ kicker: dateStr(), title: 'Que fais-tu ?', text: hubText(), choices: L });
+  L.push(C('Missions', missionBoard, { ic: '🎯', sub: 'Contrats, ordres de ta faction, petites et grosses missions.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
+  L.push(C('Voyager (Orbitrail)', travelMenu, { ic: '🚆', sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
+  L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
+  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
+  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins. Marché Noir si tu as les contacts.' }));
+  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
+  L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
+  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno.' }));
+  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
+  show({ kicker: dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -1172,7 +1390,7 @@ const EVENT_FN = {};
 function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt (les traversées du Pacifique comptent triple). Un scout-hover permet de voyager hors du réseau.'],
-    extra: h('div', {}, mapEl({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
+    extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
     choices: [C('Choisir dans la liste', travelList), hasItem('hover') ? C('Voyager en scout-hover (hors Orbitrail)', travelHover, { sub: 'Non tracé, mais exposé aux dérèglements climatiques.' }) : null, C('← Retour', hub)] });
 }
 function travelList() {
@@ -1185,7 +1403,7 @@ function travelConfirm(to) {
   const r = otRoute(G.loc, to); if (!r) return travelMenu();
   const weeks = 1 + Math.floor((r.hops - 1) / 4); const chance_ = Math.round(detectChance() * 100);
   show({ kicker: 'Orbitrail', title: `${capName(G.loc)} → ${capName(to)}`, text: [`Trajet : ${esc(routeText(r))}.`, `${r.hops} arrêt(s), ${weeks} semaine(s), <b>${r.cost} ¢</b>.`, `Risque de contrôle : environ <b>${chance_} %</b> ${pc_hasFaux() ? '(faux papiers)' : ''}`],
-    extra: h('div', {}, mapEl({ here: G.loc, pick: new Set([to]), onPick: () => { } })), choices: [C('Partir', () => travelGo(to, r, weeks), { req: { money: r.cost } }), C('Annuler', travelMenu)] });
+    extra: h('div', {}, mapBox({ here: G.loc, pick: new Set([to]), onPick: () => { }, route: r.path })), choices: [C('Partir', () => travelGo(to, r, weeks), { req: { money: r.cost } }), C('Annuler', travelMenu)] });
 }
 const pc_hasFaux = () => G.pc.faux > 0;
 function detectChance() {
@@ -1199,6 +1417,7 @@ function travelGo(to, r, weeks) {
   const used = [];
   if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
   const ctl = chance(detectChance() + (used.length ? 0 : 0));
+  const ln = r.legs.length ? r.legs[0].line : 1; splash({ title: 'LIGNE ' + ln + (r.legs.length > 1 ? ' …' : ''), sub: `${capName(from)} → ${capName(to)}`, icon: '🚆', color: OT_LINES[ln].c === '#151515' ? '#fff' : OT_LINES[ln].c, cls: 'train', ms: 1300 });
   G.loc = to; advance(weeks); if (G.status !== 'play') return;
   logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
   if (ctl) return controleFA(r);
@@ -1518,7 +1737,7 @@ function finishMission(o, quality, lines, extraFx) {
 }
 function promote(L0) {
   const pc = G.pc; pc.grade++; const f = F[pc.faction]; const s0 = wantedStars(); addHeat(0); pc.heat = Math.max(pc.heat, minHeat()); const s1 = wantedStars();
-  recalc(); pc.hp = pc.hpMax; logEntry(`Promotion : ${gradeName()} (${f.name}).`);
+  recalc(); pc.hp = pc.hpMax; splash({ title: 'PROMOTION', sub: `${gradeName()} ${'★'.repeat(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
   const L = [...(L0 || [])]; if (s1 > s0) L.push({ t: `Plus tu es gradé, plus on te cherche : prime ${starStr(s1)} — ${WANTED_TXT[s1]}.`, c: 'badc' });
   const dec = ['aucune décision', 'tu votes dans les décisions de ta faction', 'tu peux proposer des opérations', 'tu décides des opérations locales', 'tu pèses sur les grandes décisions', 'tu décides de tout'][pc.grade];
   show({ kicker: 'PROMOTION', title: `${gradeName()} ${'★'.repeat(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });
@@ -1841,7 +2060,7 @@ function capturedScene(text) {
   pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4));
   pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : 20), tartare: st >= 4 };
   pc.stash = { inv: pc.inv, eq: pc.eq }; pc.inv = { kit: 0 }; delete pc.inv.kit; pc.eq = { arme: null, armure: null };
-  G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par la Force d’Autorité.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
+  splash({ title: 'CAPTURÉ', sub: pc.flags.cap.tartare ? 'Direction le Tartare' : 'Derrière les barreaux', icon: '⛓', color: '#ff3d7f' }); shake('shake-big'); G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par la Force d’Autorité.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
   show({ kicker: 'CAPTURÉ', title: pc.flags.cap.tartare ? 'Le Tartare' : 'Cellule', text: [text || 'On te passe les menottes.', st >= 4 ? 'Tu es un multirécidiviste, « représentant » de ta faction, recherché sur tout le globe : direction le <b>Tartare</b>, la plus grande prison du monde, sous la garde de Gaia, Erebe, Nyx et Eros.' : st >= 3 ? 'Prison continentale. Ils ne comptent pas te relâcher de sitôt.' : st >= 2 ? 'Prison d’État. Quelques mois derrière les barreaux t’attendent.' : 'Garde à vue. Pour des infractions mineures, tu n’en as pas pour longtemps.', 'Ton équipement est confisqué. Les captifs vivants peuvent être interrogés, emprisonnés, torturés, exécutés ou vendus selon leur mise à prix.'], choices: [C('Continuer', hub)] });
 }
 function capturedMenu() {
@@ -1869,7 +2088,7 @@ function release(text, repFx, extra, interrogated) {
   pc.hp = Math.max(pc.hp, Math.round(pc.hpMax * 0.5)); pc.en = pc.enMax; if (!interrogated) addHeat(-10, L);
   if (repFx) L.push(...fx({ rep: repFx }));
   G.loc = G.loc === 'swahilis' && wantedStars() >= 4 ? 'swahilis' : G.loc; recalc(); logEntry('Libéré.'); G.board = null;
-  show({ kicker: 'LIBÉRÉ', title: 'Tu es libre', text: [text], fx: L, choices: [C('Continuer', hub)] });
+  splash({ title: 'LIBRE', icon: '🗝', color: '#35f0a0' }); show({ kicker: 'LIBÉRÉ', title: 'Tu es libre', text: [text], fx: L, choices: [C('Continuer', hub)] });
 }
 function escapeMenu() {
   const pc = G.pc; const cap = pc.flags.cap; if (!cap) return hub(); const tier = clamp(cap.stars + 1, 1, 5); const dc = dcOf(tier); const L = [];
@@ -1887,7 +2106,7 @@ function becomeFallenScene() {
 function becomeFallen(forced) {
   const pc = G.pc; const old = pc.faction; const L = []; pc.flags.cap = null; if (pc.stash) { pc.inv = pc.stash.inv; pc.eq = pc.stash.eq; pc.stash = null; }
   L.push(...fx({ rep: { [old]: -30 }, spill: true })); pc.faction = 'fallen'; pc.merit = 0; pc.grade = Math.max(0, Math.min(pc.grade, 2)); pc.heat = 0; pc.implant = { deadline: G.wk + 12 }; pc.rep.fallen = 30; pc.rep.fa = 5;
-  recalc(); pc.hp = pc.hpMax; logEntry('Tu es devenu Fallen : implant explosif posé.'); G.board = null;
+  splash({ title: 'FALLEN', sub: 'Implant explosif posé', icon: '💥', color: '#ff3d7f' }); recalc(); pc.hp = pc.hpMax; logEntry('Tu es devenu Fallen : implant explosif posé.'); G.board = null;
   show({ kicker: 'FALLEN', title: 'L’implant', text: ['L’aiguille s’enfonce dans ta nuque. Une petite lumière clignote : douze semaines pour livrer une prime.', 'Dans le menu « Missions », ton contrat de chasseur apparaît en rouge. Tu peux aussi chercher à faire retirer l’implant (menu « Ta faction »).'], fx: L, choices: [C('Continuer', hub)] });
 }
 function queueFallenForced() { show({ kicker: 'VENTE', title: 'Vendu', text: ['On ne te garde pas : on te vend. Le Marché Noir te propose l’implant plutôt que la mine.'], choices: [C('Accepter l’implant', () => becomeFallen(true)), C('Refuser', () => endGame('dead', 'Mort dans les mines du Marché Noir.'), { cls: 'danger' })] }); }
@@ -1985,7 +2204,7 @@ function successionMenu() {
 }
 function becomeLeader(fid, text, how, extra) {
   const pc = G.pc; const W = G.world; W.leader[fid] = 'pc'; pc.grade = 5; pc.merit = Math.max(pc.merit, MERIT_STEPS[5]); delete pc.flags.vacant; recalc(); pc.hp = pc.hpMax; pc.heat = Math.max(pc.heat, minHeat()); G.board = null; G.score.leader = 1;
-  logEntry(`Tu deviens ${how === 'relève' ? 'la relève et ' : ''}le chef de ${F[fid].name}.`); newsPush(`${pc.name} prend la tête de ${F[fid].name}.`);
+  splash({ title: 'CHEF', sub: F[fid].name, icon: '👑', color: '#ffe83a', ms: 2200 }); logEntry(`Tu deviens ${how === 'relève' ? 'la relève et ' : ''}le chef de ${F[fid].name}.`); newsPush(`${pc.name} prend la tête de ${F[fid].name}.`);
   show({ kicker: 'CHEF', title: `Tu diriges ${F[fid].name}`, text: [text, 'Tu décides de tout, tu es recherché sur toute la planète (prime ⭐⭐⭐⭐ pour les factions ANTI), et chaque mois, des décisions t’attendent. Menu « Ta faction → Diriger la faction ».'], fx: extra || [], choices: [C('Continuer', hub)] });
 }
 EVENT_FN.succession = function (fid) { show({ kicker: F[fid].name, title: 'Le chef est mort', text: [`${esc(F[fid].name)} n’a plus de chef. Tu es Bras droit : tu peux prendre la tête (menu Ta faction → Prétendre à la tête).`], choices: [C('Prendre la tête maintenant', () => becomeLeader(fid, 'Le fauteuil est vide. Tu t’y installes.', 'mort')), C('Plus tard', hub)] }); };
@@ -2213,6 +2432,7 @@ function crRandomAll() {
 function showEnding(kind, cause, sc) {
   const pc = G.pc; const title = kind === 'win' ? '🏆 LES 16 PIERRES !' : kind === 'retire' ? '🌴 Retraite' : '☠ Fin de ta route';
   const txt = kind === 'win' ? ['La seizième pierre s’illumine au creux de ta main. Les seize éclats vibrent à l’unisson, comme un seul cœur : l’aura de toutes les civilisations passées déferle, et le monde retient son souffle. <b>Tu as gagné la partie.</b>'] : kind === 'retire' ? [`${esc(pc.name)} raccroche. Quelque part, loin des radars, tu vis de tes souvenirs, de tes amis et de ton argent. Les histoires de tes exploits circuleront longtemps.`] : [esc(cause || 'Tu es mort.'), 'Le monde de Cratès est cruel avec ceux qui s’approchent trop des pierres, des chefs et de Néo.'];
+  if (kind === 'win') { splash({ title: '16 / 16', sub: 'LES PIERRES ANTIQUES', icon: '🏆', color: '#ffe83a', ms: 2800, force: true }); sfx('crit'); } else if (kind === 'dead') { splash({ title: 'FIN', sub: 'Ta route s’arrête ici', icon: '☠', color: '#ff3d7f', ms: 2200, force: true }); sfx('lose'); }
   const t = h('table', { class: 't' }); [['Pierres antiques', stoneCount() * 600], ['Grade', pc.grade * 400], ['Mérite', pc.merit * 2], ['Fortune', Math.round(pc.money / 25)], ['Alliés', pc.party.length * 60], ['Missions', (G.score.missions || 0) * 15], ['Territoires', (G.score.terr || 0) * 200], ['Combats gagnés', (G.score.wins || 0) * 25], ['Vies sauvées', (G.score.saved || 0) * 30], ['Durée (mois)', Math.floor(G.wk / 4) * 10]].forEach(([k, v]) => t.append(h('tr', {}, h('td', {}, k), h('td', {}, v))));
   const scores = loadScores(); const rank = scores.findIndex(s => s.score === sc && s.name === pc.name) + 1;
   UI.scene = { kicker: dateStr(), title, text: [...txt, `<b>Score final : ${fmt(sc)}</b>${kind === 'dead' ? ' (×0,6)' : kind === 'retire' ? ' (×1,25)' : ' (+15 000)'} — ${rank ? 'classement : #' + rank : ''}`], extra: t, choices: [C('Meilleurs scores', () => { G = null; scoresScreen(); }), C('Menu principal', titleScreen)] };

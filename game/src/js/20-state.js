@@ -109,6 +109,7 @@ function startGame(spec) {
   recalc(); pc.hp = pc.hpMax; pc.en = pc.enMax;
   logEntry(`Début de l’aventure : ${pc.name}, ${F[pc.faction].name}.`);
   saveGame();
+  setTimeout(() => splash({ title: '2071', sub: 'Juin · Le protocole ANTI vient d’être lancé', cls: 'year', color: '#ffe83a', ms: 2200 }), 80);
   return G;
 }
 
