@@ -26,13 +26,19 @@ function vehicleOk(vid, from, to) {
 function vehicleMenu() {
   const vs = myVehicles(); const L = vs.map(id => { const v = ITEMS[id].v; return C(`${v.ic} ${ITEMS[id].n}`, () => vehicleDest(id), { sub: `${v.legal ? 'Légal' : 'ILLÉGAL'}${v.armed ? ' · armé' : ''} · ${ITEMS[id].desc}` }); });
   if (!vs.length) L.push(Object.assign(C('Aucun véhicule', () => { }), { lock: 'Achète-en un au Marché (trottinette, vélo volant, hoverboard, skis, voiture, vaisseau… ou au Marché Noir)' }));
-  L.push(C('← Retour', travelMenu)); show({ kicker: 'Véhicules', title: 'Voyager autrement', text: ['Un véhicule te libère de l’Orbitrail : pas de contrôle de gare, mais d’autres risques sur la route. Les illégaux attirent la F.A. ; les armés dissuadent les pillards.'], choices: L });
+  L.push(C('← Retour', () => travelMenu())); show({ kicker: 'Véhicules', title: 'Voyager autrement', text: ['Un véhicule te libère de l’Orbitrail : pas de contrôle de gare, mais d’autres risques sur la route. Les illégaux attirent la F.A. ; les armés dissuadent les pillards.'], choices: L });
 }
 function vehicleDest(vid) {
   const v = ITEMS[vid].v; const L = [];
   DATA.states.forEach(s => { const r = vehicleOk(vid, G.loc, s.id); if (r) { const wk = Math.max(1, Math.ceil(r.hops / v.spd)); const fuel = 10 + r.hops * 6; L.push(C(`${s.capital} — ${s.name}`, () => vehicleGo(vid, s.id, wk, fuel, r), { sub: `${r.hops} arrêt(s) · ${wk} sem. · carburant ${fuel} ¢`, req: { money: fuel } })); } });
   if (!L.length) L.push(Object.assign(C('Aucune destination accessible', () => { }), { lock: 'Ce véhicule ne peut pas aller plus loin d’ici (portée, mer ou climat)' }));
-  L.push(C('← Retour', vehicleMenu)); show({ kicker: ITEMS[vid].n, title: 'Destination', text: [`Depuis ${esc(capName(G.loc))}. ${ITEMS[vid].desc}`], extra: mapBox({ here: G.loc, pick: new Set(DATA.states.filter(s => vehicleOk(vid, G.loc, s.id)).map(s => s.id)), onPick: s => { const r = vehicleOk(vid, G.loc, s); const wk = Math.max(1, Math.ceil(r.hops / v.spd)); vehicleGo(vid, s, wk, 10 + r.hops * 6, r); } }), choices: L });
+  L.push(C('← Retour', vehicleMenu, { cls: 'back' }));
+  let sel = null, box; const info = h('div', { class: 'travelinfo' }, h('span', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
+  const pickIt = s => { const r = vehicleOk(vid, G.loc, s); if (!r) return; const wk = Math.max(1, Math.ceil(r.hops / v.spd)); const fuel = 10 + r.hops * 6;
+    if (sel === s) { if (G.pc.money < fuel) { toast('Carburant insuffisant (' + fuel + ' ¢)'); return; } return vehicleGo(vid, s, wk, fuel, r); }
+    sel = s; sfx('click'); box.setRoute(r); info.innerHTML = ''; info.append(h('b', {}, `${capName(G.loc)} → ${capName(s)}`), h('div', {}, `${r.hops} arrêt(s) · ${wk} sem. · carburant `, h('b', { class: 'acc' }, fuel + ' ¢')), h('div', { class: 'acc' }, '▶ Touche encore ' + capName(s) + ' pour partir')); };
+  box = mapBox({ here: G.loc, pick: new Set(DATA.states.filter(s => vehicleOk(vid, G.loc, s.id)).map(s => s.id)), onPick: pickIt });
+  show({ kicker: ITEMS[vid].n, title: 'Destination', text: [`Depuis ${esc(capName(G.loc))}. ${ITEMS[vid].desc}`], extra: h('div', {}, box, info), choices: L });
 }
 function vehicleGo(vid, to, wk, fuel, r) {
   const pc = G.pc; const v = ITEMS[vid].v; pc.money -= fuel; const from = G.loc;

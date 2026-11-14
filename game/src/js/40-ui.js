@@ -251,17 +251,20 @@ function mapEl(o = {}) {
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
-  const routeSteps = o.routeObj && o.routeObj.steps;
-  if (routeSteps && routeSteps.length && !o.routeObj.custom) {
-    const runs = [[]];
-    routeSteps.forEach(st => { const g = edgeGeom(st.from, st.to, st.line); let cur = runs[runs.length - 1];
-      if (g.off) { g.pts.slice(0, g.na).forEach(q => cur.push(q)); const nr = g.pts.slice(g.na).map(q => [q[0] - g.off, q[1]]); runs.push(nr); }
-      else g.pts.forEach((q, k) => { if (!(cur.length && k === 0)) cur.push(q); }); });
-    runs.forEach(r => { const pts = r.map(q => q.join(',')).join(' '); svg.append(el('polyline', { points: pts, fill: 'none', stroke: '#0a0a14', 'stroke-width': 17, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: .55 }), el('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '2 13', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'routeline' })); });
-    routeSteps.forEach(st => [st.from, st.to].forEach(id => svg.append(el('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 15, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4, class: 'pulse' }))));
-  }
+  if (o.routeObj) drawRoute(svg, o.routeObj);
   if (o.tile) { const kids = [...svg.childNodes]; [-1800, 1800].forEach(off => { const g = el('g', { transform: `translate(${off} 0)`, opacity: .5 }); kids.forEach(k => g.append(k.cloneNode(true))); svg.append(g); }); svg.prepend(el('rect', { x: -4000, y: -400, width: 9800, height: 1800, fill: '#0a0a14' })); }
   return svg;
+}
+const svgEl = (t, a) => { const e = document.createElementNS('http://www.w3.org/2000/svg', t); for (const x in a) e.setAttribute(x, a[x]); return e; };
+function drawRoute(parent, routeObj) {
+  const steps = routeObj && routeObj.steps; if (!steps || !steps.length || routeObj.custom) return null;
+  const grp = svgEl('g', { class: 'routegrp', 'pointer-events': 'none' }); const runs = [[]];
+  steps.forEach(st => { const g = edgeGeom(st.from, st.to, st.line); const cur = runs[runs.length - 1];
+    if (g.off) { g.pts.slice(0, g.na).forEach(q => cur.push(q)); runs.push(g.pts.slice(g.na).map(q => [q[0] - g.off, q[1]])); }
+    else g.pts.forEach((q, k) => { if (!(cur.length && k === 0)) cur.push(q); }); });
+  runs.forEach(r => { const pts = r.map(q => q.join(',')).join(' '); grp.append(svgEl('polyline', { points: pts, fill: 'none', stroke: '#0a0a14', 'stroke-width': 17, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: .55 }), svgEl('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '2 13', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'routeline' })); });
+  const last = steps[steps.length - 1].to; [steps[0].from, last].forEach((id, k) => grp.append(svgEl('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 16, fill: 'none', stroke: k ? '#ff2a6d' : '#fcee09', 'stroke-width': 4, class: 'pulse' })));
+  parent.append(grp); return grp;
 }
 function wrapStub(a, b) { // point de sortie au bord de la carte pour la station a vers b
   const L = OT_LINES[(OT_WRAP.find(w => (w[0] === a && w[1] === b) || (w[1] === a && w[0] === b)) || [0, 0, 1])[2]];
@@ -279,10 +282,10 @@ function mapBox(o = {}) {
   const zoomAt = (f, px, py) => { const nw = clamp(vb.w / f, 300, 2400); const rx = px == null ? .5 : px, ry = py == null ? .5 : py; const cx = vb.x + vb.w * rx, cy = vb.y + vb.h * ry; vb.w = nw; vb.h = nw * chh() / cw(); vb.x = cx - vb.w * rx; vb.y = cy - vb.h * ry; apply(); };
   const home = () => o.here ? focus(o.here, innerWidth < 700 ? 700 : 1100) : fit();
   const ptrs = new Map(); let lastD = 0, startX = 0, startY = 0;
-  svg.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false; startX = e.clientX; startY = e.clientY; try { svg.setPointerCapture(e.pointerId); } catch (x) { } lastD = 0; svg.style.cursor = 'grabbing'; });
+  svg.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false; startX = e.clientX; startY = e.clientY; lastD = 0; svg.style.cursor = 'grabbing'; });
   svg.addEventListener('pointermove', e => {
     if (!ptrs.has(e.pointerId)) return; const prev = ptrs.get(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
-    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 7) moved = true; if (!moved) return;
+    if (!moved && Math.hypot(e.clientX - startX, e.clientY - startY) > 7) { moved = true; try { svg.setPointerCapture(e.pointerId); } catch (x) { } } if (!moved) return;
     if (ptrs.size === 1) { vb.x -= (e.clientX - prev[0]) * vb.w / cw(); vb.y -= (e.clientY - prev[1]) * vb.h / chh(); apply(); }
     else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); const r = wrap.getBoundingClientRect(); if (lastD) zoomAt(d / lastD, ((a[0] + b[0]) / 2 - r.left) / r.width, ((a[1] + b[1]) / 2 - r.top) / r.height); lastD = d; }
   });
@@ -293,6 +296,7 @@ function mapBox(o = {}) {
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
+  box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
   if (window.ResizeObserver) new ResizeObserver(() => apply()).observe(wrap);
   return box;

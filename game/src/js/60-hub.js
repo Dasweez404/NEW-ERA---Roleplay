@@ -39,24 +39,26 @@ function pendingEvents() {
 const EVENT_FN = {};
 
 // ───────── Voyager ─────────
-function travelMenu() {
-  const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
-  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Touche une station allumée (18 ¢ par arrêt). La Terre est une boucle : le Pacifique relie Tokyo↔Toronto et Nouméa↔Lima par les bords de la carte.'],
-    extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
-    choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu)] });
+function travelMenu(pre) {
+  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box;
+  const info = h('div', { class: 'travelinfo' }, h('span', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
+  const select = to => {
+    const r = otRoute(here, to); if (!r) return; const weeks = 1 + Math.floor((r.hops - 1) / 4);
+    if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
+    sel = to; sfx('click'); box.setRoute(r);
+    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
+  };
+  box = mapBox({ here, pick: new Set(ids), onPick: select });
+  if (pre) setTimeout(() => select(pre), 30);
+  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu, { cls: 'back' })] });
 }
 function travelList() {
   const here = G.loc; const L = [];
   CONT.forEach(ct => DATA.states.filter(s => s.continent === ct && s.id !== here).forEach(s => { const r = otRoute(here, s.id); L.push(C(`${s.capital} — ${s.name}`, () => travelConfirm(s.id), { sub: `${ct} · ${r.hops} arrêt(s) · ${r.cost} ¢` })); }));
-  L.push(C('← Retour', travelMenu)); show({ kicker: 'Orbitrail', title: 'Destinations', text: [], choices: L });
+  L.push(C('← Retour', () => travelMenu())); show({ kicker: 'Orbitrail', title: 'Destinations', text: [], choices: L });
 }
 function routeText(r) { return r.legs.map(l => `ligne ${l.line} : ${OT_ST[l.from][2]} → ${OT_ST[l.to][2]}`).join(' ; '); }
-function travelConfirm(to) {
-  const r = otRoute(G.loc, to); if (!r) return travelMenu();
-  const weeks = 1 + Math.floor((r.hops - 1) / 4); const chance_ = Math.round(detectChance() * 100);
-  show({ kicker: 'Orbitrail', title: `${capName(G.loc)} → ${capName(to)}`, text: [`Trajet : ${esc(routeText(r))}.`, `${r.hops} arrêt(s), ${weeks} semaine(s), <b>${r.cost} ¢</b>.`, `Risque de contrôle : environ <b>${chance_} %</b> ${pc_hasFaux() ? '(faux papiers)' : ''}`],
-    extra: h('div', {}, mapBox({ here: G.loc, pick: new Set([to]), onPick: () => { }, routeObj: r })), choices: [C('Partir', () => travelGo(to, r, weeks), { req: { money: r.cost } }), C('Annuler', travelMenu)] });
-}
+function travelConfirm(to) { travelMenu(to); }
 const pc_hasFaux = () => G.pc.faux > 0;
 function detectChance() {
   const pc = G.pc; if (pc.faction === 'fa' && !pc.flags.defected) return 0.02;

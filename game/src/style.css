@@ -344,3 +344,4 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .maphint{font-family:var(--fm);font-size:.64rem;letter-spacing:.06em;color:var(--mut);margin-top:4px;text-transform:uppercase}
 .mapbtns .ibtn{width:40px;height:40px;font-size:1.1rem}
 @media(max-width:960px){.mapscroll{height:58vh}}
+.travelinfo{margin-top:8px;padding:8px 12px;border-left:3px solid var(--acc);background:#12121e;font-size:.95rem;min-height:3.4em}
