@@ -13,7 +13,7 @@ function monthTick() {
   addHeat(-4); if (pc.brouil < 0) pc.brouil = 0;
   // loyauté des alliés
   [...pc.party].forEach(a => {
-    a.loy = clamp(a.loy + (hasRole('leader') ? 2 : 0) + rint(-3, 2) + ((pc.rep[CH[a.id].faction] || 0) < -30 ? -4 : 0), 0, 100);
+    a.loy = clamp(a.loy + PK('bond') + (hasRole('leader') ? 2 : 0) + rint(-3, 2) + ((pc.rep[CH[a.id].faction] || 0) < -30 ? -4 : 0), 0, 100);
     if (a.loy <= 12) { const c = CH[a.id]; removeAlly(a.id); newsPush(`${c.name} a quitté ton groupe.`); logEntry(`${c.name} t'a quitté.`); if (chance(0.3) && isAnti(c.faction) === false && wantedStars() > 0) { pc.flags.betrayed = (pc.flags.betrayed || 0) + 1; addHeat(8); logEntry(`${c.name} t'a vendu à la F.A.`); newsPush(`Une dénonciation vise un fugitif.`); } }
   });
   // implant

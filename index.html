@@ -371,6 +371,7 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .map .st.go:hover .stc{stroke:#fcee09}
 .maplegend{display:flex;gap:14px;margin-top:6px;font-family:var(--fm);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}.maplegend .y{color:#fcee09}.maplegend .w{color:#f2f3ff}.maplegend .c{color:#00e5ff}
 .recotxt2{color:#fcee09;font-weight:700}
+.perk{font-size:.85rem;margin:2px 0 8px 10px;color:var(--acc,#ffe83a)}
 </style>
 </head>
 <body>
@@ -826,6 +827,8 @@ function skill(attrId, tags = []) {
   if (gm) { parts.push(['équipement', gm]); mod += gm; }
   if (tags.includes('ally') && pc.party.length) { const b = Math.min(3, pc.party.filter(a => a.inj <= 0).length); if (b) { parts.push(['alliés', b]); mod += b; } }
   if (!tags.includes('ally') && pc.party.length) { const hl = pc.party.filter(a => a.inj <= 0).length; const b = Math.min(2, Math.floor(hl / 2)); if (b) { parts.push(['équipe', b]); mod += b; } }
+  const pb = perkChk(tags); if (pb) { parts.push(['particularité', pb]); mod += pb; }
+  if (PK('night') && typeof envTime === 'function' && envTime() === 'night') { parts.push(['nuit', PK('night')]); mod += PK('night'); }
   if (pc.stim > 0) { parts.push(['stimulant', 3]); mod += 3; }
   if (pc.hp < pc.hpMax * 0.3) { parts.push(['blessé', -2]); mod -= 2; }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
@@ -1073,7 +1076,7 @@ function tabPerso() {
     h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché (pas d’identité civile complète)'));
   box.append(h('h3', {}, 'Pouvoir : ' + TYPENAME[pc.ptype]));
   if (!pcPowers().length) box.append(h('div', { class: 'mut' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => box.append(powerLine(p)));
+  pcPowers().forEach(p => { box.append(powerLine(p)); const k = perkOf(p); if (k) box.append(h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), ' ', h('span', { class: 'mut' }, `(${k.kind}) ${k.desc}`))); });
   if (pc.ptype !== 'aucun') box.append(h('div', { class: 'small mut', style: 'margin-top:4px' }, 'Faiblesse : ' + WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   box.append(h('h3', {}, 'Attributs' + (pc.pts ? ` — ${pc.pts} point(s) à répartir` : '')));
   ATTRS.forEach(a => {
@@ -1678,12 +1681,16 @@ function pop(k, txt, cls) { if (CB) (CB.pops = CB.pops || []).push({ k, txt, cls
 const aliveFoes = () => CB.foes.filter(f => !f.dead);
 const target = () => { let t = CB.foes[CB.tgt]; if (!t || t.dead) { t = aliveFoes()[0]; CB.tgt = CB.foes.indexOf(t); } return t; };
 const clog = (t, c = '') => { CB.log.push({ t, c }); if (CB.log.length > 40) CB.log.shift(); };
-function pcDef() { const pc = G.pc; const a = armorOf(); return 3 + Math.floor(A('agilite') / 2) + (a ? a.def : 0) + (pc.style === 'juggernaut' ? 1 : 0) + (CB && CB.defend ? 3 : 0) + (CB && CB.fore > 0 ? 3 : 0) + (hasRole('gardien') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 1 : 0); }
+function pcDef() { const pc = G.pc; const a = armorOf(); return 3 + PK('def') + Math.floor(A('agilite') / 2) + (a ? a.def : 0) + (pc.style === 'juggernaut' ? 1 : 0) + (CB && CB.defend ? 3 : 0) + (CB && CB.fore > 0 ? 3 : 0) + (hasRole('gardien') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 1 : 0); }
 
 function startCombat(cfg) {
   CB = { cfg, foes: cfg.foes, round: 1, log: [], tgt: 0, menu: 'main', shield: 0, defend: false, crit: false, dodge: 0, drones: 0, buff: 0, fore: 0, hitBuff: 0, rage: false, boost: 0, stunPc: 0, noItems: false, wasAwake: false, tier: Math.max(...cfg.foes.map(f => Math.round((f.atk) / 2))) };
   CB.foes.forEach(f => { f.dead = false; });
   clog(cfg.intro || 'Le combat commence !');
+  CB.dodge += PK('dodge'); CB.shield += PK('shield'); CB.weakDone = false; CB.lb = !!PK('lastbreath');
+  if (PK('dodge')) clog('Réflexes : tu es prêt à esquiver.', 'good');
+  if (PK('shield')) clog(`Protection : ${PK('shield')} de bouclier.`, 'good');
+  if (PK('first')) { const t0 = aliveFoes()[0]; if (t0) { hitFoe(t0, dmgBase(), 0, 'Initiative —', { auto: true }); if (!aliveFoes().length) return finishCombat('win'); } }
   renderCombat();
 }
 const powName = tag => { const p = pcPowers().find(p => p.tags.includes(tag)); return p ? p.name : 'Pouvoir'; };
@@ -1752,14 +1759,19 @@ function atkMod(tags = ['combat']) { const s = skill(STYLES[G.pc.style].prim ===
 function dmgBase() { const w = weaponOf(); return 3 + Math.floor(A(STYLES[G.pc.style].prim === 'maitrise' ? 'corps' : STYLES[G.pc.style].prim) / 2) + (w ? w.dmg : 0) + (CB.buff > 0 ? 4 : 0) + (CB.rage ? 6 : 0) + (hasRole('combattant') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 2 : 0); }
 function hitFoe(f, dmg, mod, label, o = {}) {
   let r, total, hit;
-  if (!o.auto && o.attr) { const rr = check(o.attr, 10 + f.def, o.tags || ['combat'], (CB.hitBuff || 0) + (CB.stunPc > 0 ? -3 : 0) + (o.bonus || 0)); r = rr.crit ? 20 : rr.fumble ? 1 : rr.r; total = rr.total; hit = rr.ok; mod = rr.mod; }
-  else { r = rint(1, 20); total = r + mod; hit = o.auto || r === 20 || (r !== 1 && total >= 10 + f.def); }
+  if (!o.auto && o.attr) { const rr = check(o.attr, 10 + f.def, o.tags || ['combat'], PK('pierce') + (CB.hitBuff || 0) + (CB.stunPc > 0 ? -3 : 0) + (o.bonus || 0)); r = rr.crit ? 20 : rr.fumble ? 1 : rr.r; total = rr.total; hit = rr.ok; mod = rr.mod; }
+  else { r = rint(1, 20); total = r + mod; hit = o.auto || r === 20 || (r !== 1 && total + PK('pierce') >= 10 + f.def); }
   const fi = CB.foes.indexOf(f);
   if (f.dash > 0 && !o.auto) { f.dash = 0; pop('f' + fi, 'ESQUIVE', 'miss'); clog(`${f.name} esquive d’un Dash.`, 'log-miss'); return false; }
   if (!hit) { pop('f' + fi, `RATÉ · ${total}`, 'miss'); clog(`${label} ${f.name} : raté (d20 ${r}+${mod}).`, 'log-miss'); return false; }
-  let d = Math.max(1, dmg + rint(-1, 2)); if (r === 20 || o.crit) d = Math.round(d * 1.6);
+  const kc = r === 20 || o.crit || (PK('crit') && r >= 19); let d = Math.max(1, dmg + PK('dmg') + rint(-1, 2)); if (kc) d = Math.round(d * 1.6);
   if (f.shield) { f.shield = 0; pop('f' + fi, 'BLOQUÉ', 'miss'); clog(`Le bouclier de ${f.name} absorbe le coup !`, 'log-miss'); return true; }
-  if (f.weak) d += 2; f.hp -= d; pop('f' + fi, `−${d}`, (r === 20 || o.crit) ? 'crit' : 'dmg'); clog(`${label} ${f.name} : ${d} dégâts${r === 20 || o.crit ? ' (CRITIQUE)' : ''} (d20 ${r}+${mod}).`, 'log-hit');
+  if (f.weak) d += 2; f.hp -= d; pop('f' + fi, `−${d}`, kc ? 'crit' : 'dmg'); clog(`${label} ${f.name} : ${d} dégâts${kc ? ' (CRITIQUE)' : ''} (d20 ${r}+${mod}).`, 'log-hit');
+  if (!o.auto && f.hp > 0) {
+    if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; f.atk = Math.max(0, f.atk - PK('weaken')); clog(`${f.name} est affaibli.`, 'warnc'); }
+    if (PK('stun') && f.stun <= 0 && chance(PK('stun') / 100)) { f.stun = 1; clog(`${f.name} est sidéré !`, 'warnc'); }
+  }
+  if (PK('drain') && !o.auto) { const pc = G.pc; const g = Math.min(PK('drain'), pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } }
   if (f.hp <= 0) { f.dead = true; clog(`${f.name} est hors combat.`, 'good'); }
   return true;
 }
@@ -1871,7 +1883,8 @@ function foeTurn() {
       let d = Math.max(1, f.dmg + rint(-1, 1) - (armorOf() ? Math.floor(armorOf().def / 2) : 0)); if (r === 20) d = Math.round(d * 1.5);
       if (CB.guard > 0) d = Math.max(1, d - 2);
       if (CB.shield > 0) { const ab = Math.min(CB.shield, d); CB.shield -= ab; d -= ab; clog(`Ton bouclier absorbe ${ab}.`, 'good'); if (CB.rebound && ab) { f.hp -= 4; clog(`Rebound : ${f.name} subit 4 dégâts en retour.`, 'log-hit'); if (f.hp <= 0) f.dead = true; } }
-      if (d > 0) { pc.hp = Math.max(0, pc.hp - d); pop('pc', `−${d}`, r === 20 ? 'crit' : 'dmg'); CB.hurt = true; clog(`${f.name} te touche : ${d} dégâts.`, 'log-dmg'); }
+      if (d > 0) { pc.hp = Math.max(0, pc.hp - d); if (pc.hp <= 0 && CB.lb) { CB.lb = false; pc.hp = 1; clog('Dernier souffle : tu t’accroches à 1 PV !', 'good'); } pop('pc', `−${d}`, r === 20 ? 'crit' : 'dmg'); CB.hurt = true; clog(`${f.name} te touche : ${d} dégâts.`, 'log-dmg'); }
+      if (PK('thorns') && !f.dead) { f.hp -= PK('thorns'); clog(`Riposte : ${f.name} subit ${PK('thorns')} dégâts.`, 'log-hit'); if (f.hp <= 0) { f.dead = true; clog(`${f.name} est hors combat.`, 'good'); } }
       if (CB.counter && !f.dead) { f.hp -= CB.counter; clog(`Tu ripostes : ${CB.counter} dégâts.`, 'log-hit'); if (f.hp <= 0) f.dead = true; }
     } else { pop('pc', 'MANQUÉ', 'ok'); clog(`${f.name} te manque.`, 'log-miss'); }
   });
@@ -1887,7 +1900,9 @@ function endPlayerTurn() {
   if (!aliveFoes().length) return finishCombat('win');
   CB.round++; CB.defend = false; if (CB.buff > 0) CB.buff--; if (CB.fore > 0) CB.fore--; if (CB.guard > 0) CB.guard--; if (CB.stunPc > 0) CB.stunPc--; if (CB.counter) CB.counter = 0; CB.rebound = false;
   CB.foes.forEach(f => { if (f.buff > 0) { f.buff--; if (!f.buff) f.dmg -= 1; } });
-  G.pc.en = Math.min(G.pc.enMax, G.pc.en + 1);
+  G.pc.en = Math.min(G.pc.enMax, G.pc.en + 1 + PK('energy'));
+  if (PK('regen') && G.pc.hp < G.pc.hpMax) { G.pc.hp = Math.min(G.pc.hpMax, G.pc.hp + PK('regen')); clog(`Récupération : +${PK('regen')} PV.`, 'good'); }
+  if (PK('allyheal')) G.pc.party.forEach(a => { if (a.inj <= 0 && CH[a.id] && a.hp < (a.hpMax || a.hp)) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
   CB.menu = 'main'; renderCombat();
 }
 function finishCombat(kind) {
@@ -1989,6 +2004,7 @@ function detectChance() {
   const pc = G.pc; if (pc.faction === 'fa' && !pc.flags.defected) return 0.02;
   let p = 0.04 + wantedStars() * 0.1 + ((pc.ptype !== 'zoologique' && pc.ptype !== 'aucun') ? 0.08 : 0) + (G.world.era === 'dark' ? 0.08 : 0);
   if (pc.faux > 0) p -= 0.2; if (pc.brouil > 0) p -= 0.15; if (G.world.era === 'newera') p = 0.01;
+  p -= PK('travel') / 100;
   return clamp(p, 0.02, 0.75);
 }
 function travelGo(to, r, weeks) {
@@ -2024,7 +2040,7 @@ function restMenu() {
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
   const full = weeks >= 2 || free; const dh = full ? pc.hpMax : Math.round(pc.hpMax * 0.25), de = full ? pc.enMax : Math.round(pc.enMax * 0.25);
-  pc.hp = Math.min(pc.hpMax, pc.hp + dh); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
+  pc.hp = Math.min(pc.hpMax, pc.hp + dh + PK('rest') * 4); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
   const ev = chance(0.18) && randomHubEvent(); if (ev) return ev();
   show({ kicker: 'Repos', title: 'Tu te sens mieux', text: ['Les jours passent. Les bleus s’effacent.'], choices: [C('Continuer', hub)] });
 }
@@ -2044,7 +2060,7 @@ function shopMenu() {
   L.push(C('← Retour', actionsMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
 }
 function shopList(ids, mult, black) {
-  const pc = G.pc; const disc = hasRole('logisticien') ? 0.9 : 1; const L = [];
+  const pc = G.pc; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); const L = [];
   [...new Set(ids)].forEach(id => {
     const it = ITEMS[id]; const price = Math.round(it.price * mult * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1));
     L.push(C(`${it.n} — ${price} ¢`, () => buy(id, price, ids, mult, black), { sub: it.desc, req: { money: price } }));
@@ -2172,7 +2188,7 @@ function leadCard(s) {
 }
 function clueCard() {
   const dc = 14 + Math.min(4, stoneCount());
-  show({ kicker: 'RUMEUR', title: 'Un indice sur les pierres', text: ['Un vieux conteur, une archive piratée, une fresque effacée… quelque chose parle des seize pierres muta.'], choices: [C('Creuser la piste', () => { const r = check('intellect', dc, ['scout', 'relic']); advance(1); if (G.status !== 'play') return; const l = r.ok ? stoneClueGain() : null; show({ kicker: 'PIERRES ANTIQUES', title: r.ok ? 'Une piste !' : 'Fausse piste', text: [r.ok ? (l ? esc(cap(l)) : 'Tu sais déjà tout ce qu’il y a à savoir.') : 'Rien de concluant, cette fois.'], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' }), C('Laisser tomber', hub, { cls: 'back' })] });
+  show({ kicker: 'RUMEUR', title: 'Un indice sur les pierres', text: ['Un vieux conteur, une archive piratée, une fresque effacée… quelque chose parle des seize pierres muta.'], choices: [C('Creuser la piste', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; const l = r.ok ? stoneClueGain() : null; show({ kicker: 'PIERRES ANTIQUES', title: r.ok ? 'Une piste !' : 'Fausse piste', text: [r.ok ? (l ? esc(cap(l)) : 'Tu sais déjà tout ce qu’il y a à savoir.') : 'Rien de concluant, cette fois.'], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' }), C('Laisser tomber', hub, { cls: 'back' })] });
 }
 function restCard() {
   show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent. Un faux pas de plus et ça tourne mal.'], choices: [C('Dormir une semaine', () => doRest(1), { ic: '🛏', cls: 'safe' }), C('Se faire soigner (80 ¢)', () => doRest(2, 80), { ic: '💊', req: { money: 80 } }), C('Continuer quand même', () => dealCard(), { cls: 'risk' })] });
@@ -2323,6 +2339,69 @@ function orbitrailDebug(sel) {
   const ord = sel ? `<b>Ligne ${sel}</b> (${lineStations(sel).map(i => esc(OT_ST[i][2])).join(' → ')})` : 'Choisis une ligne pour la mettre en évidence.';
   show({ kicker: 'DEBUG', title: 'Orbitrail', text: [esc(sum), ord], extra: h('div', {}, chips, mapBox({ hl: sel || null }), h('div', { class: 'scroll', style: 'margin-top:8px;max-height:340px' }, tb)), choices: [C('← Retour', back)] });
 }
+
+// ───────── Particularités : chaque pouvoir apporte une petite capacité utile (combat ou hors combat) ─────────
+const PERKS = {
+  dodge: ['Réflexes', n => `Commence chaque combat avec ${n} esquive`], shield: ['Protection', n => `+${n} de bouclier au début de chaque combat`], dmg: ['Puissance', n => `+${n} dégâts en combat`],
+  regen: ['Récupération', n => `Récupère ${n} PV à chaque tour de combat`], energy: ['Réserve', n => `+${n} énergie à chaque tour de combat`], stun: ['Sidération', n => `${n} % de chances d’étourdir l’ennemi touché`],
+  thorns: ['Riposte', n => `Renvoie ${n} dégâts quand on te touche`], crit: ['Coup fatal', () => 'Critique dès 19 sur le dé'], first: ['Initiative', () => 'Frappe en premier, gratuitement, au début de chaque combat'],
+  def: ['Défense', n => `+${n} en défense`], weaken: ['Affaiblissement', n => `Ta première touche affaiblit l’ennemi (−${n} attaque)`], allyheal: ['Soutien', n => `Soigne tes alliés de ${n} PV par tour de combat`],
+  drain: ['Absorption', n => `Récupère ${n} PV à chaque coup porté`], lastbreath: ['Dernier souffle', () => 'Une fois par combat, tu survis à 1 PV'], pierce: ['Perforation', n => `Ignore ${n} de défense ennemie`],
+  cash: ['Sens des affaires', n => `+${n} % de gains aux missions`], xp: ['Apprentissage', n => `+${n} % d’expérience`], quiet: ['Discrétion', n => `Ta prime monte ${n} % moins vite`], travel: ['Voyageur', n => `−${n} % de risque de contrôle en voyage`],
+  rest: ['Repos réparateur', n => `Chaque repos soigne ${n * 4} PV de plus`], fix: ['Marchandage', n => `−${n} % sur les prix des boutiques`], clue: ['Flair', n => `+${n} aux enquêtes sur les pierres antiques`], loot: ['Butin', n => `+${n} % de chances de butin après une mission`],
+  bond: ['Charisme de groupe', n => `Loyauté des alliés +${n} par mois`], night: ['Noctambule', n => `+${n} à tous les jets la nuit`],
+};
+['stealth', 'scout', 'social', 'hack', 'tech', 'heal', 'mobility', 'defense', 'combat', 'control'].forEach(t => PERKS['c_' + t] = ['Spécialité', n => `+${n} aux jets de ${TAGNAME[t]} (combat comme hors combat)`]);
+const PK_TABLE = {
+  // ── surnaturels : matière
+  'Essence': ['thorns', 2, 'Huile glissante'], 'Écorce': ['def', 1, 'Peau d’écorce'], 'Slime': ['weaken', 1, 'Mucus engluant'], 'Néon': ['energy', 1, 'Recharge au néon'], 'Ciment': ['shield', 5, 'Mur de ciment'], 'Plasma': ['pierce', 2, 'Corps de plasma'], 'Colle': ['stun', 20, 'Piège collant'], 'Marbre': ['def', 2, 'Peau de marbre'], 'Étincelles': ['c_tech', 2, 'Soudure d’étincelles'], 'Boue': ['dodge', 1, 'Terrain glissant'], 'Sucre': ['regen', 1, 'Coup de sucre'], 'Argile': ['c_tech', 1, 'Modelage'], 'Papier': ['dodge', 1, 'Corps de papier'], 'Poison': ['weaken', 1, 'Toxine'], 'Cire': ['shield', 4, 'Carapace de cire'], 'Cristal': ['pierce', 1, 'Éclats de cristal'], 'Explosion': ['dmg', 2, 'Nitroglycérine'], 'Sang': ['drain', 1, 'Hémoglobine'],
+  // corporelles
+  'Ailes': ['c_mobility', 2, 'Envol'], 'Emotion – Forme joie': ['energy', 1, 'Bonheur contagieux'], 'Emotion – Forme tristesse': ['regen', 1, 'Larmes de force'], 'Emotion – Forme colère': ['dmg', 2, 'Rage'], 'Perméabilité': ['dodge', 1, 'Intangible'], 'Maladie': ['weaken', 1, 'Mal en petit pouvoir'], 'Durcissement': ['def', 2, 'Membre invincible'], 'Nageoire': ['c_mobility', 1, 'Nage'], 'Faufilement': ['c_stealth', 2, 'Fin comme du papier'], 'Muscles': ['dmg', 2, 'Force brute'], 'Saut': ['c_mobility', 2, 'Ressorts'], 'Déformation': ['dodge', 1, 'Corps malléable'], 'Elastique': ['thorns', 2, 'Rebond élastique'], 'Dédoublement': ['c_tech', 2, 'Membre en double'], 'Vision': ['c_scout', 2, 'Vision augmentée'], 'Elytres': ['c_mobility', 1, 'Élytres'], 'Voile': ['c_mobility', 1, 'Voiles solides'], 'Air comprimé': ['stun', 20, 'Souffle comprimé'], 'Vitesse': ['first', 1, 'Éclair'], 'Cordes': ['stun', 20, 'Cordes invincibles'], 'Piques': ['thorns', 3, 'Corps piquant'], 'Flexibilité': ['dodge', 1, 'Os flexibles'], 'Réincarnation': ['lastbreath', 1, 'Renaissance'], 'Souffle': ['stun', 20, 'Rafale'], 'Respiration': ['rest', 1, 'Respire partout'], 'Décor': ['c_stealth', 2, 'Mimétisme d’objet'], 'Avalement': ['regen', 1, 'Digestion'], 'Articulations': ['dodge', 1, 'Double articulation'], 'Roue': ['c_mobility', 2, 'Roues'], 'Sens': ['c_social', 1, 'Goût et odorat'], 'Boule': ['shield', 4, 'Boule rebondissante'], 'Pilosité': ['c_tech', 1, 'Poils à vitesse folle'], 'Objet – Forme outil': ['c_tech', 2, 'Corps-outil'], 'Objet – Forme arme': ['dmg', 2, 'Corps-arme'], 'Nerf': ['lastbreath', 1, 'Aucune douleur'], 'Dextérité': ['c_tech', 2, 'Mains de maître'], 'Télescopique': ['pierce', 1, 'Membres télescopiques'], 'Identité': ['c_social', 2, 'Voleur de visage'], 'Régénération': ['regen', 2, 'Guérison éclair'], 'Tournis': ['stun', 25, 'Membres rotatifs'], 'Lame': ['dmg', 2, 'Bras-lames'], 'Métamorphose': ['c_stealth', 1, 'Autre être vivant'], 'Voix': ['stun', 20, 'Voix qui blesse'], 'Kératine': ['c_tech', 1, 'Kératine rapide'], 'Ecailles': ['def', 1, 'Écailles'], 'Queue': ['dodge', 1, 'Troisième bras'], 'Fragmentation': ['dodge', 1, 'Corps fragmentable'], 'Eclosion': ['allyheal', 2, 'Éclosion alliée'], 'Stockage': ['loot', 10, 'Soute corporelle'], 'Funambule': ['c_mobility', 2, 'Équilibre parfait'], 'Son': ['c_scout', 2, 'Ouïe fine'],
+  // mentales
+  'Logique': ['c_social', 1, 'Logique inversée'], 'Image': ['c_scout', 1, 'Photographie vivante'], 'Détection': ['dodge', 1, 'Alerte danger'], 'Tempérament': ['c_social', 2, 'Maître des émotions'], 'Télépathie': ['bond', 1, 'Liens mentaux'], 'Hallucinations': ['dodge', 1, 'Mirages'], 'Hypnose': ['stun', 25, 'Sommeil éclair'], 'Conscience': ['c_tech', 2, 'Objets vivants'], 'Mémoire': ['xp', 10, 'Souvenirs parfaits'], 'Rêves': ['night', 1, 'Voyageur de rêves'], 'Manipulation – Forme physique': ['stun', 20, 'Marionnettiste'], 'Manipulation – Forme mentale': ['c_social', 2, 'Pensées dirigées'], 'Malédiction': ['weaken', 1, 'Malédiction'], 'IA': ['c_hack', 2, 'Maître des IA'], 'Statistiques': ['cash', 10, 'Calcul des probabilités'], 'Réseau': ['c_hack', 2, 'Dans le réseau'], 'Contraire': ['c_control', 2, 'Inversion des décisions'], 'Portée': ['pierce', 1, 'Précision accrue'], 'Balistique': ['pierce', 2, 'Trajectoires prédites'], 'Construction': ['c_tech', 2, 'Plans visualisés'], 'Personnalité': ['bond', 1, 'IA attachantes'], 'Ultrasons': ['c_scout', 2, 'Écholocation'], 'Effacement': ['quiet', 25, 'Pouvoirs effacés'], 'Esprit': ['c_social', 1, 'Échange d’esprit'], 'Vœu': ['energy', 1, 'Étoiles exaucées'], 'Auscultation': ['c_heal', 2, 'Diagnostic parfait'],
+  // physiques
+  'Réalité': ['lastbreath', 1, 'Retouche du réel'], 'Temps': ['first', 1, 'Instant gelé'], 'Espace': ['dodge', 1, 'Pas de côté'], 'Etat': ['c_control', 2, 'Changement d’état'], 'Transmutation': ['fix', 5, 'Alchimie'], 'Période – Forme puérilité': ['c_social', 1, 'Rajeunissement'], 'Période – Forme maturité': ['xp', 10, 'Maturité'], 'Séisme': ['stun', 25, 'Secousses'], 'Psychokinésie': ['c_control', 1, 'Télékinésie mentale'], 'Télékinésie': ['dmg', 1, 'Force à distance'], 'Statique': ['dodge', 1, 'Objet figé'], 'Champ de force – Forme bulle': ['shield', 5, 'Bulle'], 'Champ de force – Forme barrière': ['shield', 6, 'Barrière'], 'Magnétisme': ['pierce', 1, 'Corps aimanté'], 'Gravité': ['stun', 20, 'Gravité altérée'], 'Sol': ['c_control', 1, 'Sols modelés'], 'Ramollissement': ['weaken', 1, 'Matière molle'], 'Mouvement': ['first', 1, 'Accélération'], 'Taille – Forme mini': ['c_stealth', 2, 'Rapetissement'], 'Taille – Forme maxi': ['dmg', 2, 'Géant'], 'Trou noir': ['loot', 10, 'Stockage noir'], 'Destruction': ['dmg', 2, 'Poussière'], 'Portail': ['travel', 5, 'Portails'], 'Son – Forme percussion': ['shield', 4, 'Percussion'], 'Son – Forme corde': ['allyheal', 2, 'Cordes'], 'Son – Forme vent': ['stun', 20, 'Vent'], 'Ondes – Forme mentale': ['c_social', 1, 'Ondes mentales'], 'Ondes – Forme physique': ['dmg', 1, 'Ondes de choc'], 'Silence': ['c_stealth', 2, 'Zone de silence'], 'Écran': ['c_hack', 2, 'Dans les écrans'], 'Climat': ['c_control', 2, 'Maître des météos'], 'Tuiles': ['shield', 4, 'Pavés invincibles'], 'Miroir': ['thorns', 3, 'Miroir'], 'Portée – Forme reflet': ['c_scout', 1, 'Reflets'], 'Portée – Forme ombre': ['c_stealth', 2, 'Ombres'], 'Mauvaises herbes – Forme lianes': ['stun', 20, 'Lianes'], 'Mauvaises herbes – Forme ronces': ['thorns', 3, 'Ronces'], 'Température – Forme froide': ['weaken', 1, 'Gel'], 'Température – Forme chaude': ['dmg', 1, 'Chaleur'], 'Poids – Forme lourde': ['stun', 20, 'Poids'], 'Poids – Forme légère': ['dodge', 1, 'Légèreté'], 'Astéroïdes': ['dmg', 2, 'Pluie d’astres'],
+  // manipulation
+  'Probabilité – Forme chance': ['loot', 15, 'Chance'], 'Probabilité – Forme malchance': ['weaken', 1, 'Malchance'], 'Nourriture': ['rest', 1, 'Festin'], 'Invisibilité': ['c_stealth', 2, 'Invisible'], 'Cryptides': ['weaken', 1, 'Peur incarnée'], 'Jouet': ['c_social', 1, 'Jouet'], 'Cartoon': ['dodge', 1, 'Cartoon'], 'Prison': ['stun', 25, 'Prison'], 'Énergie cinétique': ['dmg', 1, 'Énergie cinétique'], 'Subtilisation': ['loot', 15, 'Objets rappelés'], 'Rembobinage': ['lastbreath', 1, 'Rembobinage'], 'Glisse': ['dodge', 1, 'Savon'], 'Age': ['rest', 1, 'Âge maîtrisé'], 'Fusion': ['c_tech', 2, 'Fusion'], 'Cadenas': ['c_control', 2, 'Verrouillage'], 'Encouragement': ['allyheal', 2, 'Cœur de meneur'], 'Assemblage': ['c_tech', 2, 'Plans automatiques'], 'Bête': ['dmg', 1, 'Peur absorbée'], 'Rebond': ['thorns', 2, 'Rebond'], 'Hormone': ['regen', 1, 'Hormones'],
+  // exotiques
+  'Anti-matière': ['pierce', 2, 'Anti-matière'], 'Aura': ['bond', 2, 'Aura'], 'Nature – Forme flore': ['regen', 1, 'Allié des plantes'], 'Vol': ['c_control', 1, 'Voleur de pouvoirs'], 'Éponge – Forme dégâts': ['thorns', 3, 'Éponge de dégâts'], 'Éponge – Forme soins': ['regen', 2, 'Éponge à soins'], 'Art': ['quiet', 25, 'Œuvre d’art'], 'Epargnement': ['allyheal', 2, 'Rayons mixtes'], 'Bactérie – Forme virus': ['weaken', 1, 'Virus'], 'Bactérie – Forme anticore': ['allyheal', 3, 'Anticorps'], 'Clone': ['c_tech', 2, 'Doubles'], 'Mort': ['lastbreath', 1, 'Entre deux mondes'], 'Blueprint': ['fix', 5, 'Plans psioniques'], 'Dessin': ['c_stealth', 1, 'Dessin vivant'], 'Poursuite': ['c_scout', 2, 'Cible poursuivie'], 'Baies': ['regen', 2, 'Baies'], 'Nature – Forme faune': ['bond', 1, 'Alliés animaux'],
+  // élémentaires
+  'Lumière': ['dodge', 1, 'Éblouissement'], 'Ténèbres': ['c_stealth', 2, 'Voile d’ombre'], 'Air': ['c_mobility', 2, 'Vent porteur'], 'Pierre': ['def', 2, 'Peau de pierre'], 'Électricité': ['stun', 25, 'Foudre'], 'Métal': ['def', 2, 'Corps de métal'], 'Feu': ['dmg', 2, 'Flamme'], 'Sable': ['c_scout', 1, 'Sable mouvant'], 'Magma': ['thorns', 3, 'Lave'], 'Terre': ['shield', 5, 'Bouclier de terre'], 'Fumée': ['c_stealth', 2, 'Fumée'], 'Plante': ['regen', 2, 'Photosynthèse'], 'Gaz': ['weaken', 1, 'Nuage de gaz'], 'Eau': ['allyheal', 2, 'Eau vive'], 'Acide': ['pierce', 2, 'Acide'], 'Glace': ['stun', 25, 'Gel'],
+  // zoologiques emblématiques
+  'Flamant rose': ['dodge', 1, 'Équilibre'], 'Mésange bleu': ['c_social', 1, 'Chant'], 'Pélican': ['loot', 10, 'Bec-poche'], 'Ara rouge': ['c_social', 1, 'Imitation'], 'Chouette': ['night', 1, 'Vision nocturne'], 'Canard': ['rest', 1, 'Plumes imperméables'], 'Autruche': ['c_mobility', 2, 'Course'], 'Martin-pêcheur': ['first', 1, 'Plongeon'], 'Corbeau': ['c_scout', 2, 'Œil intelligent'], 'Vautour': ['regen', 1, 'Charognard'], 'Paon': ['c_social', 2, 'Parade'], 'Colibri': ['dodge', 1, 'Vol stationnaire'], 'Pingouin': ['c_mobility', 1, 'Toboggan'], 'Héron': ['first', 1, 'Affût'], 'Albatros': ['travel', 5, 'Grand voyageur'], 'Colombe': ['bond', 1, 'Paix'], 'Pygargue à tête blanche': ['crit', 1, 'Serres'], 'Hibou': ['night', 1, 'Vol silencieux'], 'Pigeon': ['travel', 5, 'Messager'], 'Cigogne': ['allyheal', 2, 'Porteuse'], 'Coq': ['xp', 10, 'Réveil matinal'], 'Pic-vert': ['pierce', 1, 'Bec perceur'], 'Ornithorynque': ['thorns', 2, 'Ergot'],
+  'Requin blanc': ['drain', 1, 'Odeur du sang'], 'Raie manta': ['c_mobility', 1, 'Vol sous-marin'], 'Poisson clown': ['bond', 1, 'Symbiose'], 'Poisson hérisson': ['thorns', 3, 'Gonflement'], 'Murène': ['crit', 1, 'Double mâchoire'], 'Piranha': ['drain', 1, 'Banc affamé'], 'Espadon': ['pierce', 2, 'Rostre'], 'Anguille': ['stun', 25, 'Décharge'], 'Hippocampe': ['dodge', 1, 'Camouflage'], 'Thon': ['c_mobility', 2, 'Vitesse'], 'Poisson-lune': ['def', 1, 'Masse'], 'Baudroie': ['first', 1, 'Leurre'],
+  'Crabe': ['def', 2, 'Pinces et carapace'], 'Veuve noire': ['weaken', 1, 'Venin'], 'Scorpion': ['weaken', 1, 'Dard'], 'Fourmi': ['bond', 1, 'Colonie'], 'Abeille': ['allyheal', 2, 'Miel'], 'Guêpe': ['stun', 20, 'Dard'], 'Mante religieuse': ['first', 1, 'Immobilité'], 'Papillon': ['dodge', 1, 'Ailes de soie'], 'Moustique': ['drain', 1, 'Succion'], 'Scarabée': ['def', 2, 'Élytres blindés'], 'Libellule': ['c_mobility', 2, 'Vol de précision'], 'Phasme': ['c_stealth', 2, 'Brindille'], 'Homard': ['def', 1, 'Pinces'],
+  'Caméléon': ['c_stealth', 2, 'Camouflage'], 'Cobra': ['stun', 25, 'Regard'], 'Python': ['stun', 25, 'Étreinte'], 'Crocodile du Nil': ['crit', 1, 'Mâchoires'], 'Tortue luth': ['lastbreath', 1, 'Carapace'], 'Tortue verte': ['regen', 1, 'Longévité'], 'Axolotl': ['regen', 2, 'Régénération'], 'Dendrobate': ['weaken', 1, 'Peau toxique'], 'Gecko': ['c_mobility', 1, 'Adhérence'], 'Dragon de komodo': ['weaken', 1, 'Salive infectieuse'], 'Crotale': ['stun', 20, 'Sonnette'], 'Salamandre': ['regen', 1, 'Flamme intérieure'],
+  'Pieuvre': ['dodge', 1, 'Huit bras'], 'Méduse': ['stun', 20, 'Filaments'], 'Calamar': ['dodge', 1, 'Encre'], 'Seiche': ['c_stealth', 2, 'Peau changeante'], 'Oursin': ['thorns', 2, 'Piquants'], 'Escargot': ['def', 2, 'Coquille'],
+  'Gorille': ['dmg', 2, 'Poigne'], 'Orang-outan': ['c_tech', 1, 'Mains agiles'], 'Singe capucin': ['loot', 10, 'Chapardeur'], 'Koala': ['rest', 2, 'Sieste'], 'Kangourou': ['c_mobility', 2, 'Bonds'], 'Diable de Tasmanie': ['drain', 1, 'Fureur'], 'Wombat': ['def', 2, 'Arrière-train blindé'],
+  'Orque': ['bond', 1, 'Chasse en groupe'], 'Dauphin': ['c_social', 1, 'Sonar'], 'Baleine à bosse': ['allyheal', 2, 'Chant de baleine'], 'Narval': ['pierce', 2, 'Défense'], 'Phoque': ['rest', 1, 'Graisse'], 'Morse': ['dmg', 1, 'Défenses'],
+  'Hérisson': ['thorns', 3, 'Piquants'], 'Pangolin': ['def', 2, 'Écailles'], 'Castor': ['c_tech', 2, 'Bâtisseur'], 'Taupe': ['c_stealth', 1, 'Galeries'], 'Vampire': ['drain', 1, 'Morsure'], 'Pipistrelle': ['night', 1, 'Écholocation'], 'Lapin': ['dodge', 1, 'Détente'], 'Rat': ['loot', 10, 'Fouineur'], 'Capybara': ['bond', 1, 'Calme'], 'Porc épic': ['thorns', 3, 'Épines'], 'Tatou': ['def', 2, 'Cuirasse'],
+  'Hippopotame': ['dmg', 2, 'Mâchoire géante'], 'Éléphant d’Afrique': ['shield', 6, 'Peau épaisse'], 'Rhinocéros': ['pierce', 2, 'Charge'], 'Taureau': ['dmg', 2, 'Charge'], 'Cheval': ['c_mobility', 2, 'Galop'], 'Zèbre': ['dodge', 1, 'Rayures'], 'Bison': ['def', 2, 'Troupeau'], 'Chameau': ['travel', 5, 'Traversée du désert'], 'Dromadaire': ['rest', 1, 'Réserves'], 'Girafe': ['c_scout', 2, 'Vue de haut'], 'Cerf': ['dodge', 1, 'Bois'], 'Lama': ['c_mobility', 1, 'Pas sûr'], 'Gazelle': ['c_mobility', 2, 'Bond de gazelle'], 'Phacochère': ['thorns', 2, 'Défenses'],
+  'Loup': ['bond', 1, 'Meute'], 'Lion': ['crit', 1, 'Rugissement'], 'Tigre': ['first', 1, 'Embuscade'], 'Panthère noire': ['c_stealth', 2, 'Chasseuse nocturne'], 'Renard': ['c_social', 1, 'Ruse'], 'Raton-laveur': ['loot', 15, 'Mains agiles'], 'Hyène': ['drain', 1, 'Rire'], 'Guépard': ['first', 1, 'Sprint'], 'Lynx': ['c_scout', 1, 'Oreilles de lynx'], 'Chat': ['lastbreath', 1, 'Neuf vies'], 'Ours polaire': ['rest', 1, 'Isolation'], 'Grizzli': ['dmg', 2, 'Griffes'], 'Panda': ['def', 1, 'Placidité'], 'Panda Roux': ['dodge', 1, 'Agilité'], 'Suricate': ['c_scout', 2, 'Sentinelle'], 'Fennec': ['night', 1, 'Grandes oreilles'], 'Moufette': ['weaken', 1, 'Jet nauséabond'], 'Lycaon': ['bond', 1, 'Chasse collective'], 'Doberman': ['def', 1, 'Garde'], 'Labrador': ['bond', 1, 'Fidélité'], 'Shiba': ['dodge', 1, 'Fierté'], 'Coyote': ['c_social', 1, 'Rusé'], 'Blaireau': ['def', 1, 'Terrier'], 'Loutre': ['rest', 1, 'Joueuse'], 'Furet': ['c_stealth', 1, 'Faufilé'], 'Sphinx': ['c_social', 2, 'Énigme'], 'Binturong': ['c_stealth', 1, 'Odeur de pop-corn'], 'Fossa': ['c_mobility', 1, 'Grimpeur'], 'Carcajou': ['dmg', 1, 'Obstination'],
+};
+const PK_SUB = {
+  'Rapaces & charognards': [['crit', 1], ['c_scout', 2], ['first', 1]], "Oiseaux d'eau & de mer": [['c_mobility', 1], ['loot', 10], ['travel', 5]], 'Coureurs, oiseaux du froid & atypiques': [['c_mobility', 2], ['rest', 1], ['def', 1]], 'Oiseaux colorés & passereaux': [['c_social', 1], ['bond', 1], ['dodge', 1]],
+  'Grands prédateurs': [['dmg', 1], ['crit', 1], ['drain', 1]], 'Géants & raies': [['def', 1], ['shield', 4], ['regen', 1]], 'Poissons de récif & curiosités': [['dodge', 1], ['c_stealth', 1], ['c_scout', 1]],
+  'Insectes volants': [['dodge', 1], ['c_mobility', 1], ['stun', 15]], 'Insectes terrestres': [['def', 1], ['dmg', 1], ['thorns', 2]], 'Arachnides & myriapodes': [['weaken', 1], ['stun', 20], ['c_stealth', 1]], 'Crustacés': [['def', 2], ['shield', 4], ['thorns', 2]],
+  'Serpents': [['weaken', 1], ['c_stealth', 1], ['stun', 20]], 'Lézards & crocodiliens': [['dmg', 1], ['def', 1], ['regen', 1]], 'Tortues': [['def', 2], ['regen', 1], ['lastbreath', 1]], 'Amphibiens': [['weaken', 1], ['regen', 1], ['thorns', 2]],
+  'Céphalopodes': [['dodge', 1], ['c_stealth', 2], ['c_tech', 1]], 'Cnidaires & coraux': [['thorns', 2], ['stun', 20], ['regen', 1]], 'Autres invertébrés': [['def', 1], ['shield', 4], ['c_stealth', 1]],
+  'Primates': [['c_tech', 1], ['c_social', 1], ['dmg', 1]], 'Marsupiaux': [['loot', 10], ['c_mobility', 1], ['dodge', 1]], 'Pinnipèdes & siréniens': [['rest', 1], ['regen', 1], ['def', 1]], 'Cétacés': [['c_social', 1], ['dmg', 1], ['c_scout', 1]],
+  'Chauves-souris': [['night', 1], ['c_scout', 2], ['dodge', 1]], 'Fouisseurs & insectivores': [['def', 1], ['c_stealth', 1], ['dodge', 1]], 'Rongeurs & lagomorphes': [['c_stealth', 1], ['loot', 10], ['dodge', 1]],
+  'Équidés & camélidés': [['c_mobility', 2], ['travel', 5], ['rest', 1]], 'Bovidés': [['dmg', 1], ['def', 1], ['stun', 15]], 'Cervidés & girafidés': [['dodge', 1], ['c_scout', 1], ['c_mobility', 1]], 'Pachydermes & suidés': [['def', 2], ['dmg', 2], ['shield', 5]],
+  'Félins': [['crit', 1], ['first', 1], ['c_stealth', 2]], 'Canidés': [['bond', 1], ['c_scout', 2], ['dmg', 1]], 'Ours & pandas': [['def', 2], ['dmg', 2], ['regen', 1]], 'Mustélidés & autres carnivores': [['c_stealth', 1], ['dodge', 1], ['weaken', 1]],
+};
+const _perkCache = {};
+function perkOf(p) {
+  if (!p) return null; if (_perkCache[p.id]) return _perkCache[p.id];
+  let e = PK_TABLE[p.name]; let title;
+  if (e) { title = e[2]; e = [e[0], e[1]]; }
+  else { const opts = PK_SUB[p.sub] || [['dodge', 1]]; e = opts[hashStr(p.name + p.cat) % opts.length]; title = PERKS[e[0]][0]; }
+  const def = PERKS[e[0]]; return _perkCache[p.id] = { id: e[0], mag: e[1], title, desc: def[1](e[1]), kind: e[0].startsWith('c_') ? 'jets' : ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'bond', 'night'].includes(e[0]) ? 'hors combat' : 'combat' };
+}
+function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) : []; }
+function PK(id) { return perkList().reduce((t, k) => t + (k.id === id ? k.mag : 0), 0); }
+function perkChk(tags) { let b = 0; perkList().forEach(k => { if (k.id.startsWith('c_') && tags.includes(k.id.slice(2))) b += k.mag; }); return Math.min(3, b); }
+const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };
 
 // ───────── Missions : générateur d'archétypes + résolution par approches ─────────
 const APPROACH = {
@@ -2483,7 +2562,7 @@ function finishMission(o, quality, lines, extraFx) {
   const pc = G.pc; const a = ARCH[o.arch]; const mult = quality === 'crit' ? 1.4 : quality === 'partial' ? 0.55 : 1;
   const emp = o.emp === 'civils' ? 'civils' : o.emp === 'noir' ? 'noir' : o.emp;
   const illegal = (o.tgt === 'fa' || isAnti(pc.faction)) ? 1 : 0.4; const heat = Math.round(a.heat * illegal * (quality === 'crit' ? 0.5 : 1) * (pc.faction === 'fa' ? 0 : 1) * (o.emp === 'fa' ? 0 : 1) * (chance(0.7) ? 1 : 0));
-  const rewards = { money: Math.round(o.pay * mult), xp: Math.round(o.xp * mult), merit: Math.round(o.merit * mult), heat, rep: {} };
+  const rewards = { money: Math.round(o.pay * mult * (1 + PK('cash') / 100)), xp: Math.round(o.xp * mult * (1 + PK('xp') / 100)), merit: Math.round(o.merit * mult), heat: Math.round(heat * (1 - Math.min(60, PK('quiet')) / 100)), rep: {} };
   if (emp !== 'civils' && emp !== 'noir') rewards.rep[emp] = 3 + (quality === 'crit' ? 2 : 0); else rewards.rep[emp] = 4;
   if (o.tgt && o.tgt !== emp && quality !== 'partial') rewards.rep[o.tgt] = (rewards.rep[o.tgt] || 0) - (o.arch === 'humanitaire' || o.arch === 'climat' ? 0 : 3);
   if (o.arch === 'humanitaire' || o.arch === 'climat') { rewards.rep.civils = 5; delete rewards.rep[o.tgt]; G.score.saved = (G.score.saved || 0) + rint(3, 12); }
@@ -2494,7 +2573,7 @@ function finishMission(o, quality, lines, extraFx) {
   if (o.fallen && pc.implant && quality !== 'partial') { pc.implant.deadline = G.wk + 12; L.push({ t: 'Prime livrée : le compte à rebours de ton implant est remis à zéro (12 semaines).', c: 'good' }); }
   pc.party.forEach(al => { al.loy = clamp(al.loy + 3, 0, 100); });
   // butins
-  if (chance(0.16)) { const id = pick(['capsule', 'kit', 'capsule', 'nanosoin', 'stimulant']); L.push(...fx({ item: { [id]: 1 } })); }
+  if (chance(0.16 + PK('loot') / 100)) { const id = pick(['capsule', 'kit', 'capsule', 'nanosoin', 'stimulant']); L.push(...fx({ item: { [id]: 1 } })); }
   if ((o.arch === 'fouille' || o.arch === 'enquete') && chance(0.35)) { const l = stoneClueGain(); if (l) L.push({ t: l, c: 'acc' }); }
   logEntry(`Mission « ${a.n} » (${o.empName}) : ${quality === 'crit' ? 'triomphe' : quality === 'partial' ? 'demi-succès' : 'réussie'}.`);
   const after = () => {
@@ -2556,7 +2635,7 @@ function monthTick() {
   addHeat(-4); if (pc.brouil < 0) pc.brouil = 0;
   // loyauté des alliés
   [...pc.party].forEach(a => {
-    a.loy = clamp(a.loy + (hasRole('leader') ? 2 : 0) + rint(-3, 2) + ((pc.rep[CH[a.id].faction] || 0) < -30 ? -4 : 0), 0, 100);
+    a.loy = clamp(a.loy + PK('bond') + (hasRole('leader') ? 2 : 0) + rint(-3, 2) + ((pc.rep[CH[a.id].faction] || 0) < -30 ? -4 : 0), 0, 100);
     if (a.loy <= 12) { const c = CH[a.id]; removeAlly(a.id); newsPush(`${c.name} a quitté ton groupe.`); logEntry(`${c.name} t'a quitté.`); if (chance(0.3) && isAnti(c.faction) === false && wantedStars() > 0) { pc.flags.betrayed = (pc.flags.betrayed || 0) + 1; addHeat(8); logEntry(`${c.name} t'a vendu à la F.A.`); newsPush(`Une dénonciation vise un fugitif.`); } }
   });
   // implant
@@ -2748,7 +2827,7 @@ function stoneTier(hid) { if (hid === 'temple') return 3; if (hid === 'fa') retu
 
 function stoneMenu() {
   const pc = G.pc; const W = G.world; const L = [];
-  L.push(C('Mener l’enquête (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const dc = 14 + Math.min(4, stoneCount()); const tags = ['scout', 'relic']; const r = check('intellect', dc, tags, (pc.rep.artefactors || 0) >= 20 ? 2 : 0); if (r.ok) { const l = stoneClueGain(); show({ kicker: 'Enquête', title: l ? 'Une piste' : 'Tout est déjà éclairci', text: [l ? esc(cap(l)) : 'Tu connais déjà tous les détenteurs.', checkLine(r)], fx: fx({ xp: 15 }), choices: [C('Continuer', stoneMenu)] }); } else show({ kicker: 'Enquête', title: 'Rien de concluant', text: ['Des archives incomplètes, des témoins qui se rétractent.', checkLine(r)], choices: [C('Continuer', stoneMenu)] }); }, { odds: ['intellect', 14 + Math.min(4, stoneCount()), ['scout', 'relic']], sub: 'Le Lecteur de glyphes, le rôle d’éclaireur et l’amitié des Artefactors aident.' }));
+  L.push(C('Mener l’enquête (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const dc = 14 + Math.min(4, stoneCount()); const tags = ['scout', 'relic']; const r = check('intellect', dc, tags, ((pc.rep.artefactors || 0) >= 20 ? 2 : 0) + PK('clue')); if (r.ok) { const l = stoneClueGain(); show({ kicker: 'Enquête', title: l ? 'Une piste' : 'Tout est déjà éclairci', text: [l ? esc(cap(l)) : 'Tu connais déjà tous les détenteurs.', checkLine(r)], fx: fx({ xp: 15 }), choices: [C('Continuer', stoneMenu)] }); } else show({ kicker: 'Enquête', title: 'Rien de concluant', text: ['Des archives incomplètes, des témoins qui se rétractent.', checkLine(r)], choices: [C('Continuer', stoneMenu)] }); }, { odds: ['intellect', 14 + Math.min(4, stoneCount()), ['scout', 'relic']], sub: 'Le Lecteur de glyphes, le rôle d’éclaireur et l’amitié des Artefactors aident.' }));
   DATA.stones.forEach(s => {
     if (pc.stones[s.id]) return;
     const known = !!W.stoneClue[s.id]; const hold = W.stoneHolder[s.id]; const loc = W.stoneLoc[s.id];
@@ -3160,7 +3239,7 @@ function powerPick(o, state) {
     else {
       const inCat = filtered.filter(p => p.cat === cat); const subs = [...new Set(inCat.map(p => p.sub))];
       if (!sub && subs.length > 1) { head = `${cat} — sous-catégorie`; L = subs.map(x => C(`${x} (${inCat.filter(p => p.sub === x).length})`, () => { state.path.push(x); powerPick(o, state); })); }
-      else { const list = sub ? inCat.filter(p => p.sub === sub) : inCat; head = `${sub || cat} — pouvoir`; L = list.map(p => C(`${p.name}`, () => crPicked(o, state, p), { sub: `${p.desc} Étiquettes : ${p.tags.map(x => TAGNAME[x]).join(', ')}.${p.carriers.length ? ' Porteur(s) : ' + p.carriers.map(i => CH[i] ? CH[i].name : i).join(', ') : ''}` })); }
+      else { const list = sub ? inCat.filter(p => p.sub === sub) : inCat; head = `${sub || cat} — pouvoir`; L = list.map(p => C(`${p.name}`, () => crPicked(o, state, p), { sub: `${p.desc} Étiquettes : ${p.tags.map(x => TAGNAME[x]).join(', ')}. ✦ Particularité — ${perkText(p)}.${p.carriers.length ? ' Porteur(s) : ' + p.carriers.map(i => CH[i] ? CH[i].name : i).join(', ') : ''}` })); }
     }
     const randHere = () => crPicked(o, state, pick(filtered));
     L.push(C('🎲 Au hasard dans cette catégorie', randHere));

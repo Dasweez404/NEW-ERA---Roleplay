@@ -64,6 +64,7 @@ function detectChance() {
   const pc = G.pc; if (pc.faction === 'fa' && !pc.flags.defected) return 0.02;
   let p = 0.04 + wantedStars() * 0.1 + ((pc.ptype !== 'zoologique' && pc.ptype !== 'aucun') ? 0.08 : 0) + (G.world.era === 'dark' ? 0.08 : 0);
   if (pc.faux > 0) p -= 0.2; if (pc.brouil > 0) p -= 0.15; if (G.world.era === 'newera') p = 0.01;
+  p -= PK('travel') / 100;
   return clamp(p, 0.02, 0.75);
 }
 function travelGo(to, r, weeks) {
@@ -99,7 +100,7 @@ function restMenu() {
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
   const full = weeks >= 2 || free; const dh = full ? pc.hpMax : Math.round(pc.hpMax * 0.25), de = full ? pc.enMax : Math.round(pc.enMax * 0.25);
-  pc.hp = Math.min(pc.hpMax, pc.hp + dh); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
+  pc.hp = Math.min(pc.hpMax, pc.hp + dh + PK('rest') * 4); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
   const ev = chance(0.18) && randomHubEvent(); if (ev) return ev();
   show({ kicker: 'Repos', title: 'Tu te sens mieux', text: ['Les jours passent. Les bleus s’effacent.'], choices: [C('Continuer', hub)] });
 }
@@ -119,7 +120,7 @@ function shopMenu() {
   L.push(C('← Retour', actionsMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
 }
 function shopList(ids, mult, black) {
-  const pc = G.pc; const disc = hasRole('logisticien') ? 0.9 : 1; const L = [];
+  const pc = G.pc; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); const L = [];
   [...new Set(ids)].forEach(id => {
     const it = ITEMS[id]; const price = Math.round(it.price * mult * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1));
     L.push(C(`${it.n} — ${price} ¢`, () => buy(id, price, ids, mult, black), { sub: it.desc, req: { money: price } }));

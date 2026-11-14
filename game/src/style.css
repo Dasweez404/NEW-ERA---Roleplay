@@ -360,3 +360,4 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .map .st.go:hover .stc{stroke:#fcee09}
 .maplegend{display:flex;gap:14px;margin-top:6px;font-family:var(--fm);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}.maplegend .y{color:#fcee09}.maplegend .w{color:#f2f3ff}.maplegend .c{color:#00e5ff}
 .recotxt2{color:#fcee09;font-weight:700}
+.perk{font-size:.85rem;margin:2px 0 8px 10px;color:var(--acc,#ffe83a)}

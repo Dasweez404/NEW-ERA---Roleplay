@@ -157,7 +157,7 @@ function finishMission(o, quality, lines, extraFx) {
   const pc = G.pc; const a = ARCH[o.arch]; const mult = quality === 'crit' ? 1.4 : quality === 'partial' ? 0.55 : 1;
   const emp = o.emp === 'civils' ? 'civils' : o.emp === 'noir' ? 'noir' : o.emp;
   const illegal = (o.tgt === 'fa' || isAnti(pc.faction)) ? 1 : 0.4; const heat = Math.round(a.heat * illegal * (quality === 'crit' ? 0.5 : 1) * (pc.faction === 'fa' ? 0 : 1) * (o.emp === 'fa' ? 0 : 1) * (chance(0.7) ? 1 : 0));
-  const rewards = { money: Math.round(o.pay * mult), xp: Math.round(o.xp * mult), merit: Math.round(o.merit * mult), heat, rep: {} };
+  const rewards = { money: Math.round(o.pay * mult * (1 + PK('cash') / 100)), xp: Math.round(o.xp * mult * (1 + PK('xp') / 100)), merit: Math.round(o.merit * mult), heat: Math.round(heat * (1 - Math.min(60, PK('quiet')) / 100)), rep: {} };
   if (emp !== 'civils' && emp !== 'noir') rewards.rep[emp] = 3 + (quality === 'crit' ? 2 : 0); else rewards.rep[emp] = 4;
   if (o.tgt && o.tgt !== emp && quality !== 'partial') rewards.rep[o.tgt] = (rewards.rep[o.tgt] || 0) - (o.arch === 'humanitaire' || o.arch === 'climat' ? 0 : 3);
   if (o.arch === 'humanitaire' || o.arch === 'climat') { rewards.rep.civils = 5; delete rewards.rep[o.tgt]; G.score.saved = (G.score.saved || 0) + rint(3, 12); }
@@ -168,7 +168,7 @@ function finishMission(o, quality, lines, extraFx) {
   if (o.fallen && pc.implant && quality !== 'partial') { pc.implant.deadline = G.wk + 12; L.push({ t: 'Prime livrée : le compte à rebours de ton implant est remis à zéro (12 semaines).', c: 'good' }); }
   pc.party.forEach(al => { al.loy = clamp(al.loy + 3, 0, 100); });
   // butins
-  if (chance(0.16)) { const id = pick(['capsule', 'kit', 'capsule', 'nanosoin', 'stimulant']); L.push(...fx({ item: { [id]: 1 } })); }
+  if (chance(0.16 + PK('loot') / 100)) { const id = pick(['capsule', 'kit', 'capsule', 'nanosoin', 'stimulant']); L.push(...fx({ item: { [id]: 1 } })); }
   if ((o.arch === 'fouille' || o.arch === 'enquete') && chance(0.35)) { const l = stoneClueGain(); if (l) L.push({ t: l, c: 'acc' }); }
   logEntry(`Mission « ${a.n} » (${o.empName}) : ${quality === 'crit' ? 'triomphe' : quality === 'partial' ? 'demi-succès' : 'réussie'}.`);
   const after = () => {

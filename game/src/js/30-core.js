@@ -27,6 +27,8 @@ function skill(attrId, tags = []) {
   if (gm) { parts.push(['équipement', gm]); mod += gm; }
   if (tags.includes('ally') && pc.party.length) { const b = Math.min(3, pc.party.filter(a => a.inj <= 0).length); if (b) { parts.push(['alliés', b]); mod += b; } }
   if (!tags.includes('ally') && pc.party.length) { const hl = pc.party.filter(a => a.inj <= 0).length; const b = Math.min(2, Math.floor(hl / 2)); if (b) { parts.push(['équipe', b]); mod += b; } }
+  const pb = perkChk(tags); if (pb) { parts.push(['particularité', pb]); mod += pb; }
+  if (PK('night') && typeof envTime === 'function' && envTime() === 'night') { parts.push(['nuit', PK('night')]); mod += PK('night'); }
   if (pc.stim > 0) { parts.push(['stimulant', 3]); mod += 3; }
   if (pc.hp < pc.hpMax * 0.3) { parts.push(['blessé', -2]); mod -= 2; }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }

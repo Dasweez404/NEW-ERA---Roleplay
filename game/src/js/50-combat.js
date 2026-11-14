@@ -43,12 +43,16 @@ function pop(k, txt, cls) { if (CB) (CB.pops = CB.pops || []).push({ k, txt, cls
 const aliveFoes = () => CB.foes.filter(f => !f.dead);
 const target = () => { let t = CB.foes[CB.tgt]; if (!t || t.dead) { t = aliveFoes()[0]; CB.tgt = CB.foes.indexOf(t); } return t; };
 const clog = (t, c = '') => { CB.log.push({ t, c }); if (CB.log.length > 40) CB.log.shift(); };
-function pcDef() { const pc = G.pc; const a = armorOf(); return 3 + Math.floor(A('agilite') / 2) + (a ? a.def : 0) + (pc.style === 'juggernaut' ? 1 : 0) + (CB && CB.defend ? 3 : 0) + (CB && CB.fore > 0 ? 3 : 0) + (hasRole('gardien') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 1 : 0); }
+function pcDef() { const pc = G.pc; const a = armorOf(); return 3 + PK('def') + Math.floor(A('agilite') / 2) + (a ? a.def : 0) + (pc.style === 'juggernaut' ? 1 : 0) + (CB && CB.defend ? 3 : 0) + (CB && CB.fore > 0 ? 3 : 0) + (hasRole('gardien') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 1 : 0); }
 
 function startCombat(cfg) {
   CB = { cfg, foes: cfg.foes, round: 1, log: [], tgt: 0, menu: 'main', shield: 0, defend: false, crit: false, dodge: 0, drones: 0, buff: 0, fore: 0, hitBuff: 0, rage: false, boost: 0, stunPc: 0, noItems: false, wasAwake: false, tier: Math.max(...cfg.foes.map(f => Math.round((f.atk) / 2))) };
   CB.foes.forEach(f => { f.dead = false; });
   clog(cfg.intro || 'Le combat commence !');
+  CB.dodge += PK('dodge'); CB.shield += PK('shield'); CB.weakDone = false; CB.lb = !!PK('lastbreath');
+  if (PK('dodge')) clog('Réflexes : tu es prêt à esquiver.', 'good');
+  if (PK('shield')) clog(`Protection : ${PK('shield')} de bouclier.`, 'good');
+  if (PK('first')) { const t0 = aliveFoes()[0]; if (t0) { hitFoe(t0, dmgBase(), 0, 'Initiative —', { auto: true }); if (!aliveFoes().length) return finishCombat('win'); } }
   renderCombat();
 }
 const powName = tag => { const p = pcPowers().find(p => p.tags.includes(tag)); return p ? p.name : 'Pouvoir'; };
@@ -117,14 +121,19 @@ function atkMod(tags = ['combat']) { const s = skill(STYLES[G.pc.style].prim ===
 function dmgBase() { const w = weaponOf(); return 3 + Math.floor(A(STYLES[G.pc.style].prim === 'maitrise' ? 'corps' : STYLES[G.pc.style].prim) / 2) + (w ? w.dmg : 0) + (CB.buff > 0 ? 4 : 0) + (CB.rage ? 6 : 0) + (hasRole('combattant') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 2 : 0); }
 function hitFoe(f, dmg, mod, label, o = {}) {
   let r, total, hit;
-  if (!o.auto && o.attr) { const rr = check(o.attr, 10 + f.def, o.tags || ['combat'], (CB.hitBuff || 0) + (CB.stunPc > 0 ? -3 : 0) + (o.bonus || 0)); r = rr.crit ? 20 : rr.fumble ? 1 : rr.r; total = rr.total; hit = rr.ok; mod = rr.mod; }
-  else { r = rint(1, 20); total = r + mod; hit = o.auto || r === 20 || (r !== 1 && total >= 10 + f.def); }
+  if (!o.auto && o.attr) { const rr = check(o.attr, 10 + f.def, o.tags || ['combat'], PK('pierce') + (CB.hitBuff || 0) + (CB.stunPc > 0 ? -3 : 0) + (o.bonus || 0)); r = rr.crit ? 20 : rr.fumble ? 1 : rr.r; total = rr.total; hit = rr.ok; mod = rr.mod; }
+  else { r = rint(1, 20); total = r + mod; hit = o.auto || r === 20 || (r !== 1 && total + PK('pierce') >= 10 + f.def); }
   const fi = CB.foes.indexOf(f);
   if (f.dash > 0 && !o.auto) { f.dash = 0; pop('f' + fi, 'ESQUIVE', 'miss'); clog(`${f.name} esquive d’un Dash.`, 'log-miss'); return false; }
   if (!hit) { pop('f' + fi, `RATÉ · ${total}`, 'miss'); clog(`${label} ${f.name} : raté (d20 ${r}+${mod}).`, 'log-miss'); return false; }
-  let d = Math.max(1, dmg + rint(-1, 2)); if (r === 20 || o.crit) d = Math.round(d * 1.6);
+  const kc = r === 20 || o.crit || (PK('crit') && r >= 19); let d = Math.max(1, dmg + PK('dmg') + rint(-1, 2)); if (kc) d = Math.round(d * 1.6);
   if (f.shield) { f.shield = 0; pop('f' + fi, 'BLOQUÉ', 'miss'); clog(`Le bouclier de ${f.name} absorbe le coup !`, 'log-miss'); return true; }
-  if (f.weak) d += 2; f.hp -= d; pop('f' + fi, `−${d}`, (r === 20 || o.crit) ? 'crit' : 'dmg'); clog(`${label} ${f.name} : ${d} dégâts${r === 20 || o.crit ? ' (CRITIQUE)' : ''} (d20 ${r}+${mod}).`, 'log-hit');
+  if (f.weak) d += 2; f.hp -= d; pop('f' + fi, `−${d}`, kc ? 'crit' : 'dmg'); clog(`${label} ${f.name} : ${d} dégâts${kc ? ' (CRITIQUE)' : ''} (d20 ${r}+${mod}).`, 'log-hit');
+  if (!o.auto && f.hp > 0) {
+    if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; f.atk = Math.max(0, f.atk - PK('weaken')); clog(`${f.name} est affaibli.`, 'warnc'); }
+    if (PK('stun') && f.stun <= 0 && chance(PK('stun') / 100)) { f.stun = 1; clog(`${f.name} est sidéré !`, 'warnc'); }
+  }
+  if (PK('drain') && !o.auto) { const pc = G.pc; const g = Math.min(PK('drain'), pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } }
   if (f.hp <= 0) { f.dead = true; clog(`${f.name} est hors combat.`, 'good'); }
   return true;
 }
@@ -236,7 +245,8 @@ function foeTurn() {
       let d = Math.max(1, f.dmg + rint(-1, 1) - (armorOf() ? Math.floor(armorOf().def / 2) : 0)); if (r === 20) d = Math.round(d * 1.5);
       if (CB.guard > 0) d = Math.max(1, d - 2);
       if (CB.shield > 0) { const ab = Math.min(CB.shield, d); CB.shield -= ab; d -= ab; clog(`Ton bouclier absorbe ${ab}.`, 'good'); if (CB.rebound && ab) { f.hp -= 4; clog(`Rebound : ${f.name} subit 4 dégâts en retour.`, 'log-hit'); if (f.hp <= 0) f.dead = true; } }
-      if (d > 0) { pc.hp = Math.max(0, pc.hp - d); pop('pc', `−${d}`, r === 20 ? 'crit' : 'dmg'); CB.hurt = true; clog(`${f.name} te touche : ${d} dégâts.`, 'log-dmg'); }
+      if (d > 0) { pc.hp = Math.max(0, pc.hp - d); if (pc.hp <= 0 && CB.lb) { CB.lb = false; pc.hp = 1; clog('Dernier souffle : tu t’accroches à 1 PV !', 'good'); } pop('pc', `−${d}`, r === 20 ? 'crit' : 'dmg'); CB.hurt = true; clog(`${f.name} te touche : ${d} dégâts.`, 'log-dmg'); }
+      if (PK('thorns') && !f.dead) { f.hp -= PK('thorns'); clog(`Riposte : ${f.name} subit ${PK('thorns')} dégâts.`, 'log-hit'); if (f.hp <= 0) { f.dead = true; clog(`${f.name} est hors combat.`, 'good'); } }
       if (CB.counter && !f.dead) { f.hp -= CB.counter; clog(`Tu ripostes : ${CB.counter} dégâts.`, 'log-hit'); if (f.hp <= 0) f.dead = true; }
     } else { pop('pc', 'MANQUÉ', 'ok'); clog(`${f.name} te manque.`, 'log-miss'); }
   });
@@ -252,7 +262,9 @@ function endPlayerTurn() {
   if (!aliveFoes().length) return finishCombat('win');
   CB.round++; CB.defend = false; if (CB.buff > 0) CB.buff--; if (CB.fore > 0) CB.fore--; if (CB.guard > 0) CB.guard--; if (CB.stunPc > 0) CB.stunPc--; if (CB.counter) CB.counter = 0; CB.rebound = false;
   CB.foes.forEach(f => { if (f.buff > 0) { f.buff--; if (!f.buff) f.dmg -= 1; } });
-  G.pc.en = Math.min(G.pc.enMax, G.pc.en + 1);
+  G.pc.en = Math.min(G.pc.enMax, G.pc.en + 1 + PK('energy'));
+  if (PK('regen') && G.pc.hp < G.pc.hpMax) { G.pc.hp = Math.min(G.pc.hpMax, G.pc.hp + PK('regen')); clog(`Récupération : +${PK('regen')} PV.`, 'good'); }
+  if (PK('allyheal')) G.pc.party.forEach(a => { if (a.inj <= 0 && CH[a.id] && a.hp < (a.hpMax || a.hp)) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
   CB.menu = 'main'; renderCombat();
 }
 function finishCombat(kind) {

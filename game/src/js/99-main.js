@@ -95,7 +95,7 @@ function powerPick(o, state) {
     else {
       const inCat = filtered.filter(p => p.cat === cat); const subs = [...new Set(inCat.map(p => p.sub))];
       if (!sub && subs.length > 1) { head = `${cat} — sous-catégorie`; L = subs.map(x => C(`${x} (${inCat.filter(p => p.sub === x).length})`, () => { state.path.push(x); powerPick(o, state); })); }
-      else { const list = sub ? inCat.filter(p => p.sub === sub) : inCat; head = `${sub || cat} — pouvoir`; L = list.map(p => C(`${p.name}`, () => crPicked(o, state, p), { sub: `${p.desc} Étiquettes : ${p.tags.map(x => TAGNAME[x]).join(', ')}.${p.carriers.length ? ' Porteur(s) : ' + p.carriers.map(i => CH[i] ? CH[i].name : i).join(', ') : ''}` })); }
+      else { const list = sub ? inCat.filter(p => p.sub === sub) : inCat; head = `${sub || cat} — pouvoir`; L = list.map(p => C(`${p.name}`, () => crPicked(o, state, p), { sub: `${p.desc} Étiquettes : ${p.tags.map(x => TAGNAME[x]).join(', ')}. ✦ Particularité — ${perkText(p)}.${p.carriers.length ? ' Porteur(s) : ' + p.carriers.map(i => CH[i] ? CH[i].name : i).join(', ') : ''}` })); }
     }
     const randHere = () => crPicked(o, state, pick(filtered));
     L.push(C('🎲 Au hasard dans cette catégorie', randHere));
