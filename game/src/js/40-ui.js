@@ -170,13 +170,14 @@ function tabGroupe() {
   const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, `Groupe : ${pc.party.length}/${partyMax()} (le grade et le rôle de Leader augmentent la taille).`));
   if (!pc.party.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Tu voyages seul. Recrute des gens dans le menu « Recruter ».'));
   pc.party.forEach(a => { const c = CH[a.id]; box.append(h('div', { class: 'mrow', style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, sprFit(c.id, 70, 'mini'), h('div', {}, h('b', {}, c.name), ` — ${F[c.faction].name}`, h('div', { class: 'small' }, `${STYLES[a.style].name} · PV ${a.hp}/${a.hpMax} · loyauté ${a.loy}${a.inj > 0 ? ' · blessé (' + a.inj + ' sem.)' : ''}`),
-    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: e => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'Confirmer le renvoi ?'; return; } removeAlly(a.id); addRep(c.faction, -3); render(true); } }, 'Renvoyer')))); });
+    h('div', { class: 'small mut' }, charPowerText(c)), (c.faction === pc.faction && c.stars > pc.grade) ? h('div', { class: 'small badc' }, `Plus haut placé que toi (${c.stars}★ contre ${pc.grade}★) : tu ne peux pas le renvoyer. Dépasse-le en hiérarchie.`) : h('button', { class: 'tab', onclick: e => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'Confirmer le renvoi ?'; return; } removeAlly(a.id); addRep(c.faction, -3); render(true); } }, 'Renvoyer')))); });
   return box;
 }
 function charPowerText(c) { const ps = (c.powers.length ? c.powers : fallbackPowers(c)).map(id => PW[id].name); return ps.length ? ps.join(' + ') : 'sans pouvoir'; }
 function tabFactions() {
   const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, 'Trahir une faction braque ses alliés contre toi.'));
   const ids = Object.keys(F).filter(f => f !== 'civils').sort((a, b) => (pc.rep[b] || 0) - (pc.rep[a] || 0));
+  const wl = (G.world.warLog || []).slice(0, 5); if (wl.length) { box.append(h('h3', {}, '⚔ Conflits en cours')); wl.forEach(x => box.append(h('div', { class: 'small' }, x))); }
   const t = h('table', { class: 't' }); ids.forEach(fid => { const v = pc.rep[fid] || 0; t.append(h('tr', {}, h('td', {}, F[fid].name + (fid === pc.faction ? ' ★' : '')), h('td', { class: v >= 15 ? 'good' : v <= -20 ? 'badc' : 'mut' }, repLevel(v)), h('td', {}, v))); });
   box.append(t); return box;
 }
@@ -248,7 +249,7 @@ function mapEl(o = {}) {
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
-    g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : '' }, name));
+    g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : (go || here) ? 'keytxt' : '' }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
@@ -277,7 +278,9 @@ function mapBox(o = {}) {
   const svg = mapEl(o2); svg.style.touchAction = 'none'; svg.style.cursor = 'grab';
   const wrap = h('div', { class: 'mapscroll' }, svg); let vb = { x: 0, y: 0, w: 2000, h: 975 };
   const cw = () => wrap.clientWidth || 600, chh = () => wrap.clientHeight || 380;
-  const apply = () => { vb.h = vb.w * chh() / cw(); vb.x = clamp(vb.x, -350, 2350 - vb.w); vb.y = clamp(vb.y, -200, 1175 - vb.h); svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); svg.style.setProperty('--fs', (11.5 * vb.w / cw()).toFixed(1) + 'px'); };
+  let pend = 0, lastFs = 0, lastLod = null;
+  const paint = () => { pend = 0; svg.setAttribute('viewBox', `${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`); const fs = +(11.5 * vb.w / cw()).toFixed(0); if (fs !== lastFs) { lastFs = fs; svg.style.setProperty('--fs', fs + 'px'); } const lod = vb.w > 1300; if (lod !== lastLod) { lastLod = lod; svg.classList.toggle('lod', lod); } };
+  const apply = () => { if (!isFinite(vb.w) || vb.w < 50) vb.w = 1100; vb.w = clamp(vb.w, 300, 2400); vb.h = vb.w * chh() / cw(); vb.x = clamp(isFinite(vb.x) ? vb.x : 0, -350, 2350 - vb.w); vb.y = clamp(isFinite(vb.y) ? vb.y : 0, -200, 1175 - vb.h); if (!pend) { pend = 1; requestAnimationFrame(paint); } };
   const focus = (sid, w) => { const st = OT_ST[stationOf(sid)]; vb.w = w; vb.h = vb.w * chh() / cw(); vb.x = st[0] - vb.w / 2; vb.y = st[1] - vb.h / 2; apply(); };
   const fit = () => { vb.w = 2000; vb.h = vb.w * chh() / cw(); vb.x = 0; vb.y = (975 - vb.h) / 2; apply(); };
   const zoomAt = (f, px, py) => { const nw = clamp(vb.w / f, 300, 2400); const rx = px == null ? .5 : px, ry = py == null ? .5 : py; const cx = vb.x + vb.w * rx, cy = vb.y + vb.h * ry; vb.w = nw; vb.h = nw * chh() / cw(); vb.x = cx - vb.w * rx; vb.y = cy - vb.h * ry; apply(); };
@@ -300,7 +303,7 @@ function mapBox(o = {}) {
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
-  if (window.ResizeObserver) new ResizeObserver(() => apply()).observe(wrap);
+  if (window.ResizeObserver) { let rw = 0, rh = 0; new ResizeObserver(() => { if (wrap.clientWidth !== rw || wrap.clientHeight !== rh) { rw = wrap.clientWidth; rh = wrap.clientHeight; apply(); } }).observe(wrap); }
   return box;
 }
 function tabCarte() {

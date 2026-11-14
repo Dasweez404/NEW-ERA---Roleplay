@@ -11,7 +11,7 @@ function titleScreen() {
   UI.scene = { bare: true, extra: h('div', { class: 'hero' }, envBanner(city, 260, 'night'),
     h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Cratès · 2071'),
     h('p', { class: 'lore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
-    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('À propos & sources', aboutScreen), btn('Debug : Orbitrail', orbitrailDebug)),
+    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('À propos & sources', aboutScreen)),
     h('div', { class: 'foot' }, '52 États · 31 factions · 441 personnages')) };
   UI.after = []; render(); runAfter();
 }

@@ -362,6 +362,10 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .maplegend{display:flex;gap:14px;margin-top:6px;font-family:var(--fm);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}.maplegend .y{color:#fcee09}.maplegend .w{color:#f2f3ff}.maplegend .c{color:#00e5ff}
 .recotxt2{color:#fcee09;font-weight:700}
 .perk{font-size:.85rem;margin:2px 0 8px 10px;color:var(--acc,#ffe83a)}
+
+.map .st.go circle:first-child{animation:none!important}.map .recoring{animation:none!important}
+.map.lod text:not(.recotxt):not(.keytxt){display:none}
+.mapscroll{contain:layout paint;overscroll-behavior:contain}
 </style>
 <div id="app"></div>
 <script>
@@ -1103,13 +1107,14 @@ function tabGroupe() {
   const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, `Groupe : ${pc.party.length}/${partyMax()} (le grade et le rôle de Leader augmentent la taille).`));
   if (!pc.party.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Tu voyages seul. Recrute des gens dans le menu « Recruter ».'));
   pc.party.forEach(a => { const c = CH[a.id]; box.append(h('div', { class: 'mrow', style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, sprFit(c.id, 70, 'mini'), h('div', {}, h('b', {}, c.name), ` — ${F[c.faction].name}`, h('div', { class: 'small' }, `${STYLES[a.style].name} · PV ${a.hp}/${a.hpMax} · loyauté ${a.loy}${a.inj > 0 ? ' · blessé (' + a.inj + ' sem.)' : ''}`),
-    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: e => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'Confirmer le renvoi ?'; return; } removeAlly(a.id); addRep(c.faction, -3); render(true); } }, 'Renvoyer')))); });
+    h('div', { class: 'small mut' }, charPowerText(c)), (c.faction === pc.faction && c.stars > pc.grade) ? h('div', { class: 'small badc' }, `Plus haut placé que toi (${c.stars}★ contre ${pc.grade}★) : tu ne peux pas le renvoyer. Dépasse-le en hiérarchie.`) : h('button', { class: 'tab', onclick: e => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'Confirmer le renvoi ?'; return; } removeAlly(a.id); addRep(c.faction, -3); render(true); } }, 'Renvoyer')))); });
   return box;
 }
 function charPowerText(c) { const ps = (c.powers.length ? c.powers : fallbackPowers(c)).map(id => PW[id].name); return ps.length ? ps.join(' + ') : 'sans pouvoir'; }
 function tabFactions() {
   const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, 'Trahir une faction braque ses alliés contre toi.'));
   const ids = Object.keys(F).filter(f => f !== 'civils').sort((a, b) => (pc.rep[b] || 0) - (pc.rep[a] || 0));
+  const wl = (G.world.warLog || []).slice(0, 5); if (wl.length) { box.append(h('h3', {}, '⚔ Conflits en cours')); wl.forEach(x => box.append(h('div', { class: 'small' }, x))); }
   const t = h('table', { class: 't' }); ids.forEach(fid => { const v = pc.rep[fid] || 0; t.append(h('tr', {}, h('td', {}, F[fid].name + (fid === pc.faction ? ' ★' : '')), h('td', { class: v >= 15 ? 'good' : v <= -20 ? 'badc' : 'mut' }, repLevel(v)), h('td', {}, v))); });
   box.append(t); return box;
 }
@@ -1181,7 +1186,7 @@ function mapEl(o = {}) {
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
-    g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : '' }, name));
+    g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : (go || here) ? 'keytxt' : '' }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
     svg.append(g);
   }
@@ -1210,7 +1215,9 @@ function mapBox(o = {}) {
   const svg = mapEl(o2); svg.style.touchAction = 'none'; svg.style.cursor = 'grab';
   const wrap = h('div', { class: 'mapscroll' }, svg); let vb = { x: 0, y: 0, w: 2000, h: 975 };
   const cw = () => wrap.clientWidth || 600, chh = () => wrap.clientHeight || 380;
-  const apply = () => { vb.h = vb.w * chh() / cw(); vb.x = clamp(vb.x, -350, 2350 - vb.w); vb.y = clamp(vb.y, -200, 1175 - vb.h); svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); svg.style.setProperty('--fs', (11.5 * vb.w / cw()).toFixed(1) + 'px'); };
+  let pend = 0, lastFs = 0, lastLod = null;
+  const paint = () => { pend = 0; svg.setAttribute('viewBox', `${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`); const fs = +(11.5 * vb.w / cw()).toFixed(0); if (fs !== lastFs) { lastFs = fs; svg.style.setProperty('--fs', fs + 'px'); } const lod = vb.w > 1300; if (lod !== lastLod) { lastLod = lod; svg.classList.toggle('lod', lod); } };
+  const apply = () => { if (!isFinite(vb.w) || vb.w < 50) vb.w = 1100; vb.w = clamp(vb.w, 300, 2400); vb.h = vb.w * chh() / cw(); vb.x = clamp(isFinite(vb.x) ? vb.x : 0, -350, 2350 - vb.w); vb.y = clamp(isFinite(vb.y) ? vb.y : 0, -200, 1175 - vb.h); if (!pend) { pend = 1; requestAnimationFrame(paint); } };
   const focus = (sid, w) => { const st = OT_ST[stationOf(sid)]; vb.w = w; vb.h = vb.w * chh() / cw(); vb.x = st[0] - vb.w / 2; vb.y = st[1] - vb.h / 2; apply(); };
   const fit = () => { vb.w = 2000; vb.h = vb.w * chh() / cw(); vb.x = 0; vb.y = (975 - vb.h) / 2; apply(); };
   const zoomAt = (f, px, py) => { const nw = clamp(vb.w / f, 300, 2400); const rx = px == null ? .5 : px, ry = py == null ? .5 : py; const cx = vb.x + vb.w * rx, cy = vb.y + vb.h * ry; vb.w = nw; vb.h = nw * chh() / cw(); vb.x = cx - vb.w * rx; vb.y = cy - vb.h * ry; apply(); };
@@ -1233,7 +1240,7 @@ function mapBox(o = {}) {
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
-  if (window.ResizeObserver) new ResizeObserver(() => apply()).observe(wrap);
+  if (window.ResizeObserver) { let rw = 0, rh = 0; new ResizeObserver(() => { if (wrap.clientWidth !== rw || wrap.clientHeight !== rh) { rw = wrap.clientWidth; rh = wrap.clientHeight; apply(); } }).observe(wrap); }
   return box;
 }
 function tabCarte() {
@@ -1954,7 +1961,6 @@ function actionsMenu() {
   L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
   L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno (+2 dégâts, +1 défense).' }));
-  L.push(C('Debug : Orbitrail', orbitrailDebug, { ic: '🛠', sub: 'Stations, lignes, correspondances.' }));
   L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
   L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
   show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
@@ -2159,6 +2165,7 @@ function dealCard() {
   if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
+  conflictPool(pool);
   const e = wpick(pool, x => x.w); e.f();
 }
 function missionCard() {
@@ -2313,21 +2320,6 @@ function vehicleCard() {
   show({ kicker: 'OPPORTUNITÉ', title: `Un(e) ${it.n.toLowerCase()} sans surveillance`, text: ['Garé(e) dans une ruelle, verrou électronique sommaire. Personne en vue… sauf une caméra.'], choices: [C('Le/la fracturer (jet d’agilité)', () => { const r = check('agilite', dcOf(2), ['stealth', 'tech']); if (r.ok) show({ title: 'Volé', text: [`Le moteur ronronne : ${esc(it.n)} est à toi.`], fx: [...fx({ item: { [id]: 1 }, heat: 3 })], choices: [C('Continuer', hub)] }); else show({ title: 'Alarme !', text: ['La caméra t’a filmé.'], fx: fx({ heat: 5 }), choices: [C('Continuer', hub)] }); }, { odds: ['agilite', dcOf(2), ['stealth', 'tech']], cls: 'risk' }), C('Passer', hub, { cls: 'back' })] });
 }
 
-// ───────── Debug de l'Orbitrail : stations, lignes, correspondances, connexité ─────────
-function lineStations(ln) { const seen = []; OT_LINES[ln].p.forEach(path => path.forEach(x => { if (typeof x === 'string' && !x.startsWith('@') && !seen.includes(x)) seen.push(x); })); return seen; }
-function orbitrailDebug(sel) {
-  const lines = Object.keys(OT_LINES).map(Number); const ids = Object.keys(OT_ST);
-  const seen = new Set([ids[0]]); const q = [ids[0]]; while (q.length) { const a = q.pop(); (OT.adj[a] || []).forEach(e => { if (!seen.has(e.to)) { seen.add(e.to); q.push(e.to); } }); }
-  const lns = id => lines.filter(l => lineStations(l).includes(id));
-  const back = () => G && G.status === 'play' ? actionsMenu() : titleScreen();
-  const chips = h('div', { class: 'row', style: 'margin:6px 0' }, lines.map(l => h('button', { class: 'tab' + (sel === l ? ' on' : ''), style: `border-color:${OT_LINES[l].c === '#151515' ? '#cfd3e6' : OT_LINES[l].c};${sel === l ? '' : `color:${OT_LINES[l].c === '#151515' ? '#cfd3e6' : OT_LINES[l].c}`}`, onclick: () => orbitrailDebug(sel === l ? null : l) }, 'L' + l + ' · ' + lineStations(l).length)));
-  const tb = h('table', { class: 't' }, h('tr', {}, ['Station', 'État', 'Lignes', 'Voisins'].map(x => h('th', {}, x))));
-  (sel ? lineStations(sel) : ids).forEach(id => tb.append(h('tr', {}, h('td', {}, OT_ST[id][2] + (OT_ST[id][4] ? ' ▮' : '')), h('td', {}, OT_ST[id][3]), h('td', {}, lns(id).join(' · ')), h('td', {}, [...new Set((OT.adj[id] || []).map(e => OT_ST[e.to][2]))].join(', ')))));
-  const sum = `${ids.length} stations · ${OT.edges.length} tronçons · ${lines.length} lignes · réseau connexe : ${seen.size === ids.length ? 'OUI' : 'NON (' + (ids.length - seen.size) + ' isolées)'} · petites stations (▮, arrêts normaux mais secondaires) : ${ids.filter(i => OT_ST[i][4]).map(i => OT_ST[i][2]).join(', ')} · traversées du Pacifique : ${OT_WRAP.map(w => OT_ST[w[0]][2] + '↔' + OT_ST[w[1]][2] + ' (L' + w[2] + ')').join(', ')} : la Terre est une boucle, on les rejoint des deux côtés de la carte.`;
-  const ord = sel ? `<b>Ligne ${sel}</b> (${lineStations(sel).map(i => esc(OT_ST[i][2])).join(' → ')})` : 'Choisis une ligne pour la mettre en évidence.';
-  show({ kicker: 'DEBUG', title: 'Orbitrail', text: [esc(sum), ord], extra: h('div', {}, chips, mapBox({ hl: sel || null }), h('div', { class: 'scroll', style: 'margin-top:8px;max-height:340px' }, tb)), choices: [C('← Retour', back)] });
-}
-
 // ───────── Particularités : chaque pouvoir apporte une petite capacité utile (combat ou hors combat) ─────────
 const PERKS = {
   dodge: ['Réflexes', n => `Commence chaque combat avec ${n} esquive`], shield: ['Protection', n => `+${n} de bouclier au début de chaque combat`], dmg: ['Puissance', n => `+${n} dégâts en combat`],
@@ -2390,6 +2382,70 @@ function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) 
 function PK(id) { return perkList().reduce((t, k) => t + (k.id === id ? k.mag : 0), 0); }
 function perkChk(tags) { let b = 0; perkList().forEach(k => { if (k.id.startsWith('c_') && tags.includes(k.id.slice(2))) b += k.mag; }); return Math.min(3, b); }
 const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };
+
+// ───────── Conflits entre factions : guerres, incidents de frontière, embuscades, choix de camp ─────────
+const WAR_FAC = () => Object.keys(G.world.fac).filter(f => !['civils', 'fallen', 'noir', 'own'].includes(f) && F[f]);
+const enemiesOf = fid => WAR_FAC().filter(x => x !== fid && relation(fid, x) <= -2);
+const warKey = (a, b) => [a, b].sort().join('|');
+function warLog(t) { const W = G.world; W.warLog = W.warLog || []; W.warLog.unshift(`${dateStr(G.wk)} — ${t}`); W.warLog.length = Math.min(W.warLog.length, 12); newsPush(t); }
+function terrOf(fid) { return DATA.states.map(s => s.id).filter(s => G.world.terr[s] === fid); }
+function warMonth() {
+  const W = G.world; W.war = W.war || {}; const ids = WAR_FAC();
+  // ruptures et trêves : le monde ne reste jamais calme
+  if (chance(0.22)) { const a = pick(ids), b = pick(ids.filter(x => x !== a)); if (b && relation(a, b) > -2) { setRel(a, b, -2); warLog(`Rupture entre ${F[a].name} et ${F[b].name} : les hostilités commencent.`); } }
+  if (chance(0.05)) { const hot = Object.keys(W.war).filter(k => W.war[k] > 6); if (hot.length) { const [a, b] = pick(hot).split('|'); setRel(a, b, 0); delete W.war[warKey(a, b)]; warLog(`Trêve fragile entre ${F[a].name} et ${F[b].name}.`); } }
+  // affrontements : 2 à 4 par mois
+  const pairs = []; ids.forEach(a => enemiesOf(a).forEach(b => { if (a < b) pairs.push([a, b]); }));
+  for (let i = 0; i < Math.min(pairs.length, rint(2, 4)); i++) {
+    const [a, b] = pick(pairs); const fa = W.fac[a], fb = W.fac[b]; if (!fa || !fb) continue;
+    const key = warKey(a, b); W.war[key] = (W.war[key] || 0) + 1;
+    const sa = fa.power + rint(0, 35), sb = fb.power + rint(0, 35); const win = sa >= sb ? a : b, lose = win === a ? b : a;
+    W.fac[win].power = clamp(W.fac[win].power + rint(1, 3), 6, 100); W.fac[lose].power = clamp(W.fac[lose].power - rint(2, 5), 6, 100);
+    const lt = terrOf(lose); const kind = chance(0.4) && lt.length && lose !== 'fa';
+    if (kind) { const st = pick(lt); W.terr[st] = win; warLog(`${F[win].name} écrase ${F[lose].name} et lui arrache ${S[st].name}.`); }
+    else warLog(pick([`Embuscade sanglante : ${F[win].name} décime une patrouille de ${F[lose].name}.`, `${F[win].name} et ${F[lose].name} s’affrontent aux portes d’une ville : ${F[win].name} tient la rue.`, `Raid de ${F[win].name} sur un entrepôt de ${F[lose].name}.`, `Sabotage : ${F[lose].name} perd un convoi, ${F[win].name} nie toute implication.`]));
+    // pertes parmi les membres
+    if (chance(0.5)) { const mem = DATA.chars.filter(c => c.faction === lose && W.npc[c.id].alive && W.npc[c.id].st !== 'ally' && !F[lose].leaders.includes(c.id) && !G.pc.party.some(p => p.id === c.id)); if (mem.length) { const c = pick(mem); if (chance(0.5)) { W.npc[c.id].alive = false; warLog(`${c.name} (${F[lose].name}) est tué dans la guerre contre ${F[win].name}.`); } else { W.npc[c.id].st = 'captured'; warLog(`${c.name} (${F[lose].name}) est capturé par ${F[win].name}.`); } } }
+  }
+}
+// ───────── Cartes jouables ─────────
+const wTier = () => Math.max(1, tiersForGrade()[0]);
+function frontCard() {
+  const pc = G.pc, W = G.world; const en = enemiesOf(pc.faction); if (!en.length || pc.faction === 'civils') return missionCard();
+  const e = pick(en), ef = F[e], mf = F[pc.faction]; const t = wTier();
+  const win = (txt, extra) => L => show({ kicker: 'FRONT', title: 'Victoire sur ' + ef.name, text: [txt], fx: [...L, ...fx(Object.assign({ merit: 4 + t, money: 60 + 40 * t, rep: { [pc.faction]: 5, [e]: -10 }, heat: 3 }, extra || {}))], choices: [C('Continuer', hub)] });
+  const swing = (dp, steal) => { W.fac[e].power = clamp(W.fac[e].power - dp, 6, 100); W.fac[pc.faction].power = clamp(W.fac[pc.faction].power + 3, 6, 100); const lt = terrOf(e); if (steal && lt.length) { const st = pick(lt); W.terr[st] = pc.faction; warLog(`${mf.name} reprend ${S[st].name} à ${ef.name} grâce à ${pc.name}.`); } };
+  show({ kicker: 'GUERRE', title: `${mf.name} contre ${ef.name}`, text: [`La tension a explosé. ${esc(ef.name)} attaque les nôtres sur ${esc(capName(G.loc))} : les patrouilles tombent, les rues se vident. On attend de toi un geste.`, 'Ne rien faire, c’est laisser les tiens mourir.'], choices: [
+    C(`Monter à l’assaut de ${ef.name}`, () => startCombat({ title: 'Escarmouche : ' + ef.name, foes: foesFor(e, t, rint(2, 3)), lethal: 'capture', intro: `${ef.name} se déploie. Pas de quartier.`, onWin: L => { swing(8, true); win('Leur ligne cède. Ton camp avance, et on chante ton nom.')(L); }, onFlee: () => show({ title: 'Repli', text: ['Tu laisses les tiens tenir seuls. On s’en souviendra.'], fx: fx({ rep: { [pc.faction]: -6 } }), choices: [C('Continuer', hub)] }) }), { ic: '⚔', cls: 'risk', sub: 'Combat · bonne récompense, prime en hausse' }),
+    C('Infiltrer leur camp et saboter', () => { const r = check('agilite', 12 + 3 * t, ['stealth']); advance(1); if (G.status !== 'play') return; if (r.ok) { swing(6, false); show({ kicker: 'FRONT', title: 'Sabotage réussi', text: [`Dépôts en flammes, armes inutilisables : ${esc(ef.name)} vacille.`, checkLine(r)], fx: fx({ merit: 3 + t, rep: { [pc.faction]: 4, [e]: -8 }, xp: 15 }), choices: [C('Continuer', hub)] }); } else startCombat({ title: 'Repéré par ' + ef.name, foes: foesFor(e, t, 2), lethal: 'capture', intro: 'Une alarme. Ils te sautent dessus.', onWin: win('Tu t’en sors de justesse et fais payer ta découverte.') }); }, { ic: '🕶', odds: ['agilite', 12 + 3 * t, ['stealth']], sub: 'Discret, mais un échec te met au combat' }),
+    C('Rester en retrait', () => { W.fac[pc.faction].power = clamp(W.fac[pc.faction].power - 3, 6, 100); show({ kicker: 'FRONT', title: 'Tu détournes les yeux', text: ['Les tiens encaissent seuls. Certains te regardent différemment.'], fx: fx({ rep: { [pc.faction]: -5 }, merit: -2 }), choices: [C('Continuer', hub)] }); }, { cls: 'back' })] });
+}
+function ambushCard(fromTerr) {
+  const pc = G.pc; const cand = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && ((pc.rep[f] || 0) <= -10 || relation(pc.faction, f) <= -2));
+  const e = fromTerr || (cand.length ? pick(cand) : null); if (!e) return missionCard(); const ef = F[e]; const t = wTier();
+  show({ kicker: 'EMBUSCADE', title: `${ef.name} t’attend`, text: [`Des silhouettes se détachent des ombres près de ${esc(capName(G.loc))}. L’emblème de ${esc(ef.name)}. Ils te cherchaient${relation(pc.faction, e) <= -2 ? ' : tu portes les couleurs de leurs ennemis' : ''}.`], choices: [
+    C('Se battre', () => startCombat({ title: 'Embuscade : ' + ef.name, foes: foesFor(e, t, rint(2, 3)), lethal: 'capture', intro: 'Pas le temps de parler.', onWin: L => show({ kicker: 'EMBUSCADE', title: 'Ils reculent', text: ['Les survivants disparaissent. Mais leur faction n’oubliera pas.'], fx: [...L, ...fx({ xp: 10 + 5 * t, rep: { [e]: -6 }, merit: 2 })], choices: [C('Continuer', hub)] }), onFlee: () => hub() }), { ic: '⚔', cls: 'risk' }),
+    C('Tenter de filer', () => { const r = check('agilite', 12 + 2 * t, ['mobility', 'stealth']); if (r.ok) show({ kicker: 'EMBUSCADE', title: 'Tu leur échappes', text: ['Tu disparais dans la foule.', checkLine(r)], choices: [C('Continuer', hub)] }); else startCombat({ title: 'Cernés', foes: foesFor(e, t, 3), lethal: 'capture', intro: 'Ils te rattrapent, plus nombreux.', onWin: L => show({ title: 'Tu tiens bon', text: ['Tu survis, à bout de souffle.'], fx: L, choices: [C('Continuer', hub)] }) }); }, { ic: '💨', odds: ['agilite', 12 + 2 * t, ['mobility', 'stealth']] }),
+    C('Négocier', () => { const r = check('charisme', 13 + 2 * t, ['social']); if (r.ok) show({ kicker: 'EMBUSCADE', title: 'Un accord bancal', text: ['Tu leur parles de partager le terrain. Ils baissent les armes… pour cette fois.', checkLine(r)], fx: fx({ rep: { [e]: 3 } }), choices: [C('Continuer', hub)] }); else startCombat({ title: 'Négociation ratée', foes: foesFor(e, t, 2), lethal: 'capture', intro: 'On ne te laisse pas finir ta phrase.', onWin: L => show({ title: 'Tu t’en sors', text: ['Tu as eu de la chance.'], fx: L, choices: [C('Continuer', hub)] }) }); }, { ic: '🗣', odds: ['charisme', 13 + 2 * t, ['social']] })] });
+}
+function sideCard() {
+  const pc = G.pc; const ids = WAR_FAC().filter(f => f !== pc.faction); const pairs = []; ids.forEach(a => ids.forEach(b => { if (a < b && relation(a, b) <= -2) pairs.push([a, b]); }));
+  if (!pairs.length) return missionCard(); const [a, b] = pick(pairs); const fa = F[a], fb = F[b];
+  const pay = 100 + 50 * wTier();
+  const back = (x, y) => () => { const W = G.world; W.fac[x].power = clamp(W.fac[x].power + 3, 6, 100); W.fac[y].power = clamp(W.fac[y].power - 3, 6, 100); show({ kicker: 'CHOIX DE CAMP', title: `Tu soutiens ${F[x].name}`, text: [`${esc(F[y].name)} apprendra qui a pesé dans la balance. Et ses alliés aussi.`], fx: fx({ money: pay, rep: { [x]: 10, [y]: -12 }, xp: 12 }), choices: [C('Continuer', hub)] }); };
+  show({ kicker: 'CHOIX DE CAMP', title: `${fa.name} et ${fb.name} s’affrontent`, text: [`Deux factions se disputent ${esc(capName(G.loc))} et chacune veut ton aide. L’une paie ${pay} ¢. L’autre promet des faveurs.`, 'Aider l’une, c’est s’attirer l’hostilité de l’autre — et de leurs alliés.'], choices: [
+    C(`Aider ${fa.name}`, back(a, b), { ic: '🤝' }), C(`Aider ${fb.name}`, back(b, a), { ic: '🤝' }),
+    C('Exploiter le chaos (vendre aux deux)', () => { const r = check('charisme', 15, ['social']); if (r.ok) show({ kicker: 'CHOIX DE CAMP', title: 'Double jeu réussi', text: ['Tu vends deux fois le même renseignement.', checkLine(r)], fx: fx({ money: pay * 2, heat: 2 }), choices: [C('Continuer', hub)] }); else show({ kicker: 'CHOIX DE CAMP', title: 'Démasqué', text: ['Les deux camps t’ont à l’œil.', checkLine(r)], fx: fx({ rep: { [a]: -10, [b]: -10 }, heat: 4 }), choices: [C('Continuer', hub)] }); }, { ic: '🎭', cls: 'risk', odds: ['charisme', 15, ['social']] }),
+    C('Rester neutre', hub, { cls: 'back' })] });
+}
+function conflictPool(pool) {
+  const pc = G.pc, W = G.world; const en = enemiesOf(pc.faction).length;
+  if (pc.faction !== 'civils' && en) pool.push({ w: 16 + 4 * Math.min(4, en), f: frontCard });
+  const hostile = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -10).length;
+  pool.push({ w: 6 + 4 * hostile + 4 * Math.min(3, wantedStars()), f: () => ambushCard() });
+  pool.push({ w: 10, f: sideCard });
+  const owner = W.terr[G.loc]; if (owner && owner !== pc.faction && owner !== 'pc' && F[owner] && relation(pc.faction, owner) <= -2) pool.push({ w: 28, f: () => ambushCard(owner) });
+}
 
 // ───────── Missions : générateur d'archétypes + résolution par approches ─────────
 const APPROACH = {
@@ -2633,7 +2689,7 @@ function monthTick() {
   // événements canon
   if (G.settings.canon) runCanon(key); else if (G.settings.mode === 'libre') libreMonth();
   // simulation PNJ et factions
-  simNpcs(); simFactions();
+  simNpcs(); simFactions(); warMonth();
   if (chance(0.5)) monthNews();
   // menace sur les pierres
   const n = stoneCount();
@@ -3143,7 +3199,7 @@ function titleScreen() {
   UI.scene = { bare: true, extra: h('div', { class: 'hero' }, envBanner(city, 260, 'night'),
     h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Cratès · 2071'),
     h('p', { class: 'lore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
-    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('À propos & sources', aboutScreen), btn('Debug : Orbitrail', orbitrailDebug)),
+    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('À propos & sources', aboutScreen)),
     h('div', { class: 'foot' }, '52 États · 31 factions · 441 personnages')) };
   UI.after = []; render(); runAfter();
 }
