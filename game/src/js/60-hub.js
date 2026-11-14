@@ -41,7 +41,7 @@ const EVENT_FN = {};
 // ───────── Voyager ─────────
 function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
-  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt (les traversées du Pacifique comptent triple). Un scout-hover permet de voyager hors du réseau.'],
+  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt. La Terre est une boucle : Tokyo et Toronto (ligne 1), Nouméa et Lima (ligne 3) se rejoignent par le Pacifique, des deux côtés de la carte (traversée = 3 arrêts). Les petites stations (Reykjavik, Madrid, Abidjan, San José, Sydney, Auckland) sont des destinations comme les autres. Un véhicule permet de voyager hors du réseau.'],
     extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
     choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu)] });
 }

@@ -227,6 +227,7 @@ function tabAide() {
 }
 
 // ───────── Carte de l'Orbitrail (SVG) ─────────
+const WRAPNAME = { Tokyo: 'yamato', Toronto: 'polaris', 'Nouméa': 'avaiki', Lima: 'aymaro' };
 function mapEl(o = {}) {
   const NS = 'http://www.w3.org/2000/svg'; const el = (t, a, ...k) => { const e = document.createElementNS(NS, t); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => e.append(c.nodeType ? c : document.createTextNode(c))); return e; };
   const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map dark' });
@@ -239,7 +240,7 @@ function mapEl(o = {}) {
   for (const [ln, L] of Object.entries(OT_LINES)) L.p.forEach(path => {
     const pts = path.map(pt).map(p => p.join(',')).join(' ');
     svg.append(el('polyline', { points: pts, fill: 'none', stroke: L.c === '#151515' ? '#cfd3e6' : L.c, opacity: (o.hl && o.hl !== +ln) ? 0.13 : 1, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); svg.append(el('circle', { cx: px, cy: py, r: 9, fill: '#fff', stroke: '#000', 'stroke-width': 4 }), el('text', { x: +px - 14, y: +py - 16 }, n)); } });
+    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); const sid = WRAPNAME[n]; const go = !!(o.pick && o.pick.has(sid)); const gg = el('g', { class: 'st' + (go ? ' go' : '') }, el('circle', { cx: px, cy: py, r: 12, class: 'stc' + (go ? ' gos' : '') + (o.here === sid ? ' here' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }), el('text', { x: +px - 14, y: +py - 18 }, n + ' ↺')); if (go) { gg.addEventListener('click', () => o.onPick(sid)); gg.append(el('circle', { cx: px, cy: py, r: 22, fill: 'transparent' })); } svg.append(gg); } });
   });
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
@@ -251,11 +252,17 @@ function mapEl(o = {}) {
     svg.append(g);
   }
   if (o.route && o.route.length > 1) {
-    const rp = o.route.map(id => OT_ST[id][0] + ',' + OT_ST[id][1]).join(' ');
-    svg.append(el('polyline', { points: rp, fill: 'none', stroke: '#000', 'stroke-width': 16, 'stroke-opacity': .25, 'stroke-linejoin': 'round' }), el('polyline', { points: rp, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '4 14', 'stroke-linecap': 'round', class: 'routeline' }));
+    const runs = [[]]; o.route.forEach((id, i) => { runs[runs.length - 1].push(OT_ST[id][0] + ',' + OT_ST[id][1]); const nx = o.route[i + 1]; if (nx && OT_WRAP.some(w => (w[0] === id && w[1] === nx) || (w[1] === id && w[0] === nx))) { const e1 = wrapStub(id, nx), e2 = wrapStub(nx, id); runs[runs.length - 1].push(e1.join(',')); runs.push([e2.join(',')]); } });
+    runs.forEach(r => svg.append(el('polyline', { points: r.join(' '), fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '4 14', 'stroke-linecap': 'round', class: 'routeline' })));
     o.route.forEach(id => svg.append(el('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 15, fill: 'none', stroke: '#ff3d7f', 'stroke-width': 4, class: 'pulse' })));
   }
+  if (o.tile) { const kids = [...svg.childNodes]; [-1800, 1800].forEach(off => { const g = el('g', { transform: `translate(${off} 0)`, opacity: .5 }); kids.forEach(k => g.append(k.cloneNode(true))); svg.append(g); }); svg.prepend(el('rect', { x: -4000, y: -400, width: 9800, height: 1800, fill: '#0a0a14' })); }
   return svg;
+}
+function wrapStub(a, b) { // point de sortie au bord de la carte pour la station a vers b
+  const L = OT_LINES[(OT_WRAP.find(w => (w[0] === a && w[1] === b) || (w[1] === a && w[0] === b)) || [0, 0, 1])[2]];
+  for (const path of L.p) { const i = path.indexOf(a); if (i < 0) continue; for (const d of [-1, 1]) for (let j = i + d; j >= 0 && j < path.length; j += d) { const it = path[j]; if (typeof it === 'string' && it.startsWith('@')) return it.slice(1).split('|').slice(1).map(Number); if (typeof it === 'string') break; } }
+  return [OT_ST[a][0], OT_ST[a][1]];
 }
 function mapBox(o = {}) {
   UI.zoom = UI.zoom || 1; const svg = mapEl(o); const inner = h('div', { class: 'mapin', style: `width:${UI.zoom * 100}%` }, svg);

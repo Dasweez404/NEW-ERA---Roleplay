@@ -1147,6 +1147,7 @@ function tabAide() {
 }
 
 // ───────── Carte de l'Orbitrail (SVG) ─────────
+const WRAPNAME = { Tokyo: 'yamato', Toronto: 'polaris', 'Nouméa': 'avaiki', Lima: 'aymaro' };
 function mapEl(o = {}) {
   const NS = 'http://www.w3.org/2000/svg'; const el = (t, a, ...k) => { const e = document.createElementNS(NS, t); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => e.append(c.nodeType ? c : document.createTextNode(c))); return e; };
   const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map dark' });
@@ -1159,7 +1160,7 @@ function mapEl(o = {}) {
   for (const [ln, L] of Object.entries(OT_LINES)) L.p.forEach(path => {
     const pts = path.map(pt).map(p => p.join(',')).join(' ');
     svg.append(el('polyline', { points: pts, fill: 'none', stroke: L.c === '#151515' ? '#cfd3e6' : L.c, opacity: (o.hl && o.hl !== +ln) ? 0.13 : 1, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); svg.append(el('circle', { cx: px, cy: py, r: 9, fill: '#fff', stroke: '#000', 'stroke-width': 4 }), el('text', { x: +px - 14, y: +py - 16 }, n)); } });
+    path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); const sid = WRAPNAME[n]; const go = !!(o.pick && o.pick.has(sid)); const gg = el('g', { class: 'st' + (go ? ' go' : '') }, el('circle', { cx: px, cy: py, r: 12, class: 'stc' + (go ? ' gos' : '') + (o.here === sid ? ' here' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }), el('text', { x: +px - 14, y: +py - 18 }, n + ' ↺')); if (go) { gg.addEventListener('click', () => o.onPick(sid)); gg.append(el('circle', { cx: px, cy: py, r: 22, fill: 'transparent' })); } svg.append(gg); } });
   });
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
@@ -1171,11 +1172,17 @@ function mapEl(o = {}) {
     svg.append(g);
   }
   if (o.route && o.route.length > 1) {
-    const rp = o.route.map(id => OT_ST[id][0] + ',' + OT_ST[id][1]).join(' ');
-    svg.append(el('polyline', { points: rp, fill: 'none', stroke: '#000', 'stroke-width': 16, 'stroke-opacity': .25, 'stroke-linejoin': 'round' }), el('polyline', { points: rp, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '4 14', 'stroke-linecap': 'round', class: 'routeline' }));
+    const runs = [[]]; o.route.forEach((id, i) => { runs[runs.length - 1].push(OT_ST[id][0] + ',' + OT_ST[id][1]); const nx = o.route[i + 1]; if (nx && OT_WRAP.some(w => (w[0] === id && w[1] === nx) || (w[1] === id && w[0] === nx))) { const e1 = wrapStub(id, nx), e2 = wrapStub(nx, id); runs[runs.length - 1].push(e1.join(',')); runs.push([e2.join(',')]); } });
+    runs.forEach(r => svg.append(el('polyline', { points: r.join(' '), fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '4 14', 'stroke-linecap': 'round', class: 'routeline' })));
     o.route.forEach(id => svg.append(el('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 15, fill: 'none', stroke: '#ff3d7f', 'stroke-width': 4, class: 'pulse' })));
   }
+  if (o.tile) { const kids = [...svg.childNodes]; [-1800, 1800].forEach(off => { const g = el('g', { transform: `translate(${off} 0)`, opacity: .5 }); kids.forEach(k => g.append(k.cloneNode(true))); svg.append(g); }); svg.prepend(el('rect', { x: -4000, y: -400, width: 9800, height: 1800, fill: '#0a0a14' })); }
   return svg;
+}
+function wrapStub(a, b) { // point de sortie au bord de la carte pour la station a vers b
+  const L = OT_LINES[(OT_WRAP.find(w => (w[0] === a && w[1] === b) || (w[1] === a && w[0] === b)) || [0, 0, 1])[2]];
+  for (const path of L.p) { const i = path.indexOf(a); if (i < 0) continue; for (const d of [-1, 1]) for (let j = i + d; j >= 0 && j < path.length; j += d) { const it = path[j]; if (typeof it === 'string' && it.startsWith('@')) return it.slice(1).split('|').slice(1).map(Number); if (typeof it === 'string') break; } }
+  return [OT_ST[a][0], OT_ST[a][1]];
 }
 function mapBox(o = {}) {
   UI.zoom = UI.zoom || 1; const svg = mapEl(o); const inner = h('div', { class: 'mapin', style: `width:${UI.zoom * 100}%` }, svg);
@@ -1307,23 +1314,25 @@ function edgeGeom(a, b, line) {
     const st = path.map((x, i) => [x, i]).filter(([x]) => typeof x === 'string' && !x.startsWith('@'));
     for (let k = 0; k + 1 < st.length; k++) {
       const [s1, i1] = st[k], [s2, i2] = st[k + 1];
-      if (s1 === a && s2 === b) return [path.slice(i1, i2 + 1).map(otPt)];
-      if (s1 === b && s2 === a) return [path.slice(i1, i2 + 1).map(otPt).reverse()];
+      if (s1 === a && s2 === b) return { pts: path.slice(i1, i2 + 1).map(otPt), off: 0 };
+      if (s1 === b && s2 === a) return { pts: path.slice(i1, i2 + 1).map(otPt).reverse(), off: 0 };
     }
   }
   // traversée du Pacifique : on sort par le bord de la carte et on ressort de l'autre côté
   const toEdge = (s) => { for (const path of OT_LINES[line].p) { const i = path.indexOf(s); if (i < 0) continue; for (const dir of [-1, 1]) { const seg = [otPt(s)]; for (let j = i + dir; j >= 0 && j < path.length; j += dir) { const it = path[j]; if (typeof it === 'string' && it.startsWith('@')) { seg.push(otPt(it)); return seg; } if (typeof it === 'string') break; seg.push(it); } } } return [otPt(s)]; };
-  return [toEdge(a), toEdge(b).reverse()];
+  const east = OT_ST[a][0] > OT_ST[b][0]; const off = east ? 1800 : -1800; const sa = toEdge(a), sb = toEdge(b).reverse().map(q => [q[0] + off, q[1]]);
+  return { pts: sa.concat(sb), off };
 }
 function routeGeom(r) {
   if (r.custom) { const pts = r.custom.slice(); let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return { pts, stops: [{ id: r.steps[0].from, at: 0, i: 0 }, { id: r.steps[0].to, at: len, i: pts.length - 1 }], len, jumps: [] }; }
   const pts = [], stops = [], jumps = []; let len = 0;
   const add = p => { const l = pts[pts.length - 1]; if (l) len += Math.hypot(p[0] - l[0], p[1] - l[1]); pts.push(p); };
+  let shift = 0;
   r.steps.forEach((s, n) => {
-    const segs = edgeGeom(s.from, s.to, s.line);
-    if (n === 0) { pts.push(segs[0][0]); stops.push({ id: s.from, at: 0, i: 0 }); }
-    segs.forEach((seg, k) => seg.forEach((p, j) => { if (j === 0) { if (k === 1) { pts.push(p); jumps.push(pts.length - 1); } return; } add(p); }));
-    stops.push({ id: s.to, at: len, i: pts.length - 1 });
+    const g = edgeGeom(s.from, s.to, s.line); const seg = g.pts.map(q => [q[0] + shift, q[1]]);
+    if (n === 0) { pts.push(seg[0]); stops.push({ id: s.from, at: 0, i: 0 }); }
+    seg.forEach((q, j) => { if (j > 0) add(q); });
+    stops.push({ id: s.to, at: len, i: pts.length - 1, minor: !!OT_ST[s.to][4] }); shift += g.off;
   });
   return { pts, stops, len, jumps };
 }
@@ -1331,7 +1340,7 @@ function transit(r, from, to, done) {
   let finished = false; const finish = () => { if (finished) return; finished = true; done(); };
   if (REDUCED || !r || !r.steps || !r.steps.length) return finish();
   const G_ = routeGeom(r); const first = G_.pts[0];
-  const svg = mapEl({ dark: true }); const NS = 'http://www.w3.org/2000/svg';
+  const svg = mapEl({ tile: true }); const NS = 'http://www.w3.org/2000/svg';
   const mk = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
   const trail = mk('polyline', { fill: 'none', stroke: '#fff', 'stroke-width': 5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: .9, filter: 'drop-shadow(0 0 4px #fff)' });
   const halo = mk('circle', { r: 20, fill: '#fff', opacity: .25, class: 'dothalo' }); const dot = mk('circle', { r: 8, fill: '#fff', stroke: '#27f0ff', 'stroke-width': 3 });
@@ -1362,7 +1371,7 @@ function transit(r, from, to, done) {
       else {
         const nxt = G_.stops[visited + 1]; const dist = nxt ? Math.abs(nxt.at - s) : 0; const prevd = G_.stops[visited] ? Math.abs(s - G_.stops[visited].at) : 999;
         const sp = baseSpeed * (0.28 + 0.72 * Math.min(1, Math.min(dist, prevd) / 110)); s = Math.min(total, s + sp * dt);
-        if (nxt && s >= nxt.at - 0.5) { s = nxt.at; visited++; const st = G_.stops[visited]; sfx('tick'); buzz(12); pause = visited >= G_.stops.length - 1 ? 0 : 0.28; setCap(st); bar.firstChild.style.width = (visited / (G_.stops.length - 1) * 100) + '%'; if (visited >= G_.stops.length - 1) { state = 'arrive'; t0 = now; } }
+        if (nxt && s >= nxt.at - 0.5) { s = nxt.at; visited++; const st = G_.stops[visited]; sfx('tick'); buzz(12); pause = visited >= G_.stops.length - 1 ? 0 : (st.minor ? 0.12 : 0.28); setCap(st); bar.firstChild.style.width = (visited / (G_.stops.length - 1) * 100) + '%'; if (visited >= G_.stops.length - 1) { state = 'arrive'; t0 = now; } }
       }
       const p = posAt(s); const tx = p.x, ty = p.y; const jumped = p.jump && Math.hypot(tx - cx, ty - cy) > 400; if (jumped) { cx = tx; cy = ty; flash('#27f0ff'); } else { cx += (tx - cx) * Math.min(1, dt * 6); cy += (ty - cy) * Math.min(1, dt * 6); }
     }
@@ -1812,7 +1821,7 @@ const EVENT_FN = {};
 // ───────── Voyager ─────────
 function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
-  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt (les traversées du Pacifique comptent triple). Un scout-hover permet de voyager hors du réseau.'],
+  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt. La Terre est une boucle : Tokyo et Toronto (ligne 1), Nouméa et Lima (ligne 3) se rejoignent par le Pacifique, des deux côtés de la carte (traversée = 3 arrêts). Les petites stations (Reykjavik, Madrid, Abidjan, San José, Sydney, Auckland) sont des destinations comme les autres. Un véhicule permet de voyager hors du réseau.'],
     extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
     choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu)] });
 }
@@ -2130,7 +2139,7 @@ function vehicleDest(vid) {
 }
 function vehicleGo(vid, to, wk, fuel, r) {
   const pc = G.pc; const v = ITEMS[vid].v; pc.money -= fuel; const from = G.loc;
-  const a = OT_ST[stationOf(from)], b = OT_ST[stationOf(to)]; const mid = [(a[0] + b[0]) / 2 + (b[1] - a[1]) * 0.08, (a[1] + b[1]) / 2 - (b[0] - a[0]) * 0.08];
+  const a = OT_ST[stationOf(from)], b0 = OT_ST[stationOf(to)]; const dx = b0[0] - a[0]; const b = Math.abs(dx) > 900 ? [b0[0] - Math.sign(dx) * 1800, b0[1]] : b0; const mid = [(a[0] + b[0]) / 2 + (b[1] - a[1]) * 0.08, (a[1] + b[1]) / 2 - (b[0] - a[0]) * 0.08];
   const fake = { steps: [{ from: stationOf(from), to: stationOf(to), line: 0 }], custom: [[a[0], a[1]], mid, [b[0], b[1]]], vehicle: v.ic };
   const ctl = !v.legal && chance(clamp(detectChance() + 0.12, 0.1, 0.8));
   transit(fake, from, to, () => {
@@ -2156,7 +2165,7 @@ function orbitrailDebug(sel) {
   const chips = h('div', { class: 'row', style: 'margin:6px 0' }, lines.map(l => h('button', { class: 'tab' + (sel === l ? ' on' : ''), style: `border-color:${OT_LINES[l].c === '#151515' ? '#cfd3e6' : OT_LINES[l].c};${sel === l ? '' : `color:${OT_LINES[l].c === '#151515' ? '#cfd3e6' : OT_LINES[l].c}`}`, onclick: () => orbitrailDebug(sel === l ? null : l) }, 'L' + l + ' · ' + lineStations(l).length)));
   const tb = h('table', { class: 't' }, h('tr', {}, ['Station', 'État', 'Lignes', 'Voisins'].map(x => h('th', {}, x))));
   (sel ? lineStations(sel) : ids).forEach(id => tb.append(h('tr', {}, h('td', {}, OT_ST[id][2] + (OT_ST[id][4] ? ' ▮' : '')), h('td', {}, OT_ST[id][3]), h('td', {}, lns(id).join(' · ')), h('td', {}, [...new Set((OT.adj[id] || []).map(e => OT_ST[e.to][2]))].join(', ')))));
-  const sum = `${ids.length} stations · ${OT.edges.length} tronçons · ${lines.length} lignes · réseau connexe : ${seen.size === ids.length ? 'OUI' : 'NON (' + (ids.length - seen.size) + ' isolées)'} · stations « stub » (▮) : ${ids.filter(i => OT_ST[i][4]).map(i => OT_ST[i][2]).join(', ')} · traversées du Pacifique : ${OT_WRAP.map(w => OT_ST[w[0]][2] + '↔' + OT_ST[w[1]][2] + ' (L' + w[2] + ')').join(', ')}.`;
+  const sum = `${ids.length} stations · ${OT.edges.length} tronçons · ${lines.length} lignes · réseau connexe : ${seen.size === ids.length ? 'OUI' : 'NON (' + (ids.length - seen.size) + ' isolées)'} · petites stations (▮, arrêts normaux mais secondaires) : ${ids.filter(i => OT_ST[i][4]).map(i => OT_ST[i][2]).join(', ')} · traversées du Pacifique : ${OT_WRAP.map(w => OT_ST[w[0]][2] + '↔' + OT_ST[w[1]][2] + ' (L' + w[2] + ')').join(', ')} : la Terre est une boucle, on les rejoint des deux côtés de la carte.`;
   const ord = sel ? `<b>Ligne ${sel}</b> (${lineStations(sel).map(i => esc(OT_ST[i][2])).join(' → ')})` : 'Choisis une ligne pour la mettre en évidence.';
   show({ kicker: 'DEBUG', title: 'Orbitrail', text: [esc(sum), ord], extra: h('div', {}, chips, mapBox({ hl: sel || null }), h('div', { class: 'scroll', style: 'margin-top:8px;max-height:340px' }, tb)), choices: [C('← Retour', back)] });
 }

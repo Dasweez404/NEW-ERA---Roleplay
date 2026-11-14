@@ -6,23 +6,25 @@ function edgeGeom(a, b, line) {
     const st = path.map((x, i) => [x, i]).filter(([x]) => typeof x === 'string' && !x.startsWith('@'));
     for (let k = 0; k + 1 < st.length; k++) {
       const [s1, i1] = st[k], [s2, i2] = st[k + 1];
-      if (s1 === a && s2 === b) return [path.slice(i1, i2 + 1).map(otPt)];
-      if (s1 === b && s2 === a) return [path.slice(i1, i2 + 1).map(otPt).reverse()];
+      if (s1 === a && s2 === b) return { pts: path.slice(i1, i2 + 1).map(otPt), off: 0 };
+      if (s1 === b && s2 === a) return { pts: path.slice(i1, i2 + 1).map(otPt).reverse(), off: 0 };
     }
   }
   // traversée du Pacifique : on sort par le bord de la carte et on ressort de l'autre côté
   const toEdge = (s) => { for (const path of OT_LINES[line].p) { const i = path.indexOf(s); if (i < 0) continue; for (const dir of [-1, 1]) { const seg = [otPt(s)]; for (let j = i + dir; j >= 0 && j < path.length; j += dir) { const it = path[j]; if (typeof it === 'string' && it.startsWith('@')) { seg.push(otPt(it)); return seg; } if (typeof it === 'string') break; seg.push(it); } } } return [otPt(s)]; };
-  return [toEdge(a), toEdge(b).reverse()];
+  const east = OT_ST[a][0] > OT_ST[b][0]; const off = east ? 1800 : -1800; const sa = toEdge(a), sb = toEdge(b).reverse().map(q => [q[0] + off, q[1]]);
+  return { pts: sa.concat(sb), off };
 }
 function routeGeom(r) {
   if (r.custom) { const pts = r.custom.slice(); let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return { pts, stops: [{ id: r.steps[0].from, at: 0, i: 0 }, { id: r.steps[0].to, at: len, i: pts.length - 1 }], len, jumps: [] }; }
   const pts = [], stops = [], jumps = []; let len = 0;
   const add = p => { const l = pts[pts.length - 1]; if (l) len += Math.hypot(p[0] - l[0], p[1] - l[1]); pts.push(p); };
+  let shift = 0;
   r.steps.forEach((s, n) => {
-    const segs = edgeGeom(s.from, s.to, s.line);
-    if (n === 0) { pts.push(segs[0][0]); stops.push({ id: s.from, at: 0, i: 0 }); }
-    segs.forEach((seg, k) => seg.forEach((p, j) => { if (j === 0) { if (k === 1) { pts.push(p); jumps.push(pts.length - 1); } return; } add(p); }));
-    stops.push({ id: s.to, at: len, i: pts.length - 1 });
+    const g = edgeGeom(s.from, s.to, s.line); const seg = g.pts.map(q => [q[0] + shift, q[1]]);
+    if (n === 0) { pts.push(seg[0]); stops.push({ id: s.from, at: 0, i: 0 }); }
+    seg.forEach((q, j) => { if (j > 0) add(q); });
+    stops.push({ id: s.to, at: len, i: pts.length - 1, minor: !!OT_ST[s.to][4] }); shift += g.off;
   });
   return { pts, stops, len, jumps };
 }
@@ -30,7 +32,7 @@ function transit(r, from, to, done) {
   let finished = false; const finish = () => { if (finished) return; finished = true; done(); };
   if (REDUCED || !r || !r.steps || !r.steps.length) return finish();
   const G_ = routeGeom(r); const first = G_.pts[0];
-  const svg = mapEl({ dark: true }); const NS = 'http://www.w3.org/2000/svg';
+  const svg = mapEl({ tile: true }); const NS = 'http://www.w3.org/2000/svg';
   const mk = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
   const trail = mk('polyline', { fill: 'none', stroke: '#fff', 'stroke-width': 5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: .9, filter: 'drop-shadow(0 0 4px #fff)' });
   const halo = mk('circle', { r: 20, fill: '#fff', opacity: .25, class: 'dothalo' }); const dot = mk('circle', { r: 8, fill: '#fff', stroke: '#27f0ff', 'stroke-width': 3 });
@@ -61,7 +63,7 @@ function transit(r, from, to, done) {
       else {
         const nxt = G_.stops[visited + 1]; const dist = nxt ? Math.abs(nxt.at - s) : 0; const prevd = G_.stops[visited] ? Math.abs(s - G_.stops[visited].at) : 999;
         const sp = baseSpeed * (0.28 + 0.72 * Math.min(1, Math.min(dist, prevd) / 110)); s = Math.min(total, s + sp * dt);
-        if (nxt && s >= nxt.at - 0.5) { s = nxt.at; visited++; const st = G_.stops[visited]; sfx('tick'); buzz(12); pause = visited >= G_.stops.length - 1 ? 0 : 0.28; setCap(st); bar.firstChild.style.width = (visited / (G_.stops.length - 1) * 100) + '%'; if (visited >= G_.stops.length - 1) { state = 'arrive'; t0 = now; } }
+        if (nxt && s >= nxt.at - 0.5) { s = nxt.at; visited++; const st = G_.stops[visited]; sfx('tick'); buzz(12); pause = visited >= G_.stops.length - 1 ? 0 : (st.minor ? 0.12 : 0.28); setCap(st); bar.firstChild.style.width = (visited / (G_.stops.length - 1) * 100) + '%'; if (visited >= G_.stops.length - 1) { state = 'arrive'; t0 = now; } }
       }
       const p = posAt(s); const tx = p.x, ty = p.y; const jumped = p.jump && Math.hypot(tx - cx, ty - cy) > 400; if (jumped) { cx = tx; cy = ty; flash('#27f0ff'); } else { cx += (tx - cx) * Math.min(1, dt * 6); cy += (ty - cy) * Math.min(1, dt * 6); }
     }
