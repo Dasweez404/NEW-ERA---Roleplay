@@ -21,14 +21,20 @@ function actionsMenu() {
   L.push(C('Missions', missionBoard, { ic: '🎯', sub: 'Choisir un contrat.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
   L.push(C('Voyager (Orbitrail)', travelMenu, { ic: '🚆', sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
   L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
-  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins. Marché Noir si tu as les contacts.' }));
-  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
-  L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
-  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno (+2 dégâts, +1 défense).' }));
-  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
+  L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
+  L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
   L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
   show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
+}
+function cityMenu() {
+  const pc = G.pc; const L = [];
+  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
+  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
+  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
+  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
+  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Terminer la partie avec un bonus de score (×1,25).', cls: 'danger' }));
+  L.push(C('← Retour', actionsMenu, { cls: 'back' }));
+  show({ kicker: 'EN VILLE', title: capName(G.loc), text: [], choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -94,7 +100,7 @@ function restMenu() {
   L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère tout. Soigne aussi les alliés.', req: { money: 80 } }));
   L.push(C('Se mettre au vert pendant 1 mois', () => lieLow(), { sub: 'La prime baisse ; tu récupères tout, mais ton argent fond (coût de la vie 60 ¢).', req: { money: 60 } }));
   L.push(C('Chercher un contact des Siha Mujahaz (soins clandestins)', () => { addRep('siha', 2, { spill: false }); doRest(1, 0, true); }, { sub: 'Soins gratuits mais discrets, si la Siha t’apprécie.', req: { rep: { siha: 10 } } }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
 }
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
@@ -116,7 +122,7 @@ function shopMenu() {
   L.push(C('Marché légal de la ville', () => shopList(SHOP_LEGAL, 1, false), { sub: wantedStars() >= 2 ? '⚠ Tu es recherché : risque d’être reconnu.' : 'Boutiques, enseignes, bornes automatisées.' }));
   L.push(C('Marché Noir', () => shopList(SHOP_BLACK, 1.35, true), { sub: 'Armes lourdes, faux papiers, brouilleurs, hover… à prix fort.', req: { ok: () => blackOk ? null : 'Il faut un contact : 10 de réputation avec le Marché Noir (rends-lui un service) ou appartenir à une faction liée à lui' } }));
   L.push(C('Vendre un équipement', sellMenu, { req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
 }
 function shopList(ids, mult, black) {
   const pc = G.pc; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); const L = [];
@@ -148,7 +154,7 @@ function recruitMenu() {
   here.slice(0, 12).forEach(c => { const lead = Object.values(F).some(f => G.world.leader[f.id] === c.id); L.push(C(`${c.name} — ${F[c.faction].name}`, () => meetNpc(c.id), { img: c.id, sub: `${c.stars ? 'Prestige ' + '★'.repeat(c.stars) : 'Anonyme'} · ${STYLES[c.style || 'brawler'].name} · ${charPowerText(c)}${lead ? ' · CHEF DE FACTION' : ''}` })); });
   if (!here.length) L.push(Object.assign(C('Personne de remarquable ici', () => { }), { lock: 'Essaie une autre ville, ou le QG d’une faction' }));
   L.push(C('Chercher des rumeurs et des visages (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const ev = randomHubEvent(true); if (ev) ev(); else show({ title: 'Rien', text: ['Une semaine à traîner dans les bars et les marchés. Rien de neuf.'], choices: [C('Continuer', hub)] }); }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
 }
 function factionRoster(page) {
   const pc = G.pc; const all = DATA.chars.filter(c => c.faction === pc.faction && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free').sort((a, b) => b.stars - a.stars); const per = 8; const pages = Math.max(1, Math.ceil(all.length / per)); page = clamp(page, 0, pages - 1);
@@ -190,7 +196,7 @@ function trainMenu() {
   const cap = 1 + Math.floor(pc.grade / 2);
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
   L.push(C('Répartir les points d’attribut', () => { UI.tab = 'perso'; render(); }, { req: { ok: () => pc.pts > 0 ? null : 'Aucun point disponible (l’expérience en donne : 1 point tous les 80 XP)' } }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Progression', title: 'S’entraîner', text: [`XP : ${pc.xp} · points disponibles : ${pc.pts}`], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Progression', title: 'S’entraîner', text: [`XP : ${pc.xp} · points disponibles : ${pc.pts}`], choices: L });
 }
 function roleMenu() {
   const pc = G.pc; const cap = 1 + Math.floor(pc.grade / 2); const L = [];

@@ -1330,7 +1330,7 @@ function diceEl(r, still) {
   };
   if (still || REDUCED) { settle(true); return wrap; }
   UI.after.push(() => {
-    let n = 0; const iv = setInterval(() => { num.textContent = rint(1, 20); sfx('tick'); if (++n >= 13) { clearInterval(iv); settle(false); } }, 65);
+    let n = 0; const iv = setInterval(() => { num.textContent = rint(1, 20); sfx('tick'); if (++n >= 8) { clearInterval(iv); settle(false); } }, 55);
   });
   return wrap;
 }
@@ -1660,8 +1660,8 @@ const FOE = {
   garde: { n: 'Garde du corps', hp: 22, atk: 1, def: 2, dmg: 3, sp: ['shield'] }, porteur: { n: 'Géno-porteur', hp: 22, atk: 1, def: 1, dmg: 3, sp: ['dash', 'buff'] },
 };
 function mkFoe(tid, tier, name, extra = {}) {
-  const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier));
-  return Object.assign({ tid, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: b.dmg + 2 * tier, sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
+  const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier) * 0.45);
+  return Object.assign({ tid, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
@@ -1689,6 +1689,7 @@ const clog = (t, c = '') => { CB.log.push({ t, c }); if (CB.log.length > 40) CB.
 function pcDef() { const pc = G.pc; const a = armorOf(); return 3 + PK('def') + Math.floor(A('agilite') / 2) + (a ? a.def : 0) + (pc.style === 'juggernaut' ? 1 : 0) + (CB && CB.defend ? 3 : 0) + (CB && CB.fore > 0 ? 3 : 0) + (hasRole('gardien') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 1 : 0); }
 
 function startCombat(cfg) {
+  if (cfg.foes.length > 3) { const keep = cfg.foes.slice(0, 3); keep.forEach(f => { f.hp = f.hpMax = Math.round(f.hpMax * 1.15); }); cfg.foes = keep; }
   CB = { cfg, foes: cfg.foes, round: 1, log: [], tgt: 0, menu: 'main', shield: 0, defend: false, crit: false, dodge: 0, drones: 0, buff: 0, fore: 0, hitBuff: 0, rage: false, boost: 0, stunPc: 0, noItems: false, wasAwake: false, tier: Math.max(...cfg.foes.map(f => Math.round((f.atk) / 2))) };
   CB.foes.forEach(f => { f.dead = false; });
   clog(cfg.intro || 'Le combat commence !');
@@ -1735,7 +1736,7 @@ function renderCombat() {
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-3).map(l => h('div', { class: l.c }, l.t)));
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
-    const delay = UI.scene && UI.scene.roll ? 1050 : 0;
+    const delay = UI.scene && UI.scene.roll ? 560 : 0;
     requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), delay));
     setTimeout(() => {
       let dmgF = false, dmgP = false, miss = false;
@@ -1756,7 +1757,7 @@ function combatChoices() {
   const awk = pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake;
   if (awk) L.push(C('⚡ ÉVEIL', awaken, { cls: 'danger', sub: pc.ptype === 'zoologique' ? 'Bête féroce incontrôlable' : pc.ptype === 'elementaire' ? 'Demi-dieu' : pc.ptype === 'hybride' ? 'Éveil partiel' : 'Capacités au maximum' }));
   if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.cfg.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
-  if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
+  else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
   return L;
 }
 
@@ -1966,14 +1967,20 @@ function actionsMenu() {
   L.push(C('Missions', missionBoard, { ic: '🎯', sub: 'Choisir un contrat.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
   L.push(C('Voyager (Orbitrail)', travelMenu, { ic: '🚆', sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
   L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
-  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins. Marché Noir si tu as les contacts.' }));
-  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
-  L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
-  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno (+2 dégâts, +1 défense).' }));
-  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
+  L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
+  L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
   L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
   show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
+}
+function cityMenu() {
+  const pc = G.pc; const L = [];
+  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
+  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
+  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
+  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
+  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Terminer la partie avec un bonus de score (×1,25).', cls: 'danger' }));
+  L.push(C('← Retour', actionsMenu, { cls: 'back' }));
+  show({ kicker: 'EN VILLE', title: capName(G.loc), text: [], choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -2039,7 +2046,7 @@ function restMenu() {
   L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère tout. Soigne aussi les alliés.', req: { money: 80 } }));
   L.push(C('Se mettre au vert pendant 1 mois', () => lieLow(), { sub: 'La prime baisse ; tu récupères tout, mais ton argent fond (coût de la vie 60 ¢).', req: { money: 60 } }));
   L.push(C('Chercher un contact des Siha Mujahaz (soins clandestins)', () => { addRep('siha', 2, { spill: false }); doRest(1, 0, true); }, { sub: 'Soins gratuits mais discrets, si la Siha t’apprécie.', req: { rep: { siha: 10 } } }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
 }
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
@@ -2061,7 +2068,7 @@ function shopMenu() {
   L.push(C('Marché légal de la ville', () => shopList(SHOP_LEGAL, 1, false), { sub: wantedStars() >= 2 ? '⚠ Tu es recherché : risque d’être reconnu.' : 'Boutiques, enseignes, bornes automatisées.' }));
   L.push(C('Marché Noir', () => shopList(SHOP_BLACK, 1.35, true), { sub: 'Armes lourdes, faux papiers, brouilleurs, hover… à prix fort.', req: { ok: () => blackOk ? null : 'Il faut un contact : 10 de réputation avec le Marché Noir (rends-lui un service) ou appartenir à une faction liée à lui' } }));
   L.push(C('Vendre un équipement', sellMenu, { req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
 }
 function shopList(ids, mult, black) {
   const pc = G.pc; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); const L = [];
@@ -2093,7 +2100,7 @@ function recruitMenu() {
   here.slice(0, 12).forEach(c => { const lead = Object.values(F).some(f => G.world.leader[f.id] === c.id); L.push(C(`${c.name} — ${F[c.faction].name}`, () => meetNpc(c.id), { img: c.id, sub: `${c.stars ? 'Prestige ' + '★'.repeat(c.stars) : 'Anonyme'} · ${STYLES[c.style || 'brawler'].name} · ${charPowerText(c)}${lead ? ' · CHEF DE FACTION' : ''}` })); });
   if (!here.length) L.push(Object.assign(C('Personne de remarquable ici', () => { }), { lock: 'Essaie une autre ville, ou le QG d’une faction' }));
   L.push(C('Chercher des rumeurs et des visages (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const ev = randomHubEvent(true); if (ev) ev(); else show({ title: 'Rien', text: ['Une semaine à traîner dans les bars et les marchés. Rien de neuf.'], choices: [C('Continuer', hub)] }); }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
 }
 function factionRoster(page) {
   const pc = G.pc; const all = DATA.chars.filter(c => c.faction === pc.faction && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free').sort((a, b) => b.stars - a.stars); const per = 8; const pages = Math.max(1, Math.ceil(all.length / per)); page = clamp(page, 0, pages - 1);
@@ -2135,7 +2142,7 @@ function trainMenu() {
   const cap = 1 + Math.floor(pc.grade / 2);
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
   L.push(C('Répartir les points d’attribut', () => { UI.tab = 'perso'; render(); }, { req: { ok: () => pc.pts > 0 ? null : 'Aucun point disponible (l’expérience en donne : 1 point tous les 80 XP)' } }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Progression', title: 'S’entraîner', text: [`XP : ${pc.xp} · points disponibles : ${pc.pts}`], choices: L });
+  L.push(C('← Retour', cityMenu)); show({ kicker: 'Progression', title: 'S’entraîner', text: [`XP : ${pc.xp} · points disponibles : ${pc.pts}`], choices: L });
 }
 function roleMenu() {
   const pc = G.pc; const cap = 1 + Math.floor(pc.grade / 2); const L = [];
@@ -3175,7 +3182,7 @@ function successionMenu() {
   const pc = G.pc; const fid = pc.faction; const W = G.world; const lead = W.leader[fid]; const vac = pc.flags.vacant === fid || !lead; const L = [];
   const lc = lead && lead !== 'pc' ? CH[lead] : null; const nm = lc ? lc.name : 'le chef';
   L.push(C(`Être choisi comme la relève par ${nm}`, () => { const r = check('charisme', dcOf(4), ['social']); advance(2); if (G.status !== 'play') return; if (r.ok) becomeLeader(fid, `${esc(nm)} te désigne devant l’assemblée : « Elle est prête. »`, 'relève'); else show({ title: 'Pas encore', text: ['« Tu n’es pas prêt(e), » répond le chef.', checkLine(r)], choices: [C('Continuer', hub)] }); }, { odds: ['charisme', dcOf(4), ['social']], req: { ok: () => (pc.rep[fid] || 0) < 60 ? `Requiert 60 de réputation avec ${F[fid].name} (tu as ${pc.rep[fid] || 0})` : vac ? 'Il n’y a plus de chef à convaincre' : null }, sub: 'Voie pacifique : réputation, confiance, grade.' }));
-  L.push(C(`Défier ${nm} en duel`, () => { startCombat({ title: `Duel pour la tête de ${F[fid].name}`, foes: [mkFoe('porteur', 5, lc ? lc.name + ' (chef)' : 'Le chef', { hp: 90, hpMax: 90, cid: lc ? lc.id : undefined })], lethal: 'death', canFlee: false, intro: 'Le cercle se referme. Tout le monde regarde.', onWin: l => { if (lc) { G.world.npc[lead].alive = false; newsPush(`${lc.name} est mort${lc.gender === 'F' ? 'e' : ''} en duel face à ${pc.name}.`); } L2 = fx({ rep: { [fid]: -10 } }); becomeLeader(fid, 'Le chef tombe. Les yeux se tournent vers toi, et personne ne bronche.', 'tué', l); } }); var L2; }, { cls: 'danger', req: { ok: () => vac ? 'Il n’y a plus de chef à défier' : null }, sub: 'Si tu gagnes, tu l’as tué : certains alliés du chef t’en voudront.' }));
+  L.push(C(`Défier ${nm} en duel`, () => { startCombat({ title: `Duel pour la tête de ${F[fid].name}`, foes: [mkFoe('porteur', 5, lc ? lc.name + ' (chef)' : 'Le chef', { hp: 60, hpMax: 60, cid: lc ? lc.id : undefined })], lethal: 'death', canFlee: false, intro: 'Le cercle se referme. Tout le monde regarde.', onWin: l => { if (lc) { G.world.npc[lead].alive = false; newsPush(`${lc.name} est mort${lc.gender === 'F' ? 'e' : ''} en duel face à ${pc.name}.`); } L2 = fx({ rep: { [fid]: -10 } }); becomeLeader(fid, 'Le chef tombe. Les yeux se tournent vers toi, et personne ne bronche.', 'tué', l); } }); var L2; }, { cls: 'danger', req: { ok: () => vac ? 'Il n’y a plus de chef à défier' : null }, sub: 'Si tu gagnes, tu l’as tué : certains alliés du chef t’en voudront.' }));
   L.push(C('Éliminer le chef en secret', () => { const r = check('agilite', dcOf(5), ['stealth']); advance(2); if (G.status !== 'play') return; if (r.ok) { if (lc) { G.world.npc[lead].alive = false; newsPush(`${lc.name} est retrouvé mort dans des circonstances troubles.`); } becomeLeader(fid, 'Le chef est retrouvé mort. Personne ne sait. Tu hérites de la place.', 'tué', fx({ rep: { [fid]: -4 } })); } else { show({ title: 'Démasqué', text: ['Le chef t’a vu venir. Tu es exclu de la faction.', checkLine(r)], fx: fx({ rep: { [fid]: -50 }, heat: 6 }), choices: [C('Continuer', () => { pc.faction = 'civils'; pc.grade = 0; pc.merit = 0; G.board = null; hub(); })] }); } }, { cls: 'danger', odds: ['agilite', dcOf(5), ['stealth']], req: { ok: () => vac ? 'Il n’y a plus de chef' : null } }));
   L.push(C('Prendre la tête (le chef est mort)', () => becomeLeader(fid, 'Le fauteuil est vide. L’assemblée t’acclame.', 'mort'), { req: { ok: () => vac ? null : 'Le chef est toujours en vie' }, cls: 'safe' }));
   L.push(C('← Retour', factionMenu)); show({ kicker: 'Succession', title: 'La tête de ' + F[fid].name, text: ['« Soit tu es la relève, soit tu l’as tué, soit il est mort. » À toi de choisir.'], choices: L });

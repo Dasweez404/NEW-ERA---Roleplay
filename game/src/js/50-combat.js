@@ -17,8 +17,8 @@ const FOE = {
   garde: { n: 'Garde du corps', hp: 22, atk: 1, def: 2, dmg: 3, sp: ['shield'] }, porteur: { n: 'Géno-porteur', hp: 22, atk: 1, def: 1, dmg: 3, sp: ['dash', 'buff'] },
 };
 function mkFoe(tid, tier, name, extra = {}) {
-  const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier));
-  return Object.assign({ tid, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: b.dmg + 2 * tier, sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
+  const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier) * 0.45);
+  return Object.assign({ tid, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
@@ -46,6 +46,7 @@ const clog = (t, c = '') => { CB.log.push({ t, c }); if (CB.log.length > 40) CB.
 function pcDef() { const pc = G.pc; const a = armorOf(); return 3 + PK('def') + Math.floor(A('agilite') / 2) + (a ? a.def : 0) + (pc.style === 'juggernaut' ? 1 : 0) + (CB && CB.defend ? 3 : 0) + (CB && CB.fore > 0 ? 3 : 0) + (hasRole('gardien') ? 1 : 0) + ((G.pc.faction === 'fa' || G.pc.flags.antigeno) ? 1 : 0); }
 
 function startCombat(cfg) {
+  if (cfg.foes.length > 3) { const keep = cfg.foes.slice(0, 3); keep.forEach(f => { f.hp = f.hpMax = Math.round(f.hpMax * 1.15); }); cfg.foes = keep; }
   CB = { cfg, foes: cfg.foes, round: 1, log: [], tgt: 0, menu: 'main', shield: 0, defend: false, crit: false, dodge: 0, drones: 0, buff: 0, fore: 0, hitBuff: 0, rage: false, boost: 0, stunPc: 0, noItems: false, wasAwake: false, tier: Math.max(...cfg.foes.map(f => Math.round((f.atk) / 2))) };
   CB.foes.forEach(f => { f.dead = false; });
   clog(cfg.intro || 'Le combat commence !');
@@ -92,7 +93,7 @@ function renderCombat() {
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-3).map(l => h('div', { class: l.c }, l.t)));
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
-    const delay = UI.scene && UI.scene.roll ? 1050 : 0;
+    const delay = UI.scene && UI.scene.roll ? 560 : 0;
     requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), delay));
     setTimeout(() => {
       let dmgF = false, dmgP = false, miss = false;
@@ -113,7 +114,7 @@ function combatChoices() {
   const awk = pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake;
   if (awk) L.push(C('⚡ ÉVEIL', awaken, { cls: 'danger', sub: pc.ptype === 'zoologique' ? 'Bête féroce incontrôlable' : pc.ptype === 'elementaire' ? 'Demi-dieu' : pc.ptype === 'hybride' ? 'Éveil partiel' : 'Capacités au maximum' }));
   if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.cfg.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
-  if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
+  else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
   return L;
 }
 

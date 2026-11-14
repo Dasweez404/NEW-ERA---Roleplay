@@ -60,7 +60,7 @@ function diceEl(r, still) {
   };
   if (still || REDUCED) { settle(true); return wrap; }
   UI.after.push(() => {
-    let n = 0; const iv = setInterval(() => { num.textContent = rint(1, 20); sfx('tick'); if (++n >= 13) { clearInterval(iv); settle(false); } }, 65);
+    let n = 0; const iv = setInterval(() => { num.textContent = rint(1, 20); sfx('tick'); if (++n >= 8) { clearInterval(iv); settle(false); } }, 55);
   });
   return wrap;
 }
