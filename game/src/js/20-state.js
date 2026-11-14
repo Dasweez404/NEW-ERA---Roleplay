@@ -98,11 +98,12 @@ function initRep(pc) {
 
 function startGame(spec) {
   const pc = blankPC(); Object.assign(pc, spec.pc);
-  pc.hp = pc.hpMax; G = { v: 1, wk: 0, pc, loc: pc.origin, world: null, log: [], status: 'play', score: { stones: 0 }, settings: { canon: spec.canon !== false }, ver: 1, ts: Date.now() };
-  G.world = initWorld();
+  pc.hp = pc.hpMax; G = { v: 1, wk: 0, pc, loc: pc.origin, world: null, log: [], status: 'play', score: { stones: 0 }, settings: { mode: spec.mode || 'libre', canon: spec.mode === 'canon' }, ver: 1, ts: Date.now() };
+  G.world = initWorld(); G.fresh = true;
   if (pc.charId) { G.world.npc[pc.charId].alive = false; G.world.npc[pc.charId].st = 'pc'; const lead = Object.values(F).find(f => f.leaders.includes(pc.charId)); if (lead) G.world.leader[lead.id] = 'pc'; }
   const f0 = F[pc.faction]; G.loc = (pc.charId && f0 && f0.leaders.includes(pc.charId)) ? f0.hq : pc.origin;
   pc.inv = { capsule: 2, kit: 2 }; startKit(pc);
+  if (G.settings.mode === 'libre') setupLibre();
   initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type));
   if (spec.recruits) spec.recruits.forEach(cid => addAlly(cid, 70));
   pc.heat = Math.max(pc.heat, minHeat());

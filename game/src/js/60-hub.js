@@ -12,23 +12,23 @@ function hubText() {
 }
 function npcsHere() { return DATA.chars.filter(c => { const n = G.world.npc[c.id]; return n.alive && n.st === 'free' && n.loc === G.loc && c.faction !== 'civils'; }); }
 
-function hub() {
+function actionsMenu() {
   if (G.status !== 'play') return;
-  const pc = G.pc; saveGame(); recalc();
+  const pc = G.pc; recalc();
   if (pc.flags.cap) return capturedMenu();
-  const pend = pendingEvents(); if (pend) return pend();
   const f = F[pc.faction];
   const L = [];
-  L.push(C('Missions', missionBoard, { ic: '🎯', sub: 'Contrats, ordres de ta faction, petites et grosses missions.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
+  L.push(C('Missions', missionBoard, { ic: '🎯', sub: 'Choisir un contrat.', cls: 'safe', req: { ok: () => pc.hp < 5 ? 'Tu es trop blessé' : null } }));
   L.push(C('Voyager (Orbitrail)', travelMenu, { ic: '🚆', sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
   L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
   L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
   L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins. Marché Noir si tu as les contacts.' }));
   L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
   L.push(C(`Faction : ${f.name}`, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
-  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno.' }));
+  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Gagner de l’expérience, apprendre un rôle, formation anti-geno (+2 dégâts, +1 défense).' }));
   L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Mettre fin à la partie avec un bonus de score (×1,25).', cls: 'danger' }));
-  show({ kicker: dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
+  L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
+  show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -42,7 +42,7 @@ function travelMenu() {
   const pc = G.pc; const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: ['Clique sur une station allumée de la carte, ou choisis dans la liste. 18 ¢ par arrêt (les traversées du Pacifique comptent triple). Un scout-hover permet de voyager hors du réseau.'],
     extra: h('div', {}, mapBox({ here, pick: new Set(ids), onPick: s => travelConfirm(s) }), h('div', { class: 'small mut' }, 'Lignes 1 à 13 — Toronto↔Tokyo (ligne 1) et Lima↔Nouméa (ligne 3) traversent le Pacifique.')),
-    choices: [C('Choisir dans la liste', travelList), hasItem('hover') ? C('Voyager en scout-hover (hors Orbitrail)', travelHover, { sub: 'Non tracé, mais exposé aux dérèglements climatiques.' }) : null, C('← Retour', hub)] });
+    choices: [C('Choisir dans la liste', travelList), hasItem('hover') ? C('Voyager en scout-hover (hors Orbitrail)', travelHover, { sub: 'Non tracé, mais exposé aux dérèglements climatiques.' }) : null, C('← Retour', actionsMenu)] });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -91,7 +91,7 @@ function restMenu() {
   L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère tout. Soigne aussi les alliés.', req: { money: 80 } }));
   L.push(C('Se mettre au vert pendant 1 mois', () => lieLow(), { sub: 'La prime baisse ; tu récupères tout, mais ton argent fond (coût de la vie 60 ¢).', req: { money: 60 } }));
   L.push(C('Chercher un contact des Siha Mujahaz (soins clandestins)', () => { addRep('siha', 2, { spill: false }); doRest(1, 0, true); }, { sub: 'Soins gratuits mais discrets, si la Siha t’apprécie.', req: { rep: { siha: 10 } } }));
-  L.push(C('← Retour', hub)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
+  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
 }
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
@@ -113,7 +113,7 @@ function shopMenu() {
   L.push(C('Marché légal de la ville', () => shopList(SHOP_LEGAL, 1, false), { sub: wantedStars() >= 2 ? '⚠ Tu es recherché : risque d’être reconnu.' : 'Boutiques, enseignes, bornes automatisées.' }));
   L.push(C('Marché Noir', () => shopList(SHOP_BLACK, 1.35, true), { sub: 'Armes lourdes, faux papiers, brouilleurs, hover… à prix fort.', req: { ok: () => blackOk ? null : 'Il faut un contact : 10 de réputation avec le Marché Noir (rends-lui un service) ou appartenir à une faction liée à lui' } }));
   L.push(C('Vendre un équipement', sellMenu, { req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
-  L.push(C('← Retour', hub)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
+  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
 }
 function shopList(ids, mult, black) {
   const pc = G.pc; const disc = hasRole('logisticien') ? 0.9 : 1; const L = [];
@@ -144,7 +144,7 @@ function recruitMenu() {
   here.slice(0, 12).forEach(c => { const lead = Object.values(F).some(f => G.world.leader[f.id] === c.id); L.push(C(`${c.name} — ${F[c.faction].name}`, () => meetNpc(c.id), { img: c.id, sub: `${c.stars ? 'Prestige ' + '★'.repeat(c.stars) : 'Anonyme'} · ${STYLES[c.style || 'brawler'].name} · ${charPowerText(c)}${lead ? ' · CHEF DE FACTION' : ''}` })); });
   if (!here.length) L.push(Object.assign(C('Personne de remarquable ici', () => { }), { lock: 'Essaie une autre ville, ou le QG d’une faction' }));
   L.push(C('Chercher des rumeurs et des visages (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const ev = randomHubEvent(true); if (ev) ev(); else show({ title: 'Rien', text: ['Une semaine à traîner dans les bars et les marchés. Rien de neuf.'], choices: [C('Continuer', hub)] }); }));
-  L.push(C('← Retour', hub)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
+  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
 }
 function meetNpc(cid) {
   const c = CH[cid]; const pc = G.pc; const price = recruitPrice(c); const rep = pc.rep[c.faction] || 0;
@@ -176,11 +176,11 @@ function betray(cid) {
 function trainMenu() {
   const pc = G.pc; const L = [];
   L.push(C('Entraînement intensif (1 semaine, 100 ¢)', () => { pc.money -= 100; advance(1); if (G.status !== 'play') return; const L2 = fx({ xp: rint(20, 40) }); show({ kicker: 'Entraînement', title: 'Sueur et progrès', text: ['Une semaine à repousser tes limites.'], fx: L2, choices: [C('Continuer', trainMenu)] }); }, { req: { money: 100 } }));
-  L.push(C('Formation aux techniques anti-geno (3 semaines, 500 ¢)', () => { pc.money -= 500; advance(3); if (G.status !== 'play') return; pc.flags.antigeno = true; show({ kicker: 'Formation', title: 'Techniques anti-geno', text: ['Buff, Rebound, Shield, Restore, Foresight, Shock, Dash : accessibles à toutes, enseignées à la F.A. — tu les maîtrises désormais (menu de combat).'], choices: [C('Continuer', hub)] }); }, { req: { money: 500, notFlag: 'antigeno' } }));
+  L.push(C('Formation aux techniques anti-geno (3 semaines, 500 ¢)', () => { pc.money -= 500; advance(3); if (G.status !== 'play') return; pc.flags.antigeno = true; show({ kicker: 'Formation', title: 'Techniques anti-geno', text: ['Buff, Rebound, Shield, Restore, Foresight, Shock, Dash : accessibles à toutes, enseignées à la F.A. — tu les maîtrises désormais (+2 dégâts, +1 défense en combat).'], choices: [C('Continuer', hub)] }); }, { req: { money: 500, notFlag: 'antigeno' } }));
   const cap = 1 + Math.floor(pc.grade / 2);
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
   L.push(C('Répartir les points d’attribut', () => { UI.tab = 'perso'; render(); }, { req: { ok: () => pc.pts > 0 ? null : 'Aucun point disponible (l’expérience en donne : 1 point tous les 80 XP)' } }));
-  L.push(C('← Retour', hub)); show({ kicker: 'Progression', title: 'S’entraîner', text: [`XP : ${pc.xp} · points disponibles : ${pc.pts}`], choices: L });
+  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Progression', title: 'S’entraîner', text: [`XP : ${pc.xp} · points disponibles : ${pc.pts}`], choices: L });
 }
 function roleMenu() {
   const pc = G.pc; const cap = 1 + Math.floor(pc.grade / 2); const L = [];

@@ -1,0 +1,61 @@
+// ───────── Le fil de l'histoire : une carte, deux ou trois choix, un dé, la suite (style Destiny Eleven) ─────────
+function hub() {
+  if (G.status !== 'play') return;
+  const pc = G.pc; saveGame(); recalc();
+  if (pc.flags.cap) return capturedMenu();
+  let pend = pendingEvents(); if (pend) return pend();
+  if (G.fresh) G.fresh = false;
+  else { advance(1); if (G.status !== 'play') return; if (pc.flags.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); }
+  dealCard();
+}
+function dealCard() {
+  const pc = G.pc, W = G.world; const pool = [];
+  const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
+  pool.push({ w: 34, f: missionCard });
+  if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
+  const known = DATA.stones.filter(s => !pc.stones[s.id] && W.stoneClue[s.id]);
+  const here = known.filter(s => W.stoneLoc[s.id] === G.loc), far = known.filter(s => W.stoneLoc[s.id] !== G.loc);
+  if (here.length) pool.push({ w: 34, f: () => stoneCard(pick(here)) });
+  if (far.length) pool.push({ w: 14, f: () => leadCard(pick(far)) });
+  if (stoneCount() < 16) pool.push({ w: 9, f: clueCard });
+  const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
+  if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
+  pool.push({ w: 26, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
+  pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard });
+  if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
+  if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
+  if (pc.implant) pool.push({ w: 25, f: fallenContract });
+  const e = wpick(pool, x => x.w); e.f();
+}
+function missionCard() {
+  const pc = G.pc; const [t0, t1] = tiersForGrade();
+  let emp = (pc.faction !== 'civils' && chance(0.72)) ? pc.faction : ((pc.rep.noir || 0) >= 5 && pc.faction !== 'fa' && chance(0.4) ? 'noir' : 'civils');
+  const o = genOffer(emp, rint(Math.max(1, t0 - 1), t1)); o.feed = true; if (emp === 'fallen') o.fallen = true; missionApproach(o);
+}
+function stoneCard(s) {
+  const hold = G.world.stoneHolder[s.id];
+  show({ kicker: 'PIERRE ANTIQUE', title: `La pierre de ${s.name} est ici`, text: [`Elle est ${hold === 'temple' ? 'cachée dans un temple oublié' : 'aux mains de ' + esc(holderName(hold))}, tout près de toi. Royaume ${esc(s.ruler)} — ${esc(s.spec)}.`], choices: [C('Tenter de la récupérer', () => stoneAttempt(s.id), { ic: '💎', cls: 'risk' }), C('Pas maintenant', hub, { cls: 'back' })] });
+}
+function leadCard(s) {
+  const loc = G.world.stoneLoc[s.id]; const r = otRoute(G.loc, loc); const cost = r ? r.cost : 0;
+  show({ kicker: 'PISTE', title: `La pierre de ${s.name}`, text: [`Ta piste te mène à <b>${esc(capName(loc))}</b> (${esc(stateName(loc))}) : ${esc(holderName(G.world.stoneHolder[s.id]))}.`], choices: [C(`Prendre l’Orbitrail (${cost} ¢)`, () => travelConfirm(loc), { ic: '🚆', req: { money: cost } }), C('Pas maintenant', hub, { cls: 'back' })] });
+}
+function clueCard() {
+  const dc = 14 + Math.min(4, stoneCount());
+  show({ kicker: 'RUMEUR', title: 'Un indice sur les pierres', text: ['Un vieux conteur, une archive piratée, une fresque effacée… quelque chose parle des seize pierres muta.'], choices: [C('Creuser la piste', () => { const r = check('intellect', dc, ['scout', 'relic']); advance(1); if (G.status !== 'play') return; const l = r.ok ? stoneClueGain() : null; show({ kicker: 'PIERRES ANTIQUES', title: r.ok ? 'Une piste !' : 'Fausse piste', text: [r.ok ? (l ? esc(cap(l)) : 'Tu sais déjà tout ce qu’il y a à savoir.') : 'Rien de concluant, cette fois.'], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' }), C('Laisser tomber', hub, { cls: 'back' })] });
+}
+function restCard() {
+  show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent. Un faux pas de plus et ça tourne mal.'], choices: [C('Dormir une semaine', () => doRest(1), { ic: '🛏', cls: 'safe' }), C('Se faire soigner (80 ¢)', () => doRest(2, 80), { ic: '💊', req: { money: 80 } }), C('Continuer quand même', () => dealCard(), { cls: 'risk' })] });
+}
+function townCard() {
+  show({ kicker: capName(G.loc).toUpperCase(), title: 'Un moment de répit', text: ['Entre deux coups durs, la ville offre ses boutiques, ses visages et ses salles d’entraînement.'], choices: [C('Faire le tour des marchés', shopMenu, { ic: '🛒' }), C('Chercher des recrues', recruitMenu, { ic: '🤝' }), C('S’entraîner', trainMenu, { ic: '🎓' }), C('Passer son chemin', hub, { cls: 'back' })] });
+}
+function travelCard() {
+  const arcs = (G.world.arcs || []).filter(a => a.state !== G.loc); const nb = neighbors(G.loc); if (!nb.length && !arcs.length) return missionCard(); const to = arcs.length && chance(0.6) ? pick(arcs).state : pick(nb); const r = otRoute(G.loc, to);
+  show({ kicker: 'ORBITRAIL', title: `Un train pour ${capName(to)}`, text: [`Un contact te souffle qu’il se passe quelque chose du côté de <b>${esc(capName(to))}</b> (${esc(stateName(to))}).`], choices: [C(`Monter à bord (${r.cost} ¢)`, () => travelConfirm(to), { ic: '🚆', req: { money: r.cost } }), C('Rester ici', hub, { cls: 'back' })] });
+}
+function joinCard() {
+  const pc = G.pc; const ids = Object.keys(F).filter(k => !['civils', 'fallen', 'noir', 'own', 'omega'].includes(k) && !(k === 'fa' && pc.ptype !== 'aucun') && (pc.rep[k] || 0) > -20);
+  const fid = pick(ids); const f = F[fid]; const dc = (f.secret ? 19 : 14) - Math.floor((pc.rep[fid] || 0) / 10);
+  show({ kicker: f.name.toUpperCase(), title: 'On t’a remarqué', text: [`Quelqu’un de <b>${esc(f.name)}</b> t’aborde : « ${esc(f.goal)} Ça t’intéresse ? »`], choices: [C(`Les rejoindre`, () => joinFaction(fid, dc), { odds: ['charisme', dc, ['social']], ic: '🏴' }), C('Décliner', hub, { cls: 'back' })] });
+}

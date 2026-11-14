@@ -17,7 +17,7 @@ function titleScreen() {
     h('p', { class: 'lore' }, 'Cratès, 2071. Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
     h('div', { class: 'lineup' }, ghost, order.map(([id, kk], i) => fig(id, kk, i, i === (mob ? 1 : 2) ? 'big' : ''))),
     h('div', { class: 'menu' },
-      sc ? h('button', { class: 'ch go', onclick: () => { sfx('click'); if (loadGame()) { restoreOwn(); hub(); } } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Continuer la partie'))) : null,
+      sc ? h('button', { class: 'ch go', onclick: () => { sfx('click'); if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Continuer la partie'))) : null,
       h('button', { class: 'ch' + (sc ? '' : ' go'), onclick: () => { sfx('click'); newGameMenu(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Nouvelle partie'))),
       h('button', { class: 'ch', onclick: () => { sfx('click'); scoresScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'Meilleurs scores'))),
       h('button', { class: 'ch', onclick: () => { sfx('click'); aboutScreen(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, 'À propos & sources')))),
@@ -39,6 +39,7 @@ function scoresScreen() {
 }
 function newGameMenu() {
   show({ kicker: 'Nouvelle partie', title: 'Qui es-tu ?', text: ['Deux façons de jouer : créer ton personnage de toutes pièces, ou prendre la place d’un des 441 personnages existants — avec son grade, sa faction et ses responsabilités (un chef de faction commence chef).'], choices: [
+    C(UI.mode === 'canon' ? 'Mode : CANON (timeline d’Ora) — changer' : 'Mode : LIBRE (scénario aléatoire) — changer', () => { UI.mode = UI.mode === 'canon' ? 'libre' : 'canon'; newGameMenu(); }, { sub: UI.mode === 'canon' ? 'Les sagas de la Vigilante Squad se déroulent dans le monde.' : 'Chaque partie tire au hasard le contexte : détenteurs des pierres, rival, intrigues. Rien n’est écrit d’avance.', cls: 'risk' }),
     C('Personnage customisé', () => { CR = { name: '', gender: 'N/B', age: 24, faction: null, origin: null, ptype: null, powers: [], style: null, base: { corps: 2, agilite: 2, intellect: 2, charisme: 2, maitrise: 2 }, add: { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }, canon: true }; crName(); }, { sub: 'Nom, faction, origine, pouvoir, style de combat, attributs. À chaque étape tu peux tirer au hasard (🎲).', cls: 'safe' }),
     C('Un personnage existant, au hasard', () => randomChar(), { sub: 'Tu es tiré au sort parmi les 441 personnages du tableur, tout est pré-rempli.' }),
     C('Choisir un personnage existant dans la liste', browseChars, { sub: 'Filtrer par faction.' }),
@@ -58,7 +59,7 @@ function charCard(cid, rnd) {
   const c = CH[cid]; const spec = charToSpec(c); const lead = Object.values(F).find(f => f.leaders.includes(cid));
   const att = spec.pc.attrs;
   show({ extra: portrait(c.id, 170), kicker: F[c.faction].name, title: c.name, text: [`${c.gender === 'H' ? 'Homme' : c.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : <b>${STYLES[spec.pc.style].name}</b>.`, `Pouvoir : <b>${esc(charPowerText(c))}</b>${c.ptypes.length > 1 ? ' (hybride)' : ''}.`, `Grade de départ : <b>${esc(gradeNames(spec.pc.faction === 'fa' ? { faction: 'fa' } : { faction: spec.pc.faction })[spec.pc.grade])} ${'★'.repeat(spec.pc.grade)}</b>${lead ? ' — <b>CHEF DE FACTION : tu commences avec toutes les responsabilités.</b>' : ''}.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + att[a.id]).join(' · ')}.`, spec.recruits.length ? `Équipiers de départ : ${esc(spec.recruits.map(i => CH[i].name).join(', '))}.` : ''],
-    choices: [C(`Jouer ${c.name}`, () => { startGame(spec); hub(); }, { cls: 'safe' }), rnd ? C('🎲 Tirer un autre personnage', randomChar) : null, C('← Retour', rnd ? newGameMenu : () => browseFaction(c.faction))] });
+    choices: [C(`Jouer ${c.name}`, () => { spec.mode = UI.mode || 'libre'; startGame(spec); hub(); }, { cls: 'safe' }), rnd ? C('🎲 Tirer un autre personnage', randomChar) : null, C('← Retour', rnd ? newGameMenu : () => browseFaction(c.faction))] });
 }
 // ── personnage customisé ──
 function crSteps() { return ['Nom', 'Faction', 'Origine', 'Pouvoir', 'Style', 'Attributs', 'Résumé']; }
@@ -135,9 +136,9 @@ function crLook() { spritePicker(crSummary, id => { CR.sprite = id; crSummary();
 function crSummary() {
   const attrs = {}; ATTRS.forEach(a => attrs[a.id] = 2 + CR._bonus[a.id] + CR.add[a.id]);
   const ps = CR.powers.map(id => PW[id].name).join(' + ') || 'aucun';
-  crHead(6, CR.name, [CR.sprite ? '' : '<span class="mut">Pense à choisir ton apparence (sprite).</span>',`${CR.gender === 'H' ? 'Homme' : CR.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${CR.age} ans — origine <b>${esc(stateName(CR.origin))}</b> (${esc(capName(CR.origin))}).`, `Faction : <b>${esc(F[CR.faction].name)}</b> (recrue). Pouvoir : <b>${esc(ps)}</b> (${TYPENAME[CR.ptype]}). Style : <b>${STYLES[CR.style].name}</b>.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + attrs[a.id]).join(' · ')}.`, 'Départ : juin 2071, le protocole ANTI vient d’être lancé. Les 16 pierres sont dispersées ; la timeline d’Ora se déroule en toile de fond.'],
-    [C(CR.sprite ? 'Changer mon apparence' : '🎭 Choisir mon apparence', crLook, { img: CR.sprite }), C('Commencer l’aventure', () => { startGame({ pc: { sprite: CR.sprite, name: CR.name, gender: CR.gender, age: CR.age, origin: CR.origin, faction: CR.faction, powers: CR.powers, style: CR.style, attrs, grade: 0, money: 300 }, canon: CR.canon }); hub(); }, { cls: 'safe' }), C('← Retour', crAttrs)],
-    h('label', { class: 'small', style: 'display:block;margin-top:10px' }, h('input', { type: 'checkbox', checked: CR.canon ? 'checked' : null, onchange: e => { CR.canon = e.target.checked; } }), ' Les événements canon de la timeline (Vigilante Squad, pierres, chute éventuelle du Régime) se produisent dans le monde, avec ou sans toi.'));
+  crHead(6, CR.name, [CR.sprite ? '' : '<span class="mut">Pense à choisir ton apparence (sprite).</span>',`${CR.gender === 'H' ? 'Homme' : CR.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${CR.age} ans — origine <b>${esc(stateName(CR.origin))}</b> (${esc(capName(CR.origin))}).`, `Faction : <b>${esc(F[CR.faction].name)}</b> (recrue). Pouvoir : <b>${esc(ps)}</b> (${TYPENAME[CR.ptype]}). Style : <b>${STYLES[CR.style].name}</b>.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + attrs[a.id]).join(' · ')}.`, 'Départ : juin 2071, le protocole ANTI vient d’être lancé. Les 16 pierres sont dispersées.'],
+    [C(CR.sprite ? 'Changer mon apparence' : '🎭 Choisir mon apparence', crLook, { img: CR.sprite }), C('Commencer l’aventure', () => { startGame({ mode: UI.mode || 'libre', pc: { sprite: CR.sprite, name: CR.name, gender: CR.gender, age: CR.age, origin: CR.origin, faction: CR.faction, powers: CR.powers, style: CR.style, attrs, grade: 0, money: 300 } }); hub(); }, { cls: 'safe' }), C('← Retour', crAttrs)],
+    h('p', { class: 'small mut', style: 'margin-top:10px' }, UI.mode === 'canon' ? 'Mode canon : la timeline d’Ora se déroule dans le monde.' : 'Mode libre : le scénario général est tiré au hasard au lancement.'));
 }
 function crRandomAll() {
   CR.name = randName(); CR.gender = pick(['H', 'F', 'N/B']); CR.age = rint(16, 45);

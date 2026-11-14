@@ -12,7 +12,7 @@ function factionMenu() {
   if (pc.faction === 'fallen' && pc.implant) L.push(C('Faire retirer l’implant', removeImplantMenu, { cls: 'danger' }));
   L.push(C('Fonder ta propre faction', foundFaction, { req: { grade: 3, money: 3000, party: 2, ok: () => pc.ownFaction ? 'Tu en diriges déjà une' : null }, sub: 'Nom, objectif, QG. Tu pars avec ton groupe : tu es le chef.' }));
   L.push(C('Quitter la faction', leaveFaction, { cls: 'danger', sub: 'Traître pour ses alliés.' }));
-  L.push(C('← Retour', hub));
+  L.push(C('← Retour', actionsMenu));
   const nm = lead === 'pc' ? 'toi' : lead && CH[lead] ? CH[lead].name : 'personne (vacant)';
   show({ extra: lead && lead !== 'pc' && CH[lead] ? portrait(lead, 110) : null, kicker: `Fondée en ${f.founded}`, title: f.name, text: [esc(f.desc), `<i>${esc(f.lore ? f.lore.slice(0, 380) + (f.lore.length > 380 ? '…' : '') : '')}</i>`, `Objectif : ${esc(f.goal)}`, `Chef : <b>${esc(nm)}</b>. Ton grade : ${esc(gradeName())} ${'★'.repeat(pc.grade)}. Mérite : ${pc.merit}${nxt ? ' / ' + nxt : ''}.`], choices: L });
 }
@@ -29,7 +29,7 @@ function joinMenu() {
     const f = F[fid]; const rep = pc.rep[fid] || 0; const dc = (f.secret ? 19 : 14) - Math.floor(rep / 10) + (fid === 'fa' ? 2 : 0);
     L.push(C(`${f.name}${f.secret ? ' (secret)' : ''}`, () => joinFaction(fid, dc), { sub: `${f.goal} — réputation ${repLevel(rep)}`, odds: ['charisme', dc, ['social']], req: { ok: () => fid === 'fa' && pc.ptype !== 'aucun' ? 'La Force d’Autorité n’accepte que des gens sans pouvoir' : fid === 'omega' ? 'L’Omega Force recrute elle-même des enfants géno-porteurs' : null } }));
   });
-  L.push(C('← Retour', hub)); show({ kicker: 'Affiliation', title: 'Rejoindre une faction', text: ['Tu es sans faction : une simple recrue d’aucun camp. Les 31 groupes recrutent… à leur manière. Un jet de charisme, ta réputation et ton pouvoir décident.'], choices: L });
+  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Affiliation', title: 'Rejoindre une faction', text: ['Tu es sans faction : une simple recrue d’aucun camp. Les 31 groupes recrutent… à leur manière. Un jet de charisme, ta réputation et ton pouvoir décident.'], choices: L });
 }
 function joinFaction(fid, dc) {
   const pc = G.pc; const r = check('charisme', dc, ['social']); advance(1); if (G.status !== 'play') return;

@@ -1,5 +1,5 @@
 // ───────── Interface ─────────
-const UI = { tab: 'perso', scene: null, sheetOpen: false, after: [], prev: null, roll: null };
+const UI = { mode: 'libre', tab: 'perso', scene: null, sheetOpen: false, after: [], prev: null, roll: null };
 const PCN = () => esc(G.pc.name);
 
 // Conditions d'accès (choix verrouillés mais visibles)
@@ -58,7 +58,7 @@ function hudEl() {
   UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   return h('div', { class: cls },
     h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
-      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
+      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn act', title: 'Actions', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, '⚡'), h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
     h('div', { class: 'hud-bars' },
       h('div', { class: 'stat hp' }, h('span', { class: 'lab' }, 'SANTÉ'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
       h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
@@ -113,7 +113,7 @@ function sideEl() {
   box.append(TABFN()[UI.tab]()); return box;
 }
 function dockEl() {
-  return h('nav', { class: 'dock' }, TABS.filter(t => t[0] !== 'aide' && t[0] !== 'factions' || true).map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
+  return h('nav', { class: 'dock' }, h('button', { class: 'dk agir', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, h('span', { class: 'i' }, '⚡'), h('span', { class: 'n' }, 'Agir')), TABS.filter(t => t[0] !== 'aide' && t[0] !== 'factions' || true).map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
 }
 function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i][0] === tab)); }
 function closeSheet() { UI.sheetOpen = false; const s = $('#sheet'); if (s) s.classList.remove('open'); document.querySelectorAll('.dk').forEach(b => b.classList.remove('on')); }
@@ -202,6 +202,7 @@ function tabJournal() {
 }
 function questList() {
   const pc = G.pc; const W = G.world; const d = h('div', { class: 'small' }); const li = (t, c) => d.append(h('div', { class: c || '', style: 'padding:2px 0' }, '• ' + t));
+  if (G.world.premise) li('Scénario : ' + G.world.premise.t + ' — rival : ' + F[G.world.rival].name + ' (' + DATA.stones.filter(s => G.world.stoneHolder[s.id] === G.world.rival).length + ' pierres).', 'warnc');
   li(`<principale> Réunir les 16 pierres antiques : ${stoneCount()}/16.`.replace('<principale>', 'Quête principale :'), 'acc');
   const known = DATA.stones.filter(s => !pc.stones[s.id] && W.stoneClue[s.id]); known.slice(0, 5).forEach(s => li(`   Piste — pierre de ${s.name} : ${holderName(W.stoneHolder[s.id])}, ${stateName(W.stoneLoc[s.id])}.`, 'mut'));
   if (!known.length && stoneCount() < 16) li('   Aucune piste connue : mène l’enquête ou tends l’oreille (rumeurs, fouilles).', 'mut');

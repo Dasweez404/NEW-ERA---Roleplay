@@ -288,3 +288,12 @@ h3{color:var(--acc2);text-shadow:0 0 8px rgba(0,240,255,.5);font-size:.82rem}h3:
 .lineup{margin-top:min(2vh,16px)}
 .dk .n{letter-spacing:0;font-size:.56rem;text-transform:uppercase}
 @media(max-width:640px){.fig .nt{max-width:96px;font-size:.52rem}.logo2{font-size:clamp(2.6rem,17vw,4.6rem)}.brand{margin-top:6px}.hud-bars{gap:6px}.stat{font-size:.6rem}}
+/* ── combat simplifié ── */
+.sg.foe{display:flex;flex-direction:column;align-items:center}.sg .fi{width:100%;min-width:76px;max-width:130px;margin-top:4px;text-align:center}
+.sg .fn{font-family:var(--fm);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:#fff;line-height:1.1;margin-bottom:2px}.sg .fs{font-size:.62rem;color:var(--warn)}
+.bar.mini{height:7px}.bar.mini::after{background:repeating-linear-gradient(90deg,transparent 0 5px,#05040b 5px 6px)}
+.rlog{margin:6px 0 2px;padding:6px 10px;border-left:2px solid var(--acc2);background:rgba(0,240,255,.05);font-size:.9rem;min-height:3.4em}.rlog div{padding:1px 0}
+.dk.agir{color:var(--acc)}.ibtn.act{background:rgba(252,238,9,.12);border-color:var(--acc)}
+@media(max-width:640px){.sg .fi{min-width:60px}.sg .fn{font-size:.5rem}}
+.stage .side{flex:0 1 auto}.sg .fi{min-width:0;max-width:96px}.stage{overflow:hidden}.sg.foe .spr{max-width:100%;height:auto}
+.combat .sg.foe{clip-path:none;background:none;border:0;padding:0;margin:0;box-shadow:none;border-radius:0}

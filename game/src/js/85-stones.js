@@ -20,7 +20,7 @@ function stoneMenu() {
     L.push(C(`Pierre de ${s.name} — ${holderName(hold)} (${stateName(loc)})`, () => stoneAttempt(s.id), { sub: `Difficulté ${stars(stoneTier(hold))}`, req: { ok: () => G.loc !== loc ? `Rends-toi à ${capName(loc)} (${stateName(loc)})` : null } }));
   });
   L.push(C('Lire les glyphes déjà déchiffrés', glyphLib));
-  L.push(C('← Retour', hub));
+  L.push(C('← Retour', actionsMenu));
   show({ kicker: 'Pierres antiques', title: `Les 16 pierres — ${stoneCount()}/16`, text: [`« Il y a longtemps, 16 civilisations de géno-porteurs se partageaient 16 éclats appelés <i>pierres muta</i>. » Les réunir toutes met fin à la partie : <b>victoire</b>. Plus tu en as, plus tu es puissant — et plus on te traque.`, 'Seules les pistes connues apparaissent dans la liste. Enquête, fouille, tends l’oreille.'], extra: h('div', { class: 'stones' }, DATA.stones.map(s => h('div', { class: 'stone' + (pc.stones[s.id] ? ' have' : ''), style: `background:${s.color};color:${s.color}` }, h('span', { style: 'color:#000' }, s.order)))), choices: L });
 }
 function glyphLib() {

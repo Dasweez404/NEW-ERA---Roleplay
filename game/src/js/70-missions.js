@@ -100,7 +100,7 @@ function missionBoard() {
   offers.forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${o.roleOffer ? '🎭 ' + ROLES[o.roleOffer].name + ' — ' : ''}${a.n} (${o.empName}) — difficulté ${stars(o.tier)}`, () => missionBrief(o), { sub: `${o.tgtName} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, req: { ok: () => pc.faction === 'fa' && o.emp === 'noir' ? 'Impossible pour un officier de la F.A.' : null } })); });
   if (pc.implant) L.unshift(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   L.push(C('Chercher d’autres contrats (1 semaine)', () => { advance(1); if (G.status !== 'play') return; G.board = null; missionBoard(); }));
-  L.push(C('← Retour', hub));
+  L.push(C('← Retour', actionsMenu));
   show({ kicker: 'Missions', title: 'Tableau de missions', text: ['Contrats de ta faction, du Marché Noir ou de notables locaux. La difficulté suit ton grade ; plus haut tu vises, plus ça paie — et plus ça mord.'], choices: L });
 }
 function missionBrief(o) {
@@ -120,7 +120,7 @@ function approachChoices(o) {
 }
 function missionApproach(o) {
   const a = ARCH[o.arch];
-  show({ kicker: `${a.n} — ${o.empName}`, title: 'Comment t’y prends-tu ?', text: [ctxText(a.intro, o), 'Choisis ton approche. Ton pouvoir, ton rôle, ton équipement et ton groupe changent tes chances.'], choices: [...approachChoices(o), C('Renoncer', missionBoard)] });
+  show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''}</span>`], choices: [...approachChoices(o), C('Renoncer', o.feed ? hub : missionBoard, { cls: 'back' })] });
 }
 function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;

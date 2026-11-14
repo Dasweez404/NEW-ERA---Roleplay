@@ -21,7 +21,7 @@ function monthTick() {
   // captivité : exécution / vente
   if (pc.flags.cap) captiveMonth();
   // événements canon
-  if (G.settings.canon) runCanon(key);
+  if (G.settings.canon) runCanon(key); else if (G.settings.mode === 'libre') libreMonth();
   // simulation PNJ et factions
   simNpcs(); simFactions();
   if (chance(0.5)) monthNews();
@@ -59,6 +59,7 @@ function runCanon(key) {
 }
 function canonOffers() {
   const out = []; const pc = G.pc; const now = monthKey();
+  if (G.settings.mode === 'libre') return libreOffers();
   if (!G.settings.canon || (pc.rep.vigilante || 0) <= -30) return out;
   DATA.arcs.forEach((arc, i) => {
     const d = arc.date; const cur = G.wk; const mm = dateOf(cur); const ym = mm.y * 12 + mm.m; const [y, m] = d.split('-').map(Number); const am = y * 12 + m - 1;
