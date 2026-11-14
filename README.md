@@ -2,7 +2,8 @@
 
 Jeu à choix (type *Destiny Eleven*) dans l'univers de **New Era** : Cratès, 2071, les géno-porteurs, le Nouveau Régime, l'Orbitrail et les 16 pierres antiques.
 
-**Jouer :** ouvre `game/new-era.html` dans un navigateur (un seul fichier, hors-ligne, sauvegarde automatique dans le navigateur).
+**Jouer :** ouvre `index.html` (ou `game/new-era.html`) dans un navigateur : un seul fichier, hors-ligne, mobile et PC, sauvegarde automatique.
+**En ligne :** sur GitHub, *Settings → Pages → Deploy from a branch*, choisis la branche et `/ (root)` : `index.html` est servi tel quel. Variante prête pour claude.ai : `game/new-era.artifact.html`.
 
 ## Ce que contient le jeu
 - **Deux façons de jouer** : personnage **customisé** (nom → faction parmi 31 + Force d'Autorité → origine parmi les 52 États → pouvoir → style de combat → 5 attributs, avec 🎲 au hasard à chaque étape) ou **personnage existant** parmi les 441 du tableur (au hasard ou choisi) avec son grade, son pouvoir réel et ses responsabilités (un chef de faction commence chef).
@@ -34,3 +35,6 @@ node game/tools/sweep.js $PWD/game/new-era.html      # balayage des scènes + 5 
 node game/tools/autoplay.js $PWD/game/new-era.html 600 custom
 ```
 Structure : `game/src/js/*.js` (moteur, concaténés dans l'ordre alphabétique), `game/src/style.css`, `game/data/data.json`, `game/tools/` (extraction de données et tests).
+
+## Sprites et animation
+`game/tools/build_sprites.py` réduit les sprites HD (×10) en miniatures pixel-art et les embarque (`game/data/sprites.json`). Le trajet en Orbitrail rejoue les lignes vectorielles (`OT_LINES`) avec une caméra zoomée qui suit un point blanc de station en station (`game/src/js/47-transit.js`).

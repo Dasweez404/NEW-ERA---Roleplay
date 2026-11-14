@@ -14,6 +14,7 @@ function titleScreen() {
       h('button', { class: 'ch', onclick: newGameMenu }, h('div', { class: 'l' }, 'Nouvelle partie')),
       h('button', { class: 'ch', onclick: scoresScreen }, h('div', { class: 'l' }, 'Meilleurs scores')),
       h('button', { class: 'ch', onclick: aboutScreen }, h('div', { class: 'l' }, 'À propos : fidélité, sources et libertés prises'))),
+    h('div', { class: 'parade' }, shuffle(DATA.chars).slice(0, 14).map((c, i) => h('div', { class: 'pg', style: `--i:${i}` }, sprFit(c.id, 96)))),
     h('p', { class: 'small' }, 'Jeu non officiel inspiré de l’univers New Era. Tout est jouable hors-ligne dans ce fichier.')) };
   render();
 }
@@ -44,13 +45,13 @@ function browseChars() {
   L.push(C('← Retour', newGameMenu)); show({ kicker: 'Personnages', title: 'Choisir une faction', text: [], choices: L });
 }
 function browseFaction(fid) {
-  const L = DATA.chars.filter(c => c.faction === fid).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).map(c => C(`${c.name}${Object.values(F).some(f => f.leaders.includes(c.id)) ? ' — CHEF' : ''}`, () => charCard(c.id, false), { sub: `${c.stars ? '★'.repeat(c.stars) + ' · ' : ''}${charPowerText(c)} · ${STYLES[c.style || 'brawler'].name}` }));
+  const L = DATA.chars.filter(c => c.faction === fid).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).map(c => C(`${c.name}${Object.values(F).some(f => f.leaders.includes(c.id)) ? ' — CHEF' : ''}`, () => charCard(c.id, false), { img: c.id, sub: `${c.stars ? '★'.repeat(c.stars) + ' · ' : ''}${charPowerText(c)} · ${STYLES[c.style || 'brawler'].name}` }));
   L.push(C('← Retour', browseChars)); show({ kicker: F[fid].name, title: 'Personnages', text: [], choices: L });
 }
 function charCard(cid, rnd) {
   const c = CH[cid]; const spec = charToSpec(c); const lead = Object.values(F).find(f => f.leaders.includes(cid));
   const att = spec.pc.attrs;
-  show({ kicker: F[c.faction].name, title: c.name, text: [`${c.gender === 'H' ? 'Homme' : c.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : <b>${STYLES[spec.pc.style].name}</b>.`, `Pouvoir : <b>${esc(charPowerText(c))}</b>${c.ptypes.length > 1 ? ' (hybride)' : ''}.`, `Grade de départ : <b>${esc(gradeNames(spec.pc.faction === 'fa' ? { faction: 'fa' } : { faction: spec.pc.faction })[spec.pc.grade])} ${'★'.repeat(spec.pc.grade)}</b>${lead ? ' — <b>CHEF DE FACTION : tu commences avec toutes les responsabilités.</b>' : ''}.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + att[a.id]).join(' · ')}.`, spec.recruits.length ? `Équipiers de départ : ${esc(spec.recruits.map(i => CH[i].name).join(', '))}.` : ''],
+  show({ extra: portrait(c.id, 170), kicker: F[c.faction].name, title: c.name, text: [`${c.gender === 'H' ? 'Homme' : c.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : <b>${STYLES[spec.pc.style].name}</b>.`, `Pouvoir : <b>${esc(charPowerText(c))}</b>${c.ptypes.length > 1 ? ' (hybride)' : ''}.`, `Grade de départ : <b>${esc(gradeNames(spec.pc.faction === 'fa' ? { faction: 'fa' } : { faction: spec.pc.faction })[spec.pc.grade])} ${'★'.repeat(spec.pc.grade)}</b>${lead ? ' — <b>CHEF DE FACTION : tu commences avec toutes les responsabilités.</b>' : ''}.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + att[a.id]).join(' · ')}.`, spec.recruits.length ? `Équipiers de départ : ${esc(spec.recruits.map(i => CH[i].name).join(', '))}.` : ''],
     choices: [C(`Jouer ${c.name}`, () => { startGame(spec); hub(); }, { cls: 'safe' }), rnd ? C('🎲 Tirer un autre personnage', randomChar) : null, C('← Retour', rnd ? newGameMenu : () => browseFaction(c.faction))] });
 }
 // ── personnage customisé ──
@@ -124,18 +125,19 @@ function crAttrs() {
     h('div', {}, ATTRS.map(row)));
   CR._bonus = bonus;
 }
+function crLook() { spritePicker(crSummary, id => { CR.sprite = id; crSummary(); }); }
 function crSummary() {
   const attrs = {}; ATTRS.forEach(a => attrs[a.id] = 2 + CR._bonus[a.id] + CR.add[a.id]);
   const ps = CR.powers.map(id => PW[id].name).join(' + ') || 'aucun';
-  crHead(6, CR.name, [`${CR.gender === 'H' ? 'Homme' : CR.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${CR.age} ans — origine <b>${esc(stateName(CR.origin))}</b> (${esc(capName(CR.origin))}).`, `Faction : <b>${esc(F[CR.faction].name)}</b> (recrue). Pouvoir : <b>${esc(ps)}</b> (${TYPENAME[CR.ptype]}). Style : <b>${STYLES[CR.style].name}</b>.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + attrs[a.id]).join(' · ')}.`, 'Départ : juin 2071, le protocole ANTI vient d’être lancé. Les 16 pierres sont dispersées ; la timeline d’Ora se déroule en toile de fond.'],
-    [C('Commencer l’aventure', () => { startGame({ pc: { name: CR.name, gender: CR.gender, age: CR.age, origin: CR.origin, faction: CR.faction, powers: CR.powers, style: CR.style, attrs, grade: 0, money: 300 }, canon: CR.canon }); hub(); }, { cls: 'safe' }), C('← Retour', crAttrs)],
+  crHead(6, CR.name, [CR.sprite ? '' : '<span class="mut">Pense à choisir ton apparence (sprite).</span>',`${CR.gender === 'H' ? 'Homme' : CR.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${CR.age} ans — origine <b>${esc(stateName(CR.origin))}</b> (${esc(capName(CR.origin))}).`, `Faction : <b>${esc(F[CR.faction].name)}</b> (recrue). Pouvoir : <b>${esc(ps)}</b> (${TYPENAME[CR.ptype]}). Style : <b>${STYLES[CR.style].name}</b>.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + attrs[a.id]).join(' · ')}.`, 'Départ : juin 2071, le protocole ANTI vient d’être lancé. Les 16 pierres sont dispersées ; la timeline d’Ora se déroule en toile de fond.'],
+    [C(CR.sprite ? 'Changer mon apparence' : '🎭 Choisir mon apparence', crLook, { img: CR.sprite }), C('Commencer l’aventure', () => { startGame({ pc: { sprite: CR.sprite, name: CR.name, gender: CR.gender, age: CR.age, origin: CR.origin, faction: CR.faction, powers: CR.powers, style: CR.style, attrs, grade: 0, money: 300 }, canon: CR.canon }); hub(); }, { cls: 'safe' }), C('← Retour', crAttrs)],
     h('label', { class: 'small', style: 'display:block;margin-top:10px' }, h('input', { type: 'checkbox', checked: CR.canon ? 'checked' : null, onchange: e => { CR.canon = e.target.checked; } }), ' Les événements canon de la timeline (Vigilante Squad, pierres, chute éventuelle du Régime) se produisent dans le monde, avec ou sans toi.'));
 }
 function crRandomAll() {
   CR.name = randName(); CR.gender = pick(['H', 'F', 'N/B']); CR.age = rint(16, 45);
   CR.faction = pick(Object.keys(F).filter(k => !['civils', 'fallen', 'noir', 'own'].includes(k))); CR.origin = pick(DATA.states).id;
   if (CR.faction === 'fa') { CR.ptype = 'aucun'; CR.powers = []; } else { const r = Math.random(); CR.powers = r < 0.7 ? [randPower('zoologique').id] : r < 0.93 ? [randPower('surnaturel').id] : r < 0.96 ? [randPower('elementaire').id] : [randPower('zoologique').id, randPower('surnaturel').id]; CR.ptype = ptypeOf(CR.powers.map(i => PW[i].type)); }
-  CR.style = pick(Object.keys(STYLES)); CR.add = { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 };
+  CR.sprite = pick(DATA.chars.filter(c => c.gender === CR.gender || CR.gender === 'N/B')).id; CR.style = pick(Object.keys(STYLES)); CR.add = { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 };
   const st = STYLES[CR.style]; const bonus = { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }; bonus[st.prim] += 2; bonus[st.sec] += 1; if (CR.ptype === 'zoologique') bonus.agilite += 1; CR._bonus = bonus;
   let p = crPool(); while (p > 0) { const a = pick(ATTRS).id; if (2 + bonus[a] + CR.add[a] < 8) { CR.add[a]++; p--; } }
   crSummary();

@@ -25,7 +25,7 @@ function foesFor(fid, tier, n = 2) {
   const out = []; const pool = FOE_BY_FAC[fid];
   for (let i = 0; i < n; i++) {
     if (pool) out.push(mkFoe(pick(pool), tier));
-    else { const mem = DATA.chars.filter(c => c.faction === fid && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))); const c = mem.length ? pick(mem) : null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name)); }
+    else { const mem = DATA.chars.filter(c => c.faction === fid && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))); const c = mem.length ? pick(mem) : null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
   }
   return out;
 }
@@ -54,12 +54,22 @@ function startCombat(cfg) {
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc;
   CB.prev = CB.prev || {}; const bars = [];
-  const foes = h('div', {}, CB.foes.map((f, i) => h('div', { class: 'foe' + (f.dead ? ' dead' : '') + (i === CB.tgt && !f.dead ? ' tgt' : ''), 'data-k': 'f' + i, onclick: () => { if (!f.dead) { sfx('click'); CB.tgt = i; renderCombat(); } } },
+  const foes = h('div', {}, CB.foes.map((f, i) => h('div', { class: 'foe' + (f.dead ? ' dead' : '') + (i === CB.tgt && !f.dead ? ' tgt' : ''), 'data-card': i, onclick: () => { if (!f.dead) { sfx('click'); CB.tgt = i; renderCombat(); } } },
     h('b', {}, f.name), ' ', f.stun > 0 ? h('span', { class: 'warnc' }, '[étourdi] ') : null, f.shield ? h('span', { class: 'acc' }, '[bouclier] ') : null, f.weak ? h('span', { class: 'warnc' }, '[affaibli] ') : null,
     (() => { const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : Math.max(0, f.hp)) / f.hpMax * 100}%` }); bars.push([bi, Math.max(0, f.hp) / f.hpMax * 100]); CB.prev[i] = Math.max(0, f.hp); return h('div', { class: 'bar hp' }, bi); })(), h('div', { class: 'small mut' }, `PV ${Math.max(0, f.hp)}/${f.hpMax} · attaque +${f.atk} · défense ${f.def} · dégâts ${f.dmg}`))));
   const allies = pc.party.length ? h('div', { class: 'small mut' }, 'Alliés : ' + pc.party.map(a => `${CH[a.id].name} (${a.inj > 0 ? 'hors combat' : a.hp + ' PV'})`).join(', ')) : null;
-  const status = h('div', { class: 'small pcstat', 'data-k': 'pc' }, `Toi : ${pc.hp}/${pc.hpMax} PV · ${pc.en}/${pc.enMax} énergie · défense ${pcDef()}${CB.shield ? ' · bouclier ' + CB.shield : ''}${CB.buff > 0 ? ' · Buff' : ''}${CB.rage ? ' · BÊTE FÉROCE' : ''}`);
+  const status = h('div', { class: 'small pcstat' }, `Toi : ${pc.hp}/${pc.hpMax} PV · ${pc.en}/${pc.enMax} énergie · défense ${pcDef()}${CB.shield ? ' · bouclier ' + CB.shield : ''}${CB.buff > 0 ? ' · Buff' : ''}${CB.rage ? ' · BÊTE FÉROCE' : ''}`);
   const log = h('div', { class: 'log' }, CB.log.slice(-9).map(l => h('div', { class: l.c }, l.t)));
+  const pick_ = i => { if (!CB.foes[i].dead) { sfx('click'); CB.tgt = i; renderCombat(); } };
+  const K = innerWidth < 640 ? Math.max(0.6, 1 - 0.07 * (CB.foes.length + Math.min(3, pc.party.length))) : 1;
+  const big = f => Math.round((f.hpMax > 60 ? 150 : 112) * K);
+  const emo = f => h('div', { class: 'emo' }, f.m ? '🤖' : '🧑');
+  const ps = pcSprite();
+  const stage = h('div', { class: 'stage' },
+    h('div', { class: 'side' }, h('div', { class: 'sg me' + (pc.hp <= 0 ? ' dead' : ''), 'data-k': 'pc' }, (ps && sprFit(ps, Math.round(112 * K))) || h('div', { class: 'emo' }, '🧍')),
+      ...pc.party.slice(0, 3).map(a => h('div', { class: 'sg ally' + (a.inj > 0 ? ' dead' : '') }, sprFit(a.id, Math.round(86 * K)) || h('div', { class: 'emo' }, '🧍')))),
+    h('div', { class: 'vs' }, 'VS'),
+    h('div', { class: 'side R' }, ...CB.foes.map((f, i) => h('div', { class: 'sg foe' + (f.dead ? ' dead' : '') + (i === CB.tgt && !f.dead ? ' tgt' : ''), 'data-k': 'f' + i, onclick: () => pick_(i) }, sprFit(foeSprite(f), big(f)) || emo(f)))));
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
     requestAnimationFrame(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }));
@@ -68,7 +78,7 @@ function renderCombat() {
       const el = h('span', { class: 'pop ' + p.cls, style: `animation-delay:${n * 140}ms;left:${20 + Math.random() * 55}%` }, p.txt); host.append(el); if (p.cls === 'crit') burstAt(host, '#ffe83a', 16); setTimeout(() => el.remove(), 1500 + n * 140); });
     if (dmgF) { sfx('hit'); buzz(20); } else if (miss) sfx('miss'); if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff3d7f'); }, 180); }
   };
-  show({ after: hook, kicker: `COMBAT — tour ${CB.round}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, foes, allies, status, log), choices: combatChoices() });
+  show({ after: hook, kicker: `COMBAT — tour ${CB.round}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, stage, foes, allies, status, log), choices: combatChoices() });
 }
 function combatChoices() {
   const pc = G.pc; const st = STYLES[pc.style]; const t = target();

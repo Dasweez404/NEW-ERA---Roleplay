@@ -34,7 +34,7 @@ function reqReason(rq) {
 function C(label, go, o = {}) {
   const lock = reqReason(o.req); let sub = o.sub || ''; let pct = null;
   if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; pct = Math.round(odds(a, dc, tags || [], ex || 0) * 100); sub = `${AT[a].short} contre ${dc}` + (sub ? ' · ' + sub : ''); }
-  return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, ic: o.ic };
+  return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, ic: o.ic, img: o.img };
 }
 const fxHTML = L => L && L.length ? h('div', { class: 'chips' }, L.map((l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t))) : null;
 
@@ -46,7 +46,7 @@ function show(sc) {
 }
 function paragraphs(t) { return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => typeof x === 'string' ? h('p', { class: 'rv', style: `--i:${i}`, html: x }) : x); }
 
-function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
+function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; const sp = pcSprite(); if (sp && hasSpr(sp)) return h('div', { class: 'avatar sp', style: `--hue:${hue}` }, sprFit(sp, 64)); return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
 function hudEl() {
   const pc = G.pc; const st = wantedStars(); const f = F[pc.faction]; const pv = UI.prev || { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   const hpP = pc.hp / pc.hpMax * 100, enP = pc.enMax ? pc.en / pc.enMax * 100 : 0;
@@ -58,7 +58,7 @@ function hudEl() {
   UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   return h('div', { class: cls },
     h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
-      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { if (confirm('Quitter vers le menu ? (la partie est sauvegardée)')) { saveGame(); titleScreen(); } } }, '☰'))),
+      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
     h('div', { class: 'hud-bars' },
       h('div', { class: 'stat hp' }, h('span', { class: 'lab' }, 'SANTÉ'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
       h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
@@ -73,7 +73,7 @@ function choicesEl(list, tiles) {
   return h('div', { class: 'choices' + (tiles ? ' tiles' : '') }, items.map((c, i) => {
     const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); c.go(); } } },
-      !cta && !back && !tiles ? h('span', { class: 'key' }, i + 1) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
+      !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
       h('span', { class: 'body' }, h('span', { class: 'l' }, c.label), c.sub ? h('span', { class: 's' }, c.sub) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
       c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%') : null, cta ? h('span', { class: 'arrow' }, '›') : null);
   }));
@@ -169,8 +169,8 @@ function useItem(id) {
 function tabGroupe() {
   const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, `Groupe : ${pc.party.length}/${partyMax()} (le grade et le rôle de Leader augmentent la taille).`));
   if (!pc.party.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Tu voyages seul. Recrute des gens dans le menu « Recruter ».'));
-  pc.party.forEach(a => { const c = CH[a.id]; box.append(h('div', { style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, h('b', {}, c.name), ` — ${F[c.faction].name}`, h('div', { class: 'small' }, `${STYLES[a.style].name} · PV ${a.hp}/${a.hpMax} · loyauté ${a.loy}${a.inj > 0 ? ' · blessé (' + a.inj + ' sem.)' : ''}`),
-    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: () => { if (confirm('Renvoyer ' + c.name + ' ?')) { removeAlly(a.id); addRep(c.faction, -3); render(true); } } }, 'Renvoyer'))); });
+  pc.party.forEach(a => { const c = CH[a.id]; box.append(h('div', { class: 'mrow', style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, sprFit(c.id, 70, 'mini'), h('div', {}, h('b', {}, c.name), ` — ${F[c.faction].name}`, h('div', { class: 'small' }, `${STYLES[a.style].name} · PV ${a.hp}/${a.hpMax} · loyauté ${a.loy}${a.inj > 0 ? ' · blessé (' + a.inj + ' sem.)' : ''}`),
+    h('div', { class: 'small mut' }, charPowerText(c)), h('button', { class: 'tab', onclick: e => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'Confirmer le renvoi ?'; return; } removeAlly(a.id); addRep(c.faction, -3); render(true); } }, 'Renvoyer')))); });
   return box;
 }
 function charPowerText(c) { const ps = (c.powers.length ? c.powers : fallbackPowers(c)).map(id => PW[id].name); return ps.length ? ps.join(' + ') : 'sans pouvoir'; }
@@ -228,17 +228,17 @@ function tabAide() {
 // ───────── Carte de l'Orbitrail (SVG) ─────────
 function mapEl(o = {}) {
   const NS = 'http://www.w3.org/2000/svg'; const el = (t, a, ...k) => { const e = document.createElementNS(NS, t); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => e.append(c.nodeType ? c : document.createTextNode(c))); return e; };
-  const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map' });
+  const svg = el('svg', { viewBox: '0 0 2000 975', class: 'map' + (o.dark ? ' dark' : '') });
   const pt = x => typeof x === 'string' ? (x.startsWith('@') ? x.slice(1).split('|').slice(1).map(Number) : [OT_ST[x][0], OT_ST[x][1]]) : x;
   for (const [ln, L] of Object.entries(OT_LINES)) L.p.forEach(path => {
     const pts = path.map(pt).map(p => p.join(',')).join(' ');
-    svg.append(el('polyline', { points: pts, fill: 'none', stroke: L.c, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    svg.append(el('polyline', { points: pts, fill: 'none', stroke: o.dark && L.c === '#151515' ? '#cfd3e6' : L.c, 'stroke-width': 9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
     path.forEach(x => { if (typeof x === 'string' && x.startsWith('@')) { const [n, px, py] = x.slice(1).split('|'); svg.append(el('circle', { cx: px, cy: py, r: 9, fill: '#fff', stroke: '#000', 'stroke-width': 4 }), el('text', { x: +px - 14, y: +py - 16 }, n)); } });
   });
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
+    if (stub) g.append(el('rect', { x: x - 3, y: y - 12, width: 6, height: 24, fill: '#111' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc', fill: here ? '#ffd23f' : go ? '#bff5d0' : '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff3d6e', 'stroke-width': 4 }));
     g.append(el('text', { x: x + dx, y: y + dy }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }

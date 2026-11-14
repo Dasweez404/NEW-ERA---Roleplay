@@ -67,13 +67,14 @@ function travelGo(to, r, weeks) {
   const pc = G.pc; pc.money -= r.cost; const from = G.loc;
   const used = [];
   if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
-  const ctl = chance(detectChance() + (used.length ? 0 : 0));
-  const ln = r.legs.length ? r.legs[0].line : 1; splash({ title: 'LIGNE ' + ln + (r.legs.length > 1 ? ' …' : ''), sub: `${capName(from)} → ${capName(to)}`, icon: '🚆', color: OT_LINES[ln].c === '#151515' ? '#fff' : OT_LINES[ln].c, cls: 'train', ms: 1300 });
-  G.loc = to; advance(weeks); if (G.status !== 'play') return;
-  logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
-  if (ctl) return controleFA(r);
-  const ev = randomTravelEvent(); if (ev) return ev();
-  show({ kicker: 'Orbitrail', title: `Arrivée à ${capName(to)}`, text: [`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : ''}`], choices: [C('Continuer', hub)] });
+  const ctl = chance(detectChance());
+  transit(r, from, to, () => {
+    G.loc = to; advance(weeks); if (G.status !== 'play') return;
+    logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
+    if (ctl) return controleFA(r);
+    const ev = randomTravelEvent(); if (ev) return ev();
+    show({ kicker: 'Orbitrail', title: `Arrivée à ${capName(to)}`, text: [`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : ''}`], choices: [C('Continuer', hub)] });
+  });
 }
 function travelHover() {
   show({ kicker: 'Scout-hover', title: 'Cap sur…', text: ['Hors du réseau : pas de contrôle de gare, mais les dérèglements de l’ogénite ne préviennent pas. Coût : 120 ¢ de carburant (capsules OGEN), 1 à 3 semaines.'], choices: [...CONT.flatMap(ct => DATA.states.filter(s => s.continent === ct && s.id !== G.loc).map(s => C(`${s.capital} — ${s.name}`, () => hoverGo(s.id), { sub: ct, req: { money: 120 } }))), C('← Retour', travelMenu)] });
@@ -140,7 +141,7 @@ function recruitPrice(c) { return Math.round((100 + c.stars * 180 + Math.min(c.r
 function recruitMenu() {
   const pc = G.pc; const here = npcsHere().filter(c => !Object.values(F).some(f => f.leaders.includes(c.id) && G.world.leader[f.id] === c.id && f.id !== pc.faction) || true);
   const L = [];
-  here.slice(0, 12).forEach(c => { const lead = Object.values(F).some(f => G.world.leader[f.id] === c.id); L.push(C(`${c.name} — ${F[c.faction].name}`, () => meetNpc(c.id), { sub: `${c.stars ? 'Prestige ' + '★'.repeat(c.stars) : 'Anonyme'} · ${STYLES[c.style || 'brawler'].name} · ${charPowerText(c)}${lead ? ' · CHEF DE FACTION' : ''}` })); });
+  here.slice(0, 12).forEach(c => { const lead = Object.values(F).some(f => G.world.leader[f.id] === c.id); L.push(C(`${c.name} — ${F[c.faction].name}`, () => meetNpc(c.id), { img: c.id, sub: `${c.stars ? 'Prestige ' + '★'.repeat(c.stars) : 'Anonyme'} · ${STYLES[c.style || 'brawler'].name} · ${charPowerText(c)}${lead ? ' · CHEF DE FACTION' : ''}` })); });
   if (!here.length) L.push(Object.assign(C('Personne de remarquable ici', () => { }), { lock: 'Essaie une autre ville, ou le QG d’une faction' }));
   L.push(C('Chercher des rumeurs et des visages (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const ev = randomHubEvent(true); if (ev) ev(); else show({ title: 'Rien', text: ['Une semaine à traîner dans les bars et les marchés. Rien de neuf.'], choices: [C('Continuer', hub)] }); }));
   L.push(C('← Retour', hub)); show({ kicker: 'Rencontres', title: 'Qui est dans le coin ?', text: ['Les gens que tu peux rencontrer à ' + esc(capName(G.loc)) + '. Un chef de faction ne s’engage pas en quelques mots.'], choices: L });
@@ -155,7 +156,7 @@ function meetNpc(cid) {
   L.push(C('Parler et se renseigner', () => { const L2 = fx({ rep: { [c.faction]: 1 }, spill: false }); show({ kicker: c.name, title: 'Une conversation', text: [`${esc(c.name)} te parle de ${esc(F[c.faction].name)} : « ${esc(F[c.faction].goal)} »`, G.world.stoneClue && lead ? '' : `Il te glisse une rumeur : ${rumor()}`], fx: L2, choices: [C('Continuer', recruitMenu)] }); }));
   if (isAnti(c.faction) && c.stars && pc.faction !== c.faction) L.push(C('Le dénoncer à la Force d’Autorité (récompense)', () => betray(cid), { cls: 'danger', sub: 'Trahison : sa faction et ses alliés t’en voudront.' }));
   L.push(C('← Retour', recruitMenu));
-  show({ kicker: F[c.faction].name, title: c.name, text: [`${esc(c.name)} — ${c.gender === 'H' ? 'homme' : c.gender === 'F' ? 'femme' : 'non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : ${STYLES[c.style || 'brawler'].name}.`, `Pouvoir : ${esc(charPowerText(c))}.`, lead ? '<b>Chef de sa faction.</b>' : '', `Ton lien avec sa faction : ${repLevel(rep)} (${rep}).`], choices: L });
+  show({ extra: portrait(c.id, 150), kicker: F[c.faction].name, title: c.name, text: [`${esc(c.name)} — ${c.gender === 'H' ? 'homme' : c.gender === 'F' ? 'femme' : 'non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : ${STYLES[c.style || 'brawler'].name}.`, `Pouvoir : ${esc(charPowerText(c))}.`, lead ? '<b>Chef de sa faction.</b>' : '', `Ton lien avec sa faction : ${repLevel(rep)} (${rep}).`], choices: L });
 }
 function recruit(cid, price, viaCha) {
   const c = CH[cid]; const pc = G.pc;
