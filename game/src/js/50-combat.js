@@ -18,7 +18,7 @@ const FOE = {
 };
 function mkFoe(tid, tier, name, extra = {}) {
   const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier) * 0.45);
-  return Object.assign({ tid, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
+  return Object.assign({ tid, tier, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
@@ -54,8 +54,13 @@ function startCombat(cfg) {
   CB = { cfg, foes: cfg.foes, round: 1, log: [], tier: Math.max(...cfg.foes.map(f => Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), weakDone: false, hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, drones: 0, counter: 0, guardAll: 0, pops: [], twist: null };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; });
   clog(cfg.intro || 'Le combat commence !');
+  nextTwist(); CB.preview = !cfg.noPreview; if (CB.preview) renderPreview(); else engage();
+}
+function engage() {
+  if (!CB) return;
+  CB.preview = false;
   if (PK('first')) { const t0 = aliveFoes()[0]; if (t0) { hurtFoe(t0, dmgBase(), false, 'Initiative —'); if (!aliveFoes().length) return finishCombat('win'); } }
-  nextTwist(); renderCombat();
+  renderCombat();
 }
 function nextTwist() {
   CB.twist = null; const f = pick(aliveFoes()); if (!f || !f.sp.length || chance(0.4)) return; const sp = pick(f.sp); const n = fname(f);
@@ -98,17 +103,18 @@ function tactic() {
 }
 function techMove() { const pc = G.pc; const st = STYLES[pc.style]; return { id: 'tech', ic: '★', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost} énergie`, attr: primAttr(), tags: ['combat', ...(pc.style === 'flanker' ? ['mobility'] : [])], cat: 'atk', cost: st.tech.cost, kind: 'tech', lock: (pc.style === 'performer' && !pcPowers().length) ? 'Requiert un pouvoir' : pc.en < st.tech.cost ? 'Énergie insuffisante' : null }; }
 function moves() {
-  const pc = G.pc; const L = [offense(), feint(), tactic(), techMove()];
+  const pc = G.pc; const L = [offense(), feint(), tactic(), techMove()]; const sg = sigMove(); if (sg) L.push(sg);
   if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) L.push({ id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: pc.ptype === 'zoologique' ? 'Bête féroce incontrôlable' : pc.ptype === 'elementaire' ? 'Demi-dieu' : pc.ptype === 'hybride' ? 'Éveil partiel' : 'Capacités au maximum', kind: 'awaken', cls: 'danger' });
   return L;
 }
 function oddsOf(m) { if (!m.attr) return null; const dc = 10 + Math.round(avgDef()); return [m.attr, dc, m.tags, hitBonus() + (m.bonus || 0) + twistMod(m.cat)]; }
 // ── Résolution d’un temps ──
 function play(m) {
-  if (!CB) return;
+  if (!CB) return; CB.preview = false;
   const pc = G.pc; CB.log = []; CB.pops = []; CB.safe = 0;
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   if (m.kind === 'awaken') { awaken(); }
+  else if (m.kind === 'sig') { sigDo(m); }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); clog(`${it.n} : +${pc.hp - h0} PV.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); CB.sev = 0.2; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + Math.round(g / 2)); }); clog(`${powName('heal')} : +${g} PV.`, 'good'); pop('pc', `+${g}`, 'ok'); CB.sev = 0.2; }
   else {
@@ -195,7 +201,7 @@ function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
   const rows = h('div', { class: 'foes' }, CB.foes.map((f, i) => {
     const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : Math.max(0, f.hp)) / f.hpMax * 100}%` }); bars.push([bi, Math.max(0, f.hp) / f.hpMax * 100]); CB.prev[i] = Math.max(0, f.hp);
-    return h('div', { class: 'frow' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi), h('span', { class: 'fv' }, f.dead ? 'à terre' : f.stun > 0 ? '⚡ sonné' : ''));
+    return h('div', { class: 'frow' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 26), h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi), h('span', { class: 'fv' }, f.dead ? 'à terre' : f.stun > 0 ? '⚡ sonné' : ''));
   }));
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.drones ? `🤖 ×${CB.drones}` : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const me = h('div', { class: 'frow me', 'data-k': 'pc' }, h('span', { class: 'fn' }, 'Toi'), h('div', { class: 'bar hp mini' }, h('i', { style: `width:${pc.hp / pc.hpMax * 100}%` })), h('span', { class: 'fv' }, `${pc.hp}/${pc.hpMax} · ⚡${pc.en}`));
@@ -224,11 +230,11 @@ function combatChoices() {
 function finishCombat(kind) {
   const cfg = CB.cfg; const pc = G.pc; const awoke = CB.wasAwake; const free = stoneCount() >= 8; const rage = CB.rage;
   if (CB.rage && !free) { pc.en = 0; }
-  const rounds = CB.round; const tier = CB.tier; const foes = CB.foes; CB = null;
+  const rounds = CB.round; const tier = CB.tier; const foes = CB.foes; const bm = CB.bonusMoney || 0, bx = CB.bonusXp, bl = CB.bonusLoot, bq = CB.quiet; CB = null;
   if (kind === 'flee') { G.score.fled = (G.score.fled || 0) + 1; return cfg.onFlee ? cfg.onFlee() : hub(); }
   G.score.wins = (G.score.wins || 0) + 1;
   const xp = Math.round(foes.reduce((t, f) => t + f.hpMax / 3, 0));
-  const L = fx(Object.assign({ xp }, cfg.loot || {}));
+  const L = fx(Object.assign({ xp: xp * (bx ? 2 : 1) }, cfg.loot || {}, bm ? { money: ((cfg.loot || {}).money || 0) + bm } : {}, bl ? { item: { capsule: 1 } } : {}));
   if (awoke && !free) { L.push({ t: 'L’Éveil t’a laissé exsangue : énergie vidée.', c: 'warnc' }); pc.en = 0; }
   cfg.onWin ? cfg.onWin(L, { rounds, awoke, rage }) : show({ title: 'Victoire', text: ['Le calme revient.'], fx: L, choices: [C('Continuer', hub)] });
 }

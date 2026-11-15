@@ -389,6 +389,9 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
   .scene{padding:10px 12px}
   .ch{min-height:52px}
 }
+.foeico{display:inline-block;line-height:0;flex:none}.frow .foeico{margin-right:6px}
+.fpv{display:grid;gap:8px;margin:8px 0}.fcard{display:flex;gap:12px;align-items:center;background:#12121f;border:1px solid #2a2a44;padding:10px}
+.fcard .fi2{display:grid;gap:3px;min-width:0;flex:1}.fcard .tag{display:inline-block;margin:2px 4px 0 0;font:400 .72rem var(--fm);color:#27f0ff;border:1px solid #2a2a44;padding:1px 6px}
 </style>
 </head>
 <body>
@@ -1694,7 +1697,7 @@ const FOE = {
 };
 function mkFoe(tid, tier, name, extra = {}) {
   const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier) * 0.45);
-  return Object.assign({ tid, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
+  return Object.assign({ tid, tier, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
@@ -1730,8 +1733,13 @@ function startCombat(cfg) {
   CB = { cfg, foes: cfg.foes, round: 1, log: [], tier: Math.max(...cfg.foes.map(f => Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), weakDone: false, hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, drones: 0, counter: 0, guardAll: 0, pops: [], twist: null };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; });
   clog(cfg.intro || 'Le combat commence !');
+  nextTwist(); CB.preview = !cfg.noPreview; if (CB.preview) renderPreview(); else engage();
+}
+function engage() {
+  if (!CB) return;
+  CB.preview = false;
   if (PK('first')) { const t0 = aliveFoes()[0]; if (t0) { hurtFoe(t0, dmgBase(), false, 'Initiative —'); if (!aliveFoes().length) return finishCombat('win'); } }
-  nextTwist(); renderCombat();
+  renderCombat();
 }
 function nextTwist() {
   CB.twist = null; const f = pick(aliveFoes()); if (!f || !f.sp.length || chance(0.4)) return; const sp = pick(f.sp); const n = fname(f);
@@ -1774,17 +1782,18 @@ function tactic() {
 }
 function techMove() { const pc = G.pc; const st = STYLES[pc.style]; return { id: 'tech', ic: '★', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost} énergie`, attr: primAttr(), tags: ['combat', ...(pc.style === 'flanker' ? ['mobility'] : [])], cat: 'atk', cost: st.tech.cost, kind: 'tech', lock: (pc.style === 'performer' && !pcPowers().length) ? 'Requiert un pouvoir' : pc.en < st.tech.cost ? 'Énergie insuffisante' : null }; }
 function moves() {
-  const pc = G.pc; const L = [offense(), feint(), tactic(), techMove()];
+  const pc = G.pc; const L = [offense(), feint(), tactic(), techMove()]; const sg = sigMove(); if (sg) L.push(sg);
   if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) L.push({ id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: pc.ptype === 'zoologique' ? 'Bête féroce incontrôlable' : pc.ptype === 'elementaire' ? 'Demi-dieu' : pc.ptype === 'hybride' ? 'Éveil partiel' : 'Capacités au maximum', kind: 'awaken', cls: 'danger' });
   return L;
 }
 function oddsOf(m) { if (!m.attr) return null; const dc = 10 + Math.round(avgDef()); return [m.attr, dc, m.tags, hitBonus() + (m.bonus || 0) + twistMod(m.cat)]; }
 // ── Résolution d’un temps ──
 function play(m) {
-  if (!CB) return;
+  if (!CB) return; CB.preview = false;
   const pc = G.pc; CB.log = []; CB.pops = []; CB.safe = 0;
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   if (m.kind === 'awaken') { awaken(); }
+  else if (m.kind === 'sig') { sigDo(m); }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); clog(`${it.n} : +${pc.hp - h0} PV.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); CB.sev = 0.2; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + Math.round(g / 2)); }); clog(`${powName('heal')} : +${g} PV.`, 'good'); pop('pc', `+${g}`, 'ok'); CB.sev = 0.2; }
   else {
@@ -1871,7 +1880,7 @@ function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
   const rows = h('div', { class: 'foes' }, CB.foes.map((f, i) => {
     const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : Math.max(0, f.hp)) / f.hpMax * 100}%` }); bars.push([bi, Math.max(0, f.hp) / f.hpMax * 100]); CB.prev[i] = Math.max(0, f.hp);
-    return h('div', { class: 'frow' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi), h('span', { class: 'fv' }, f.dead ? 'à terre' : f.stun > 0 ? '⚡ sonné' : ''));
+    return h('div', { class: 'frow' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 26), h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi), h('span', { class: 'fv' }, f.dead ? 'à terre' : f.stun > 0 ? '⚡ sonné' : ''));
   }));
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.drones ? `🤖 ×${CB.drones}` : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const me = h('div', { class: 'frow me', 'data-k': 'pc' }, h('span', { class: 'fn' }, 'Toi'), h('div', { class: 'bar hp mini' }, h('i', { style: `width:${pc.hp / pc.hpMax * 100}%` })), h('span', { class: 'fv' }, `${pc.hp}/${pc.hpMax} · ⚡${pc.en}`));
@@ -1900,11 +1909,11 @@ function combatChoices() {
 function finishCombat(kind) {
   const cfg = CB.cfg; const pc = G.pc; const awoke = CB.wasAwake; const free = stoneCount() >= 8; const rage = CB.rage;
   if (CB.rage && !free) { pc.en = 0; }
-  const rounds = CB.round; const tier = CB.tier; const foes = CB.foes; CB = null;
+  const rounds = CB.round; const tier = CB.tier; const foes = CB.foes; const bm = CB.bonusMoney || 0, bx = CB.bonusXp, bl = CB.bonusLoot, bq = CB.quiet; CB = null;
   if (kind === 'flee') { G.score.fled = (G.score.fled || 0) + 1; return cfg.onFlee ? cfg.onFlee() : hub(); }
   G.score.wins = (G.score.wins || 0) + 1;
   const xp = Math.round(foes.reduce((t, f) => t + f.hpMax / 3, 0));
-  const L = fx(Object.assign({ xp }, cfg.loot || {}));
+  const L = fx(Object.assign({ xp: xp * (bx ? 2 : 1) }, cfg.loot || {}, bm ? { money: ((cfg.loot || {}).money || 0) + bm } : {}, bl ? { item: { capsule: 1 } } : {}));
   if (awoke && !free) { L.push({ t: 'L’Éveil t’a laissé exsangue : énergie vidée.', c: 'warnc' }); pc.en = 0; }
   cfg.onWin ? cfg.onWin(L, { rounds, awoke, rage }) : show({ title: 'Victoire', text: ['Le calme revient.'], fx: L, choices: [C('Continuer', hub)] });
 }
@@ -1928,6 +1937,62 @@ function defeatOutcome(lethal, text) {
   }
   pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4)); advance(1);
   show({ kicker: 'DÉFAITE', title: 'Repli', text: [text, 'Tu t’en sors avec des bleus et ta fierté en miettes.'], choices: [C('Continuer', hub)] });
+}
+
+// ───────── Capacité signature active en combat + aperçu visuel de l'adversaire ─────────
+function sigMove() {
+  const ps = pcPowers(); if (!ps.length) return null; CB.sig = CB.sig || {};
+  const p = ps.find(x => !CB.sig[x.id]) || ps[0]; const k = perkOf(p); if (!k) return null; const used = !!CB.sig[p.id]; const cost = 2;
+  return { id: 'sig', pid: p.id, ic: '✦', label: `Signature : ${k.title}`, sub: `${p.name} · ${SIG_TXT[k.effs[0].id] || 'effet de pouvoir'} · ${cost} énergie · une fois par combat`, kind: 'sig', cost, cls: 'safe', lock: used ? 'Déjà utilisée dans ce combat' : null };
+}
+const SIG_TXT = { dodge: 'esquive les 2 prochaines ripostes', shield: 'bouclier massif', dmg: 'frappe surpuissante', regen: 'soigne 30 % de ta vie', energy: 'recharge la moitié de ton énergie', stun: 'sidère tous les ennemis', thorns: 'renvoie les coups reçus', crit: 'coup critique garanti', first: 'frappe éclair puis esquive', def: 'garde de fer', weaken: 'affaiblit tous les ennemis', allyheal: 'soigne ton équipe', drain: 'frappe qui te soigne', lastbreath: 'te remet debout et te protège', pierce: 'frappe qui ignore les boucliers', night: 'frappe de l’ombre', cash: 'butin garanti en cas de victoire', xp: 'expérience doublée en cas de victoire', quiet: 'ta prime ne monte pas', loot: 'butin garanti', bond: 'galvanise ton équipe', travel: 'te dérobe aux coups', rest: 'te soigne 20 %', fix: 'bouclier improvisé', clue: 'analyse : +3 pour toucher' };
+function sigDo(m) {
+  const pc = G.pc; const p = PW[m.pid]; const k = perkOf(p); const e = k.effs[0]; const id = e.id; const f = firstFoe(); CB.sig[m.pid] = 1; CB.sev = 0.2;
+  clog(`✦ ${k.title} !`, 'acc'); const big = (mul, crit) => { if (f) hurtFoe(f, dmgBase() * mul + e.mag, crit, `${k.title} frappe`); };
+  const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
+  if (id === 'dodge' || id === 'travel') { CB.dodge += 2; CB.sev = 0; }
+  else if (id === 'shield' || id === 'fix' || id === 'def') { CB.shield += 6 + e.mag * 2; CB.sev = 0.1; }
+  else if (id === 'dmg' || id === 'night') big(1.8, false);
+  else if (id === 'crit') big(1.5, true);
+  else if (id === 'pierce') { if (f) f.shield = 0; big(1.6, false); }
+  else if (id === 'first') { big(1.3, false); CB.dodge++; }
+  else if (id === 'drain') { big(1.4, false); heal(0.15); }
+  else if (id === 'regen' || id === 'rest') heal(id === 'rest' ? 0.2 : 0.3);
+  else if (id === 'energy') { pc.en = Math.min(pc.enMax, pc.en + Math.ceil(pc.enMax / 2)); clog('Énergie rechargée.', 'good'); }
+  else if (id === 'stun') { aliveFoes().forEach(x => { x.stun = Math.max(x.stun, 1); }); CB.sev = 0; clog('Tous les ennemis sont sidérés.', 'good'); }
+  else if (id === 'thorns') { CB.counter = 4 + e.mag * 2; clog('Tes ennemis paieront chaque coup.', 'good'); }
+  else if (id === 'weaken') { aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - 2); x.def = Math.max(0, x.def - 1); }); clog('Les ennemis vacillent.', 'good'); }
+  else if (id === 'allyheal' || id === 'bond') { heal(0.15); pc.party.forEach(a => { a.hp = Math.min(a.hpMax, a.hp + Math.round(a.hpMax * 0.3)); if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 3); } }); CB.hitBuff += 1; }
+  else if (id === 'lastbreath') { CB.lb = true; heal(0.15); CB.shield += 4; }
+  else if (id === 'cash') CB.bonusMoney = (CB.bonusMoney || 0) + 100; else if (id === 'xp') CB.bonusXp = 1;
+  else if (id === 'loot') CB.bonusLoot = 1; else if (id === 'quiet') CB.quiet = 1;
+  else { CB.hitBuff += 3; clog('Ton pouvoir affûte tes gestes : +3 pour toucher.', 'good'); }
+}
+// ── Aperçu visuel de l'adversaire (silhouette vectorielle) ──
+const FOE_LOOK = { droide: 'droid', centaure: 'beast', gorgone: 'beast', harpie: 'wing', sirene: 'beast', griffon: 'wing', hydre: 'beast', cerbere: 'beast', chimere: 'beast', cyclope: 'mech', atlas: 'mech', prometh: 'mech', epimeth: 'mech', menet: 'mech', bete: 'beast', cyborg: 'cyb', soldat: 'helm', mercenaire: 'cap', gladiateur: 'horn', voyou: 'cap', pirate: 'cap', necro: 'mohawk', ragnarok: 'horn', optimum: 'helm', secte: 'mask', garde: 'helm', fallen: 'mask', porteur: 'plain' };
+const FOE_HUE = { fa: '#3d7bff', droide: '#3d7bff', soldat: '#3d7bff', arena: '#ff8a1f', gladiateur: '#ff8a1f', mercenaire: '#c9d1ff', voyou: '#8ee08e', pirate: '#27f0ff', cyborg: '#27f0ff', necro: '#ff3d7f', ragnarok: '#ff6a3d', optimum: '#b026ff', secte: '#b026ff', garde: '#cfd3e6', fallen: '#ff2a2a', bete: '#d4a017', porteur: '#fcee09' };
+function foeIcon(f, px) {
+  if (f.cid && typeof hasSpr === 'function' && hasSpr(f.cid)) return h('span', { class: 'foeico' }, sprFit(f.cid, px));
+  const look = FOE_LOOK[f.tid] || 'plain'; const col = FOE_HUE[f.tid] || FOE_HUE[f.fid] || '#fcee09'; const dk = '#0b0b16'; const sk = '#e8c9a8';
+  const body = (w = 22) => `<rect x="${32 - w / 2}" y="28" width="${w}" height="24" fill="${col}"/><rect x="${32 - w / 2 - 6}" y="30" width="6" height="18" fill="${col}"/><rect x="${32 + w / 2}" y="30" width="6" height="18" fill="${col}"/><rect x="24" y="52" width="6" height="10" fill="${dk}"/><rect x="34" y="52" width="6" height="10" fill="${dk}"/>`;
+  const head = `<rect x="25" y="14" width="14" height="14" fill="${sk}"/><rect x="28" y="19" width="2" height="3" fill="${dk}"/><rect x="34" y="19" width="2" height="3" fill="${dk}"/>`;
+  let g;
+  if (look === 'droid') g = `<rect x="22" y="12" width="20" height="16" fill="#9aa0c8"/><rect x="26" y="17" width="12" height="4" fill="#ff2a6d"/><rect x="31" y="4" width="2" height="8" fill="#9aa0c8"/><circle cx="32" cy="4" r="2" fill="#ff2a6d"/>${body(24)}`;
+  else if (look === 'mech') g = `<rect x="14" y="26" width="36" height="28" fill="#6b708f"/><rect x="22" y="10" width="20" height="16" fill="#9aa0c8"/><circle cx="32" cy="18" r="5" fill="#ff2a6d"/><rect x="6" y="28" width="8" height="22" fill="#6b708f"/><rect x="50" y="28" width="8" height="22" fill="#6b708f"/><rect x="18" y="54" width="10" height="8" fill="${dk}"/><rect x="36" y="54" width="10" height="8" fill="${dk}"/>`;
+  else if (look === 'beast') g = `<polygon points="22,18 26,6 30,16" fill="${col}"/><polygon points="34,16 38,6 42,18" fill="${col}"/><rect x="20" y="16" width="24" height="18" fill="${col}"/><rect x="25" y="22" width="4" height="4" fill="#fff"/><rect x="35" y="22" width="4" height="4" fill="#fff"/><rect x="26" y="28" width="12" height="3" fill="${dk}"/><rect x="14" y="34" width="36" height="18" fill="${col}"/><rect x="16" y="52" width="6" height="10" fill="${dk}"/><rect x="42" y="52" width="6" height="10" fill="${dk}"/>`;
+  else if (look === 'wing') g = `<polygon points="4,30 28,26 28,44" fill="${col}"/><polygon points="60,30 36,26 36,44" fill="${col}"/>${head}<rect x="26" y="28" width="12" height="22" fill="${col}"/>`;
+  else { g = head + body(); if (look === 'helm') g += `<rect x="24" y="11" width="16" height="9" fill="${col}"/><rect x="26" y="19" width="12" height="3" fill="${dk}"/>`; else if (look === 'cap') g += `<rect x="24" y="12" width="16" height="5" fill="${col}"/><rect x="38" y="15" width="6" height="2" fill="${col}"/>`; else if (look === 'horn') g += `<rect x="24" y="11" width="16" height="6" fill="${col}"/><polygon points="24,12 20,4 26,10" fill="#fff"/><polygon points="40,12 44,4 38,10" fill="#fff"/>`; else if (look === 'mohawk') g += `<polygon points="28,14 30,3 34,3 36,14" fill="${col}"/>`; else if (look === 'mask') g += `<rect x="25" y="18" width="14" height="10" fill="#f2f3ff"/><rect x="28" y="21" width="3" height="3" fill="${dk}"/><rect x="34" y="21" width="3" height="3" fill="${dk}"/>`; else if (look === 'cyb') g += `<rect x="25" y="14" width="7" height="14" fill="#9aa0c8"/><rect x="33" y="19" width="6" height="3" fill="#ff2a6d"/>`; }
+  return h('span', { class: 'foeico', html: `<svg viewBox="0 0 64 64" width="${px}" height="${px}" shape-rendering="crispEdges" aria-hidden="true">${g}</svg>` });
+}
+function foeSpecialChips(f) { return (f.sp || []).map(s => ANTI[s] ? h('span', { class: 'tag', title: ANTI[s].d }, ANTI[s].n) : null).filter(Boolean); }
+function renderPreview() {
+  const cfg = CB.cfg; const cards = h('div', { class: 'fpv' }, CB.foes.map(f => {
+    const t = f.tier || Math.max(1, Math.round(f.atk / 2));
+    return h('div', { class: 'fcard' }, foeIcon(f, 88), h('div', { class: 'fi2' }, h('b', {}, fname(f)), h('div', { class: 'small mut' }, `Menace ${'★'.repeat(Math.min(5, t))}${'☆'.repeat(Math.max(0, 5 - t))}${f.m ? ' · machine' : ''}`), h('div', { class: 'bar hp mini' }, h('i', { style: 'width:100%' })), h('div', { class: 'small' }, `${f.hpMax} PV · dégâts ${f.dmg}`), h('div', {}, foeSpecialChips(f))));
+  }));
+  const L = [C('Combattre', engage, { ic: '⚔', cls: 'cta' })];
+  if (cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
+  show({ compact: true, kicker: 'FACE À FACE', title: cfg.title || 'Un affrontement', text: [cfg.intro || ''], extra: cards, choices: L });
 }
 
 // ───────── Hub : menu principal du tour, voyage, repos, marché, recrutement, rôles, retraite ─────────
