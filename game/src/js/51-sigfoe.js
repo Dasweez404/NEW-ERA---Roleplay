@@ -1,13 +1,13 @@
 // ───────── Capacité signature active en combat + aperçu visuel de l'adversaire ─────────
 function sigMove() {
   const ps = pcPowers(); if (!ps.length) return null; CB.sig = CB.sig || {};
-  const p = ps.find(x => !CB.sig[x.id]) || ps[0]; const k = perkOf(p); if (!k) return null; const used = !!CB.sig[p.id]; const cost = 2;
-  return { id: 'sig', pid: p.id, ic: '✦', label: `Signature : ${k.title}`, sub: `${p.name} · ${SIG_TXT[k.effs[0].id] || 'effet de pouvoir'} · ${cost} énergie · une fois par combat`, kind: 'sig', cost, cls: 'safe', lock: used ? 'Déjà utilisée dans ce combat' : null };
+  const p = ps.find(x => !CB.sig[x.id]) || ps[0]; const k = perkOf(p); if (!k) return null; const lv = pxLevel(p.id); const used = (CB.sig[p.id] || 0) >= (lv >= 3 ? 2 : 1); const cost = lv >= 2 ? 1 : 2;
+  return { id: 'sig', pid: p.id, ic: '✦', label: `Signature : ${k.title}`, sub: `${p.name} · ${SIG_TXT[k.effs[0].id] || 'effet de pouvoir'} · ${cost} énergie · ${lv >= 3 ? 'deux' : 'une'} fois par combat · niv. ${lv}`, kind: 'sig', cost, cls: 'safe', lock: used ? 'Déjà utilisée dans ce combat' : null };
 }
 const SIG_TXT = { dodge: 'esquive les 2 prochaines ripostes', shield: 'bouclier massif', dmg: 'frappe surpuissante', regen: 'soigne 30 % de ta vie', energy: 'recharge la moitié de ton énergie', stun: 'sidère tous les ennemis', thorns: 'renvoie les coups reçus', crit: 'coup critique garanti', first: 'frappe éclair puis esquive', def: 'garde de fer', weaken: 'affaiblit tous les ennemis', allyheal: 'soigne ton équipe', drain: 'frappe qui te soigne', lastbreath: 'te remet debout et te protège', pierce: 'frappe qui ignore les boucliers', night: 'frappe de l’ombre', cash: 'butin garanti en cas de victoire', xp: 'expérience doublée en cas de victoire', quiet: 'ta prime ne monte pas', loot: 'butin garanti', bond: 'galvanise ton équipe', travel: 'te dérobe aux coups', rest: 'te soigne 20 %', fix: 'bouclier improvisé', clue: 'analyse : +3 pour toucher' };
 function sigDo(m) {
-  const pc = G.pc; const p = PW[m.pid]; const k = perkOf(p); const e = k.effs[0]; const id = e.id; const f = firstFoe(); CB.sig[m.pid] = 1; CB.sev = 0.2;
-  clog(`✦ ${k.title} !`, 'acc'); const big = (mul, crit) => { if (f) hurtFoe(f, dmgBase() * mul + e.mag, crit, `${k.title} frappe`); };
+  const pc = G.pc; const p = PW[m.pid]; const k = perkOf(p); const e = k.effs[0]; const id = e.id; const f = firstFoe(); CB.sig[m.pid] = (CB.sig[m.pid] || 0) + 1; CB.sev = 0.2; pxGain(m.pid, 1);
+  clog(`✦ ${k.title} !`, 'acc'); const lvl = pxLevel(m.pid); const big = (mul, crit) => { if (f) hurtFoe(f, dmgBase() * (mul + 0.25 * (lvl - 1)) + e.mag, crit, `${k.title} frappe`); };
   const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
   if (id === 'dodge' || id === 'travel') { CB.dodge += 2; CB.sev = 0; }
   else if (id === 'shield' || id === 'fix' || id === 'def') { CB.shield += 6 + e.mag * 2; CB.sev = 0.1; }

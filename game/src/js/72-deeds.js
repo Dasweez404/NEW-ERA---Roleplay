@@ -43,14 +43,14 @@ function deedCard() {
     }
     return C(lab, () => {
       const r = check(attr, dc, tags); const usedPower = tags.some(x => (powerTags()[x] || 0) > 0);
-      if (r.ok) { addKarma(2); const L = fx({ rep: { civils: 8 + (r.crit ? 3 : 0) }, xp: 20 + 6 * t, money: r.crit ? 60 : 0 }); show({ kicker: d.k.toUpperCase(), title: 'Tu as sauvé des gens', text: [okT, checkLine(r)], fx: L, choices: [C('Continuer', () => (chance(exposureChance(expo + (usedPower ? 0.15 : 0))) ? backfire(done) : done()))] }); }
+      if (r.ok) { addKarma(2); addCityRep(4); const L = fx({ rep: { civils: 8 + (r.crit ? 3 : 0) }, xp: 20 + 6 * t, money: r.crit ? 60 : 0 }); show({ kicker: d.k.toUpperCase(), title: 'Tu as sauvé des gens', text: [okT, checkLine(r)], fx: L, choices: [C('Continuer', () => (chance(exposureChance(expo + (usedPower ? 0.15 : 0))) ? backfire(done) : done()))] }); }
       else { addKarma(1); show({ kicker: d.k.toUpperCase(), title: 'Pas assez', text: [koT, checkLine(r)], fx: fx({ rep: { civils: 3 }, xp: 8, hp: dmg || 0 }), choices: [C('Continuer', () => (chance(exposureChance(expo + 0.1)) ? backfire(done) : done()))] }); }
     }, { ic: '🤝', odds: [attr, dc, tags], sub: 'Bonne action' });
   };
   const [blab, bt, bfx] = d.bad;
   const badOpt = C(blab, () => {
     const o = Object.assign({}, bfx); const m = o.money ? rint(o.money[0], o.money[1]) : 0; const rep = Object.assign({}, o.rep || {}); if (o.anti && isAnti(pc.faction)) rep[pc.faction] = (rep[pc.faction] || 0) + o.anti;
-    addKarma(-3); const L = fx({ money: m, rep, heat: o.heat || 0, xp: o.xp || 0 });
+    addKarma(-3); addCityRep(-6); const L = fx({ money: m, rep, heat: o.heat || 0, xp: o.xp || 0 });
     const caught = chance(0.2 + wantedStars() * 0.04);
     show({ kicker: d.k.toUpperCase(), title: 'Tu en profites', text: [bt, caught ? 'Mais quelqu’un t’a vu faire. Un cri, un doigt pointé.' : 'Personne ne t’a vu.'], fx: L, choices: [C('Continuer', () => (caught ? fightMob('La foule t’encercle.', done, true) : done()), { cls: caught ? 'danger' : '' })] });
   }, { ic: '😈', cls: 'risk', sub: 'Mauvaise action · gain immédiat, la population s’en souviendra' });

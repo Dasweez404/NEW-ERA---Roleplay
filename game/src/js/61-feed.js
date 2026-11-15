@@ -1,7 +1,7 @@
 // ───────── Le fil de l'histoire : une carte, deux ou trois choix, un dé, la suite (style Destiny Eleven) ─────────
 function hub() {
   if (G.status !== 'play') return;
-  const pc = G.pc; saveGame(); recalc();
+  const pc = G.pc; saveGame(); recalc(); announceFeats();
   if (pc.flags.cap) return capturedMenu();
   let pend = pendingEvents(); if (pend) return pend();
   if (G.fresh) G.fresh = false;
@@ -25,19 +25,19 @@ function dealCard() {
   if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
-  conflictPool(pool); pool.push({ w: 16, f: deedCard });
+  conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool);
   const e = wpick(pool, x => x.w); e.f();
 }
 function missionCard() { contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; const offers = getBoard().slice(); const L = [];
+  const pc = G.pc; const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
-  [...promo, ...rest].slice(0, 3).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
-  if (offers.length > 3) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
+  [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
+  if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
   L.push(C('Poursuivre l’intrigue', hub, { cls: 'back', ic: '▶', sub: 'Laisser les contrats, la suite des événements arrive.' }));
-  show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.'], choices: L });
+  show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.', cityLine()].filter(Boolean), choices: L });
 }
 function stoneCard(s) {
   const hold = G.world.stoneHolder[s.id];

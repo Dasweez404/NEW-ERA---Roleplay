@@ -1114,7 +1114,7 @@ function tabPerso() {
     h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché (pas d’identité civile complète)'));
   box.append(h('h3', {}, 'Pouvoir : ' + TYPENAME[pc.ptype]));
   if (!pcPowers().length) box.append(h('div', { class: 'mut' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => { box.append(powerLine(p)); const k = perkOf(p); if (k) box.append(h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), ' ', h('span', { class: 'mut' }, `(${k.kind}) ${k.desc}`))); });
+  pcPowers().forEach(p => { box.append(powerLine(p)); const k = perkOf(p); if (k) { const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0; box.append(h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), ' ', h('span', { class: 'mut' }, `(${k.kind}) ${k.desc}`), h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]} usages` : ' · maximum'} — ${PX_TXT[lv]}`))); } });
   if (pc.ptype !== 'aucun') box.append(h('div', { class: 'small mut', style: 'margin-top:4px' }, 'Faiblesse : ' + WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   box.append(h('h3', {}, 'Attributs' + (pc.pts ? ` — ${pc.pts} point(s) à répartir` : '')));
   ATTRS.forEach(a => {
@@ -1229,6 +1229,7 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
+    if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
@@ -1942,13 +1943,13 @@ function defeatOutcome(lethal, text) {
 // ───────── Capacité signature active en combat + aperçu visuel de l'adversaire ─────────
 function sigMove() {
   const ps = pcPowers(); if (!ps.length) return null; CB.sig = CB.sig || {};
-  const p = ps.find(x => !CB.sig[x.id]) || ps[0]; const k = perkOf(p); if (!k) return null; const used = !!CB.sig[p.id]; const cost = 2;
-  return { id: 'sig', pid: p.id, ic: '✦', label: `Signature : ${k.title}`, sub: `${p.name} · ${SIG_TXT[k.effs[0].id] || 'effet de pouvoir'} · ${cost} énergie · une fois par combat`, kind: 'sig', cost, cls: 'safe', lock: used ? 'Déjà utilisée dans ce combat' : null };
+  const p = ps.find(x => !CB.sig[x.id]) || ps[0]; const k = perkOf(p); if (!k) return null; const lv = pxLevel(p.id); const used = (CB.sig[p.id] || 0) >= (lv >= 3 ? 2 : 1); const cost = lv >= 2 ? 1 : 2;
+  return { id: 'sig', pid: p.id, ic: '✦', label: `Signature : ${k.title}`, sub: `${p.name} · ${SIG_TXT[k.effs[0].id] || 'effet de pouvoir'} · ${cost} énergie · ${lv >= 3 ? 'deux' : 'une'} fois par combat · niv. ${lv}`, kind: 'sig', cost, cls: 'safe', lock: used ? 'Déjà utilisée dans ce combat' : null };
 }
 const SIG_TXT = { dodge: 'esquive les 2 prochaines ripostes', shield: 'bouclier massif', dmg: 'frappe surpuissante', regen: 'soigne 30 % de ta vie', energy: 'recharge la moitié de ton énergie', stun: 'sidère tous les ennemis', thorns: 'renvoie les coups reçus', crit: 'coup critique garanti', first: 'frappe éclair puis esquive', def: 'garde de fer', weaken: 'affaiblit tous les ennemis', allyheal: 'soigne ton équipe', drain: 'frappe qui te soigne', lastbreath: 'te remet debout et te protège', pierce: 'frappe qui ignore les boucliers', night: 'frappe de l’ombre', cash: 'butin garanti en cas de victoire', xp: 'expérience doublée en cas de victoire', quiet: 'ta prime ne monte pas', loot: 'butin garanti', bond: 'galvanise ton équipe', travel: 'te dérobe aux coups', rest: 'te soigne 20 %', fix: 'bouclier improvisé', clue: 'analyse : +3 pour toucher' };
 function sigDo(m) {
-  const pc = G.pc; const p = PW[m.pid]; const k = perkOf(p); const e = k.effs[0]; const id = e.id; const f = firstFoe(); CB.sig[m.pid] = 1; CB.sev = 0.2;
-  clog(`✦ ${k.title} !`, 'acc'); const big = (mul, crit) => { if (f) hurtFoe(f, dmgBase() * mul + e.mag, crit, `${k.title} frappe`); };
+  const pc = G.pc; const p = PW[m.pid]; const k = perkOf(p); const e = k.effs[0]; const id = e.id; const f = firstFoe(); CB.sig[m.pid] = (CB.sig[m.pid] || 0) + 1; CB.sev = 0.2; pxGain(m.pid, 1);
+  clog(`✦ ${k.title} !`, 'acc'); const lvl = pxLevel(m.pid); const big = (mul, crit) => { if (f) hurtFoe(f, dmgBase() * (mul + 0.25 * (lvl - 1)) + e.mag, crit, `${k.title} frappe`); };
   const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
   if (id === 'dodge' || id === 'travel') { CB.dodge += 2; CB.sev = 0; }
   else if (id === 'shield' || id === 'fix' || id === 'def') { CB.shield += 6 + e.mag * 2; CB.sev = 0.1; }
@@ -2048,9 +2049,9 @@ function travelMenu(pre) {
     const r = otRoute(here, to); if (!r) return; const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
     sel = to; sfx('click'); box.setRoute(r);
-    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), reco.has(to) ? h('div', { class: 'recotxt2' }, '★ Conseillé : ' + reco.get(to).join(' · ')) : null, h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
+    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), feat('monde') && G.world.terr[to] ? h('div', { class: 'small mut' }, 'Contrôle : ' + (G.world.terr[to] === 'pc' ? 'ta faction' : F[G.world.terr[to]] ? F[G.world.terr[to]].name : G.world.terr[to])) : null, reco.has(to) ? h('div', { class: 'recotxt2' }, '★ Conseillé : ' + reco.get(to).join(' · ')) : null, h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco });
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde') });
   if (pre) setTimeout(() => select(pre), 30);
   show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu, { cls: 'back' })] });
 }
@@ -2192,7 +2193,7 @@ function retireConfirm() {
 // ───────── Le fil de l'histoire : une carte, deux ou trois choix, un dé, la suite (style Destiny Eleven) ─────────
 function hub() {
   if (G.status !== 'play') return;
-  const pc = G.pc; saveGame(); recalc();
+  const pc = G.pc; saveGame(); recalc(); announceFeats();
   if (pc.flags.cap) return capturedMenu();
   let pend = pendingEvents(); if (pend) return pend();
   if (G.fresh) G.fresh = false;
@@ -2216,19 +2217,19 @@ function dealCard() {
   if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
-  conflictPool(pool); pool.push({ w: 16, f: deedCard });
+  conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool);
   const e = wpick(pool, x => x.w); e.f();
 }
 function missionCard() { contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; const offers = getBoard().slice(); const L = [];
+  const pc = G.pc; const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
-  [...promo, ...rest].slice(0, 3).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
-  if (offers.length > 3) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
+  [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
+  if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
   L.push(C('Poursuivre l’intrigue', hub, { cls: 'back', ic: '▶', sub: 'Laisser les contrats, la suite des événements arrive.' }));
-  show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.'], choices: L });
+  show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.', cityLine()].filter(Boolean), choices: L });
 }
 function stoneCard(s) {
   const hold = G.world.stoneHolder[s.id];
@@ -2450,8 +2451,9 @@ function buildPerks() {
 const HORS = ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'bond', 'night'];
 function perkOf(p) { if (!p) return null; if (!_perkAll) buildPerks(); return _perkAll[p.id] || null; }
 function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) : []; }
-function PK(id) { let t = 0; perkList().forEach(k => k.effs.forEach(x => { if (x.id === id) t += x.mag; })); return t; }
-function perkChk(tags) { let b = 0; perkList().forEach(k => k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag; })); return Math.min(3, b); }
+const lvF = p => (typeof pxLevel === 'function' && G && G.pc) ? [1, 1, 1.25, 1.5][pxLevel(p.id)] : 1;
+function PK(id) { let t = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id === id) t += x.mag * lvF(p); }); }); return Math.ceil(t - 1e-9); }
+function perkChk(tags) { let b = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag * lvF(p); }); }); return Math.min(3, Math.round(b)); }
 const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };
 
 // ───────── Conflits entre factions : guerres, incidents de frontière, embuscades, choix de camp ─────────
@@ -2557,7 +2559,7 @@ SHOP_LEGAL.push('poing', 'couteau', 'batte', 'pied', 'hache', 'arbalete', 'cloue
 SHOP_BLACK.push('chasse', 'moto_v', 'bateau_p');
 const SHOP_CATS = [['arme', '⚔', 'Armes', 'Mains nues, lames, armes à distance'], ['armure', '🛡', 'Armures', 'Protections, du blouson au déflecteur'], ['vehicule', '🚗', 'Véhicules', 'Scooters, motos, voitures, vaisseaux'], ['conso', '💊', 'Soins & vivres', 'Soins, énergie, stimulants'], ['gadget', '🧰', 'Outils & gadgets', 'Pour pirater, grimper, espionner']];
 const SHOP = { black: false, steal: false };
-const shopPrice = id => { const it = ITEMS[id]; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); return Math.round(it.price * (SHOP.black ? 1.35 : 1) * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1)); };
+const shopPrice = id => { const it = ITEMS[id]; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100) * (SHOP.black ? 1 : (feat('rep') ? cityPerk().price : 1)); return Math.round(it.price * (SHOP.black ? 1.35 : 1) * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1)); };
 const shopIds = () => [...new Set(SHOP.black ? SHOP_BLACK : SHOP_LEGAL)].filter(id => ITEMS[id]);
 function shopMenu(black) {
   if (black != null) SHOP.black = black; if (black == null && !SHOP._init) { SHOP.black = false; } SHOP._init = true; SHOP.steal = false;
@@ -2592,7 +2594,7 @@ function buy(id, price, cat) {
 function stealDc(id) { const it = ITEMS[id]; return 12 + Math.min(5, Math.floor(it.price / 450)) * 2 + wantedStars() + (it.t === 'vehicule' ? 2 : 0); }
 function stealItem(id, cat) {
   const pc = G.pc, it = ITEMS[id]; const dc = stealDc(id); const r = check('agilite', dc, ['stealth', 'disguise']);
-  if (r.ok) { giveItem(id); equipIfFree(id); const L = r.crit ? [] : fx({ heat: it.price > 1000 ? 3 : 1 }); G.score.stolen = (G.score.stolen || 0) + 1; logEntry(`Tu voles : ${it.n}.`); return show({ kicker: 'Vol', title: r.crit ? 'Un vol parfait' : 'Dans la poche', text: [`${it.n} disparaît sous ton manteau. Personne n’a rien vu${r.crit ? ' — pas même une caméra' : ' (ou presque)'}.`, checkLine(r)], fx: L, choices: [C('Continuer à fouiner', () => shopCat(cat)), C('Partir', cityMenu, { cls: 'back' })] }); }
+  if (r.ok) { addCityRep(-2); giveItem(id); equipIfFree(id); const L = r.crit ? [] : fx({ heat: it.price > 1000 ? 3 : 1 }); G.score.stolen = (G.score.stolen || 0) + 1; logEntry(`Tu voles : ${it.n}.`); return show({ kicker: 'Vol', title: r.crit ? 'Un vol parfait' : 'Dans la poche', text: [`${it.n} disparaît sous ton manteau. Personne n’a rien vu${r.crit ? ' — pas même une caméra' : ' (ou presque)'}.`, checkLine(r)], fx: L, choices: [C('Continuer à fouiner', () => shopCat(cat)), C('Partir', cityMenu, { cls: 'back' })] }); }
   const tier = Math.min(3, 1 + Math.floor(it.price / 900));
   if (chance(0.5)) return show({ kicker: 'Vol', title: 'Tu files les mains vides', text: ['Une alarme, un cri. Tu cours à travers la foule et tu disparais.', checkLine(r)], fx: fx({ heat: 3, rep: { civils: -2 } }), choices: [C('Continuer', cityMenu)] });
   show({ kicker: 'Vol', title: 'Pris sur le fait !', text: ['Des vigiles te barrent la route.', checkLine(r)], choices: [C('Se battre', () => startCombat({ title: 'Vigiles du marché', foes: [mkFoe('garde', tier), mkFoe('garde', tier)], intro: 'Les vigiles dégainent leurs matraques.', lethal: wantedStars() >= 2 ? 'capture' : 'robbed', canFlee: true, onWin: L => { giveItem(id); equipIfFree(id); show({ kicker: 'Vol', title: 'Tu repars avec', text: [`Les vigiles à terre, tu prends ${it.n} et tu files.`], fx: [...L, ...fx({ heat: 5, rep: { civils: -3 } })], choices: [C('Continuer', cityMenu)] }); }, onFlee: () => show({ title: 'En fuite', text: ['Tu t’échappes, mais sans rien.'], fx: fx({ heat: 3 }), choices: [C('Continuer', cityMenu)] }) }), { cls: 'danger' }), C('Rendre l’objet et s’excuser', () => { const r2 = check('charisme', 13, ['social']); if (r2.ok) show({ title: 'Ils te laissent partir', text: ['Un sourire gêné, un faux prétexte.', checkLine(r2)], choices: [C('Continuer', cityMenu)] }); else show({ title: 'Amende', text: ['On te fait payer.', checkLine(r2)], fx: fx({ money: -Math.min(pc.money, Math.round(it.price * 0.5)), heat: 2 }), choices: [C('Continuer', cityMenu)] }); }, { odds: ['charisme', 13, ['social']] })] });
@@ -2729,6 +2731,7 @@ function resolveApproach(o, k, dc) {
   const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal);
   advance(o.weeks); if (G.status !== 'play') return;
   const txt = a.ap[k];
+  if (r.ok && k === 'pouvoir' && pcPowers()[0]) pxGain(pcPowers()[0].id, 1);
   if (r.ok) {
     const crit = r.crit; const go = () => finishMission(o, crit ? 'crit' : 'ok', [txt[1], checkLine(r)]);
     if (chance(0.3) && !o.promo) return complication(o, k, txt[1], r, go);
@@ -2764,6 +2767,7 @@ function finishMission(o, quality, lines, extraFx) {
   if (rewards.rep[emp] === 0) delete rewards.rep[emp];
   const L = fx(rewards); if (extraFx) L.unshift(...extraFx);
   pc.missions++; G.score.missions = (G.score.missions || 0) + 1;
+  addCityRep(['humanitaire', 'climat', 'temoin', 'mediation', 'pelerinage', 'recrutement'].includes(o.arch) ? 4 : ['assassinat', 'incendie', 'emeute', 'racket', 'braquage', 'kidnapping', 'trouble', 'blanchiment'].includes(o.arch) ? -3 : 2, o.arch);
   if (o.favor && quality !== 'partial') { pc.flags['favor_' + o.favor] = true; L.push(...fx({ rep: { [emp]: 14 } })); L.push({ t: 'Ils te doivent une faveur : tu peux maintenant négocier la pierre.', c: 'acc' }); }
   if (o.fallen && pc.implant && quality !== 'partial') { pc.implant.deadline = G.wk + 12; L.push({ t: 'Prime livrée : le compte à rebours de ton implant est remis à zéro (12 semaines).', c: 'good' }); }
   pc.party.forEach(al => { al.loy = clamp(al.loy + 3, 0, 100); });
@@ -2921,18 +2925,73 @@ function deedCard() {
     }
     return C(lab, () => {
       const r = check(attr, dc, tags); const usedPower = tags.some(x => (powerTags()[x] || 0) > 0);
-      if (r.ok) { addKarma(2); const L = fx({ rep: { civils: 8 + (r.crit ? 3 : 0) }, xp: 20 + 6 * t, money: r.crit ? 60 : 0 }); show({ kicker: d.k.toUpperCase(), title: 'Tu as sauvé des gens', text: [okT, checkLine(r)], fx: L, choices: [C('Continuer', () => (chance(exposureChance(expo + (usedPower ? 0.15 : 0))) ? backfire(done) : done()))] }); }
+      if (r.ok) { addKarma(2); addCityRep(4); const L = fx({ rep: { civils: 8 + (r.crit ? 3 : 0) }, xp: 20 + 6 * t, money: r.crit ? 60 : 0 }); show({ kicker: d.k.toUpperCase(), title: 'Tu as sauvé des gens', text: [okT, checkLine(r)], fx: L, choices: [C('Continuer', () => (chance(exposureChance(expo + (usedPower ? 0.15 : 0))) ? backfire(done) : done()))] }); }
       else { addKarma(1); show({ kicker: d.k.toUpperCase(), title: 'Pas assez', text: [koT, checkLine(r)], fx: fx({ rep: { civils: 3 }, xp: 8, hp: dmg || 0 }), choices: [C('Continuer', () => (chance(exposureChance(expo + 0.1)) ? backfire(done) : done()))] }); }
     }, { ic: '🤝', odds: [attr, dc, tags], sub: 'Bonne action' });
   };
   const [blab, bt, bfx] = d.bad;
   const badOpt = C(blab, () => {
     const o = Object.assign({}, bfx); const m = o.money ? rint(o.money[0], o.money[1]) : 0; const rep = Object.assign({}, o.rep || {}); if (o.anti && isAnti(pc.faction)) rep[pc.faction] = (rep[pc.faction] || 0) + o.anti;
-    addKarma(-3); const L = fx({ money: m, rep, heat: o.heat || 0, xp: o.xp || 0 });
+    addKarma(-3); addCityRep(-6); const L = fx({ money: m, rep, heat: o.heat || 0, xp: o.xp || 0 });
     const caught = chance(0.2 + wantedStars() * 0.04);
     show({ kicker: d.k.toUpperCase(), title: 'Tu en profites', text: [bt, caught ? 'Mais quelqu’un t’a vu faire. Un cri, un doigt pointé.' : 'Personne ne t’a vu.'], fx: L, choices: [C('Continuer', () => (caught ? fightMob('La foule t’encercle.', done, true) : done()), { cls: caught ? 'danger' : '' })] });
   }, { ic: '😈', cls: 'risk', sub: 'Mauvaise action · gain immédiat, la population s’en souviendra' });
   show({ kicker: 'DILEMME · ' + place.toUpperCase(), title: d.k, text: [d.text(esc(place))], choices: [goodOpt(), badOpt, C('Passer ton chemin', done, { cls: 'back' })] });
+}
+
+// ───────── Lot 1 : arbre du pouvoir (par l'usage), réputation par ville, monde visible, némésis — introduits un par un ─────────
+const FEAT_WK = { arbre: 0, rep: 3, monde: 6, nem: 10 };
+const feat = k => G && G.wk >= FEAT_WK[k];
+const FEAT_NEWS = { rep: ['Réputation par ville', 'Chaque ville retient ce que tu y fais : prix, contrats et accueil changent. Tu verras son avis sur tes cartes de contrats.'], monde: ['Monde visible', 'Sur la carte de voyage, un anneau coloré montre qui tient chaque ville.'], nem: ['Quelqu’un te suit', 'Un ennemi pourrait revenir te chercher. Ce que tu fais autour de toi décide qui.'] };
+function announceFeats() { // un seul nouvel élément à la fois, une phrase discrète
+  const seen = G.pc.flags.feats = G.pc.flags.feats || {};
+  for (const k of ['rep', 'monde', 'nem']) { if (!seen[k] && feat(k)) { seen[k] = 1; newsPush(`Nouveau — ${FEAT_NEWS[k][0]} : ${FEAT_NEWS[k][1]}`); toast('Nouveau : ' + FEAT_NEWS[k][0]); return; } }
+}
+// ── Arbre du pouvoir : on monte en l'utilisant ──
+const PX_STEPS = [0, 6, 15];
+function pxLevel(pid) { const n = (G.pc.pxp || {})[pid] || 0; return n >= PX_STEPS[2] ? 3 : n >= PX_STEPS[1] ? 2 : 1; }
+function pxGain(pid, n = 1) {
+  const pc = G.pc; pc.pxp = pc.pxp || {}; const before = pxLevel(pid); pc.pxp[pid] = (pc.pxp[pid] || 0) + n; const after = pxLevel(pid);
+  if (after > before) { const k = perkOf(PW[pid]); splash({ title: 'POUVOIR NIV. ' + after, sub: `${PW[pid].name} · ${k.title}`, icon: '✦', color: '#27f0ff', ms: 2000 }); logEntry(`${PW[pid].name} passe au niveau ${after}.`); }
+}
+const PX_TXT = ['', 'Niveau 1 : signature de base.', 'Niveau 2 : tes effets gagnent 25 %, la signature coûte 1 énergie.', 'Niveau 3 : effets +50 %, la signature s’utilise deux fois par combat.'];
+// ── Réputation par ville ──
+const cityRep = (s = G.loc) => (G.pc.crep || {})[s] || 0;
+const cityLabel = v => v >= 25 ? 'Adorée' : v >= 10 ? 'Appréciée' : v <= -25 ? 'Haïe' : v <= -10 ? 'Mal vue' : 'Neutre';
+function cityPerk() { const v = cityRep(); return v >= 25 ? { price: 0.85, offers: 2, txt: 'prix −15 %, 2 contrats de plus' } : v >= 10 ? { price: 0.9, offers: 1, txt: 'prix −10 %, 1 contrat de plus' } : v <= -25 ? { price: 1.25, offers: -1, txt: 'prix +25 %, on te surveille, contrats rares' } : v <= -10 ? { price: 1.1, offers: 0, txt: 'prix +10 %, regards en coin' } : { price: 1, offers: 0, txt: '' }; }
+function addCityRep(d, why) {
+  if (!d || !G || !feat('rep')) { if (G && d) { G.pc.crep = G.pc.crep || {}; G.pc.crep[G.loc] = clamp(cityRep() + d, -50, 50); } return; }
+  const pc = G.pc; pc.crep = pc.crep || {}; const b = cityLabel(cityRep()); pc.crep[G.loc] = clamp(cityRep() + d, -50, 50); const a = cityLabel(cityRep());
+  toast(`${capName(G.loc)} · ${d > 0 ? '+' : ''}${d} ${a !== b ? '→ ' + a : '(' + a + ')'}`);
+}
+const cityLine = () => { if (!feat('rep')) return ''; const v = cityRep(), p = cityPerk(); return `Réputation à ${capName(G.loc)} : <b>${cityLabel(v)}</b> (${v > 0 ? '+' : ''}${v})${p.txt ? ' — ' + p.txt : ''}.`; };
+// ── Némésis ──
+function nemesisPick() {
+  const pc = G.pc, W = G.world; const reps = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -5).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0));
+  const fac = reps[0] || (wantedStars() >= 2 ? 'fa' : null); if (!fac) return null;
+  const mem = DATA.chars.filter(c => c.faction === fac && c.stars >= 2 && W.npc[c.id].alive && W.npc[c.id].st === 'free' && !pc.party.some(p => p.id === c.id)); return mem.length ? pick(mem) : null;
+}
+function nemesisCard() {
+  const pc = G.pc; const f = pc.flags; let n = f.nem; if (n && (!CH[n.cid] || !G.world.npc[n.cid].alive)) n = f.nem = null;
+  if (!n) { const c = nemesisPick(); if (!c) return missionCard(); n = f.nem = { cid: c.id, tier: Math.max(1, c.stars - 1), wins: 0, seen: 0 }; }
+  const c = CH[n.cid]; const fac = F[c.faction]; f.nemWk = G.wk; n.seen++;
+  const mk = () => [mkFoe('porteur', n.tier, c.name, { cid: c.id, hp: Math.round(40 + 10 * n.tier), hpMax: Math.round(40 + 10 * n.tier), dmg: 5 + 2 * n.tier, def: 2 + n.tier }), ...(n.tier >= 3 ? [mkFoe('porteur', n.tier - 1)] : [])];
+  const intro = n.seen === 1 ? `${esc(c.name)} de ${esc(fac.name)} te barre la route. « C’est toi. On m’a parlé de ce que tu as fait. »` : n.wins ? `${esc(c.name)} est de retour, plus dur que la dernière fois. « Tu m’as battu. Je me suis entraîné. »` : `${esc(c.name)} réapparaît. « On n’a pas fini. »`;
+  show({ extra: portrait(c.id, 130), kicker: 'NÉMÉSIS · ' + capName(G.loc).toUpperCase(), title: c.name, text: [intro, `<span class="mut">${esc(fac.name)} · ${'★'.repeat(n.tier)} · ${esc(charPowerText(c))}</span>`], choices: [
+    C('L’affronter', () => startCombat({ title: `${c.name}, ta némésis`, foes: mk(), intro: 'Le coup part avant même la fin de sa phrase.', lethal: 'capture', canFlee: true,
+      onWin: L => { n.wins++; n.tier = Math.min(5, n.tier + 1); let t = [`${esc(c.name)} tombe à genoux.`, 'Il se relèvera plus fort.']; const L2 = fx({ xp: 30 + 10 * n.tier, rep: { [c.faction]: -4 } });
+        if (n.wins >= 3) { G.world.npc[c.id].st = 'captured'; f.nem = null; t = [`${esc(c.name)} est enfin neutralisé. Ta légende grandit.`]; L2.push(...fx({ merit: 5 })); newsPush(`${c.name} (${fac.name}) a été mis hors d’état de nuire par ${pc.name}.`); }
+        show({ kicker: 'NÉMÉSIS', title: n.wins >= 3 ? 'Fin de la traque' : 'Il battra en retraite', text: t, fx: [...L, ...L2], choices: [C('Continuer', hub)] }); },
+      onFlee: () => show({ title: 'Tu t’échappes', text: ['Pour cette fois seulement.'], choices: [C('Continuer', hub)] }) }), { ic: '⚔', cls: 'danger' }),
+    C('Tenter de le raisonner', () => { const r = check('charisme', 13 + 2 * n.tier, ['social']); if (r.ok) { f.nem = null; show({ kicker: 'NÉMÉSIS', title: 'Une trêve', text: [`${esc(c.name)} hésite, puis baisse sa garde. « Une autre fois. »`, checkLine(r)], fx: fx({ rep: { [c.faction]: 5 } }), choices: [C('Continuer', hub)] }); } else show({ kicker: 'NÉMÉSIS', title: 'Il ne t’écoute pas', text: [checkLine(r)], choices: [C('Se battre', () => hub())] }); }, { ic: '🗣', odds: ['charisme', 13 + 2 * n.tier, ['social']] }),
+    C('Fuir', () => { const r = check('agilite', 12 + 2 * n.tier, ['mobility']); show({ kicker: 'NÉMÉSIS', title: r.ok ? 'Tu disparais' : 'Il te rattrape', text: [checkLine(r)], fx: r.ok ? [] : fx({ hp: -rint(3, 8) }), choices: [C('Continuer', hub)] }); }, { ic: '💨', cls: 'back', odds: ['agilite', 12 + 2 * n.tier, ['mobility']] })] });
+}
+// ── Monde visible : qui tient quoi, sur la carte ──
+const facHue = fid => fid === 'pc' ? '#27f0ff' : fid === 'fa' ? '#3d7bff' : `hsl(${hashStr(String(fid)) % 360},80%,60%)`;
+// ── Injection dans le fil ──
+function lot1Pool(pool) {
+  if (feat('nem') && G.wk - (G.pc.flags.nemWk || 0) >= 8 && (wantedStars() >= 2 || Object.keys(G.pc.rep).some(f => !['civils', 'noir'].includes(f) && G.pc.rep[f] <= -5))) pool.push({ w: 12, f: nemesisCard });
+  if (feat('rep') && cityRep() <= -10) pool.push({ w: 18, f: () => fightMob(`Dans les rues de ${capName(G.loc)}, on te reconnaît. Des regards durs, puis des poings.`, hub) });
 }
 
 // ───────── Monde vivant : tic mensuel, événements canon, simulation PNJ/factions, événements aléatoires ─────────

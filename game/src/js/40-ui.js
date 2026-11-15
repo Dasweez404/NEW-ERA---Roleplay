@@ -139,7 +139,7 @@ function tabPerso() {
     h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché (pas d’identité civile complète)'));
   box.append(h('h3', {}, 'Pouvoir : ' + TYPENAME[pc.ptype]));
   if (!pcPowers().length) box.append(h('div', { class: 'mut' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => { box.append(powerLine(p)); const k = perkOf(p); if (k) box.append(h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), ' ', h('span', { class: 'mut' }, `(${k.kind}) ${k.desc}`))); });
+  pcPowers().forEach(p => { box.append(powerLine(p)); const k = perkOf(p); if (k) { const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0; box.append(h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), ' ', h('span', { class: 'mut' }, `(${k.kind}) ${k.desc}`), h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]} usages` : ' · maximum'} — ${PX_TXT[lv]}`))); } });
   if (pc.ptype !== 'aucun') box.append(h('div', { class: 'small mut', style: 'margin-top:4px' }, 'Faiblesse : ' + WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   box.append(h('h3', {}, 'Attributs' + (pc.pts ? ` — ${pc.pts} point(s) à répartir` : '')));
   ATTRS.forEach(a => {
@@ -254,6 +254,7 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
+    if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));

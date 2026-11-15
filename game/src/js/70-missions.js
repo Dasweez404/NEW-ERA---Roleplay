@@ -129,6 +129,7 @@ function resolveApproach(o, k, dc) {
   const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal);
   advance(o.weeks); if (G.status !== 'play') return;
   const txt = a.ap[k];
+  if (r.ok && k === 'pouvoir' && pcPowers()[0]) pxGain(pcPowers()[0].id, 1);
   if (r.ok) {
     const crit = r.crit; const go = () => finishMission(o, crit ? 'crit' : 'ok', [txt[1], checkLine(r)]);
     if (chance(0.3) && !o.promo) return complication(o, k, txt[1], r, go);
@@ -164,6 +165,7 @@ function finishMission(o, quality, lines, extraFx) {
   if (rewards.rep[emp] === 0) delete rewards.rep[emp];
   const L = fx(rewards); if (extraFx) L.unshift(...extraFx);
   pc.missions++; G.score.missions = (G.score.missions || 0) + 1;
+  addCityRep(['humanitaire', 'climat', 'temoin', 'mediation', 'pelerinage', 'recrutement'].includes(o.arch) ? 4 : ['assassinat', 'incendie', 'emeute', 'racket', 'braquage', 'kidnapping', 'trouble', 'blanchiment'].includes(o.arch) ? -3 : 2, o.arch);
   if (o.favor && quality !== 'partial') { pc.flags['favor_' + o.favor] = true; L.push(...fx({ rep: { [emp]: 14 } })); L.push({ t: 'Ils te doivent une faveur : tu peux maintenant négocier la pierre.', c: 'acc' }); }
   if (o.fallen && pc.implant && quality !== 'partial') { pc.implant.deadline = G.wk + 12; L.push({ t: 'Prime livrée : le compte à rebours de ton implant est remis à zéro (12 semaines).', c: 'good' }); }
   pc.party.forEach(al => { al.loy = clamp(al.loy + 3, 0, 100); });
