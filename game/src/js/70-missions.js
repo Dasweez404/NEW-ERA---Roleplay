@@ -92,7 +92,7 @@ function promoOffer() {
   if (pc.merit < need) return null;
   return genOffer(pc.faction, Math.min(5, pc.grade + 1), { promo: true });
 }
-function stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+function stars(n) { n = clamp(n | 0, 0, 5); return '★'.repeat(n) + '☆'.repeat(5 - n); }
 function missionBoard() {
   const pc = G.pc; const offers = getBoard(); const L = [];
   const co = typeof canonOffers === 'function' ? canonOffers() : []; co.forEach(c => L.push(C(`⭐ ${c.title}`, c.go, { sub: c.sub, cls: 'risk' })));
@@ -124,6 +124,7 @@ function missionApproach(o) {
 }
 function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;
+  if (k === 'furtif' && typeof feat === 'function' && feat('infil') && INFIL.has(o.arch)) return infiltration(o);
   if (d.money) pc.money -= 40 * o.tier;
   const tags = k === 'pouvoir' ? a.ptags : d.t; const penal = k === 'pouvoir' && !a.ptags.some(t => (powerTags()[t] || 0) > 0) ? -2 : 0;
   const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal);

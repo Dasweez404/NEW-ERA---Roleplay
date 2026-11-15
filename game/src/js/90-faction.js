@@ -8,6 +8,7 @@ function factionMenu() {
   if (pc.grade < 4) L.push(C(`Épreuve de grade (${gradeNames(pc)[pc.grade + 1]})`, () => { const o = promoOffer(); if (o) missionBrief(o); }, { req: { ok: () => pc.merit >= nxt ? null : `Il te faut ${nxt} de mérite (tu as ${pc.merit}) : fais des missions pour ta faction` }, sub: 'Réussis une mission d’épreuve : tu montes en grade, tu pèses plus, mais ta prime augmente aussi.' }));
   L.push(C('Réunion des décisions (conseil)', () => EVENT_FN.council(), { sub: pc.grade === 0 ? 'Recrue : tu n’as aucune voix au chapitre.' : `Ton niveau de décision : ${['aucun', 'voter', 'proposer', 'décider localement', 'décider en grand', 'trancher'][pc.grade]}.` }));
   if (pc.grade === 4) L.push(C('Prétendre à la tête de la faction', successionMenu, { sub: 'Relève, duel, attente ou fondation de ta propre faction.' }));
+  squadTile(L);
   if (pc.grade >= 5) L.push(C('Diriger la faction', leaderMenu, { sub: 'Territoires, batailles, alliances, budget.', cls: 'safe' }));
   if (pc.faction === 'fallen' && pc.implant) L.push(C('Faire retirer l’implant', removeImplantMenu, { cls: 'danger' }));
   L.push(C('Fonder ta propre faction', foundFaction, { req: { grade: 3, money: 3000, party: 2, ok: () => pc.ownFaction ? 'Tu en diriges déjà une' : null }, sub: 'Nom, objectif, QG. Tu pars avec ton groupe : tu es le chef.' }));

@@ -248,7 +248,7 @@ function defeatOutcome(lethal, text) {
   const pc = G.pc; pc.hp = Math.max(1, pc.hp);
   if (lethal === 'capture') return capturedScene(text);
   if (lethal === 'robbed') {
-    const lost = Math.round(pc.money * 0.5); pc.money -= lost; advance(2); pc.hp = Math.max(1, Math.round(pc.hpMax * 0.3));
+    const lost = Math.round(pc.money * ((pc.base && pc.base.lvl >= 2) ? 0.25 : 0.5)); pc.money -= lost; advance(2); pc.hp = Math.max(1, Math.round(pc.hpMax * 0.3));
     return show({ kicker: 'DÉFAITE', title: 'Dépouillé et laissé pour mort', text: [text, `On te dépouille : <b>−${fmt(lost)} ¢</b>. Tu te réveilles deux semaines plus tard, à moitié mort.`], choices: [C('Continuer', hub)] });
   }
   if (lethal === 'death') {

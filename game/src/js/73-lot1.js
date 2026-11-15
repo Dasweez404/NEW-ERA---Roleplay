@@ -49,6 +49,6 @@ function nemesisCard() {
 const facHue = fid => fid === 'pc' ? '#27f0ff' : fid === 'fa' ? '#3d7bff' : `hsl(${hashStr(String(fid)) % 360},80%,60%)`;
 // ── Injection dans le fil ──
 function lot1Pool(pool) {
-  if (feat('nem') && G.wk - (G.pc.flags.nemWk || 0) >= 8 && (wantedStars() >= 2 || Object.keys(G.pc.rep).some(f => !['civils', 'noir'].includes(f) && G.pc.rep[f] <= -5))) pool.push({ w: 12, f: nemesisCard });
+  if (feat('nem') && G.wk - (G.pc.flags.nemWk || 0) >= 8 && (wantedStars() >= 2 || Object.keys(G.pc.rep).some(f => !['civils', 'noir'].includes(f) && G.pc.rep[f] <= -5))) pool.push({ w: 12, f: () => { G.pc.flags.spWk = G.wk; nemesisCard(); } });
   if (feat('rep') && cityRep() <= -10) pool.push({ w: 18, f: () => fightMob(`Dans les rues de ${capName(G.loc)}, on te reconnaît. Des regards durs, puis des poings.`, hub) });
 }
