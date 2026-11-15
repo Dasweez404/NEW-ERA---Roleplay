@@ -17,7 +17,8 @@ function stoneMenu() {
     if (pc.stones[s.id]) return;
     const known = !!W.stoneClue[s.id]; const hold = W.stoneHolder[s.id]; const loc = W.stoneLoc[s.id];
     if (!known) return;
-    L.push(C(`Pierre de ${s.name} — ${holderName(hold)} (${stateName(loc)})`, () => stoneAttempt(s.id), { sub: `Difficulté ${stars(stoneTier(hold))}`, req: { ok: () => G.loc !== loc ? `Rends-toi à ${capName(loc)} (${stateName(loc)})` : null } }));
+    if (G.loc !== loc) { const r = otRoute(G.loc, loc); L.push(C(`Pierre de ${s.name} — rends-toi à ${capName(loc)}`, () => travelMenu(loc), { ic: '🚆', sub: `${holderName(hold)} (${stateName(loc)}) · ${r ? r.hops + ' arrêt(s) · ' + r.cost + ' ¢ en Orbitrail' : 'trajet indisponible'} · touche pour y aller` })); }
+    else L.push(C(`Pierre de ${s.name} — ${holderName(hold)} (${stateName(loc)})`, () => stoneAttempt(s.id), { sub: `Difficulté ${stars(stoneTier(hold))}` }));
   });
   L.push(C('Lire les glyphes déjà déchiffrés', glyphLib));
   L.push(C('← Retour', actionsMenu));
