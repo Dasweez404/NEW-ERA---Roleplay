@@ -1942,6 +1942,7 @@ function actionsMenu() {
   L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
   L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
+  L.unshift(C('Contrats ici', () => contractCard(), { ic: '🎯', sub: 'Missions de ta faction, du Marché Noir, de notables locaux.' }));
   L.unshift(C('Continuer l’aventure', hub, { ic: '▶', cls: 'safe', sub: 'Missions, rencontres, événements : tout arrive ici, carte après carte.' }));
   show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText().slice(0, 1), choices: L, tiles: true, banner: true });
 }
@@ -2001,7 +2002,7 @@ function travelGo(to, r, weeks) {
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();
-    show({ kicker: 'Orbitrail', title: `Arrivée à ${capName(to)}`, text: [`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : ''}`], choices: [C('Continuer', hub)] });
+    contractCard(`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '. ' : ''}Avant de reprendre l’intrigue, quelques contrats se présentent.`);
   });
 }
 function travelHover() {
@@ -2141,10 +2142,16 @@ function dealCard() {
   conflictPool(pool); pool.push({ w: 16, f: deedCard });
   const e = wpick(pool, x => x.w); e.f();
 }
-function missionCard() {
-  const pc = G.pc; const [t0, t1] = tiersForGrade();
-  let emp = (pc.faction !== 'civils' && chance(0.72)) ? pc.faction : ((pc.rep.noir || 0) >= 5 && pc.faction !== 'fa' && chance(0.4) ? 'noir' : 'civils');
-  const o = genOffer(emp, rint(Math.max(1, t0 - 1), t1)); o.feed = true; if (emp === 'fallen') o.fallen = true; missionApproach(o);
+function missionCard() { contractCard(); }
+// Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
+function contractCard(arrive) {
+  const pc = G.pc; const offers = getBoard().slice(); const L = [];
+  if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
+  const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
+  [...promo, ...rest].slice(0, 3).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
+  if (offers.length > 3) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
+  L.push(C('Poursuivre l’intrigue', hub, { cls: 'back', ic: '▶', sub: 'Laisser les contrats, la suite des événements arrive.' }));
+  show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.'], choices: L });
 }
 function stoneCard(s) {
   const hold = G.world.stoneHolder[s.id];
@@ -2285,7 +2292,7 @@ function vehicleGo(vid, to, wk, fuel, r) {
     const L = !v.legal ? fx({ heat: 2 }) : [];
     if (ctl) return controleFA(r);
     if (chance(0.32)) return (v.scope === 'any' || v.scope === 'cold' || chance(0.5)) ? (v.armed && chance(0.6) ? show({ kicker: 'Route', title: 'Pillards en vue', text: ['Des maraudeurs t’attendent… puis aperçoivent tes canons et décampent.'], fx: fx({ xp: 12 }), choices: [C('Continuer', hub)] }) : climateEvent()) : banditEvent();
-    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Continuer', hub)] });
+    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Voir les contrats d’ici', () => contractCard(), { ic: '🎯' }), C('Poursuivre l’intrigue', hub, { cls: 'back' })] });
   });
 }
 function vehicleCard() {
@@ -2616,12 +2623,12 @@ function missionBoard() {
   offers.forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${o.roleOffer ? '🎭 ' + ROLES[o.roleOffer].name + ' — ' : ''}${a.n} (${o.empName}) — difficulté ${stars(o.tier)}`, () => missionBrief(o), { sub: `${o.tgtName} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, req: { ok: () => pc.faction === 'fa' && o.emp === 'noir' ? 'Impossible pour un officier de la F.A.' : null } })); });
   if (pc.implant) L.unshift(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   L.push(C('Chercher d’autres contrats (1 semaine)', () => { advance(1); if (G.status !== 'play') return; G.board = null; missionBoard(); }));
-  L.push(C('← Retour', actionsMenu));
+  L.push(C('← Retour', () => contractCard()));
   show({ kicker: 'Missions', title: 'Tableau de missions', text: ['Contrats de ta faction, du Marché Noir ou de notables locaux. La difficulté suit ton grade ; plus haut tu vises, plus ça paie — et plus ça mord.'], choices: L });
 }
 function missionBrief(o) {
   const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `Récompense : <b>${o.pay} ¢</b>, ${o.xp} XP${o.merit ? ', +' + o.merit + ' mérite' : ''}. Durée : ${o.weeks} semaine(s).${o.promo ? ' <b>Si tu réussis, tu montes en grade.</b>' : ''}`, `<span class="mut">Employeur : ${esc(leaderName(o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp))}.</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', missionBoard)] });
+  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `Récompense : <b>${o.pay} ¢</b>, ${o.xp} XP${o.merit ? ', +' + o.merit + ' mérite' : ''}. Durée : ${o.weeks} semaine(s).${o.promo ? ' <b>Si tu réussis, tu montes en grade.</b>' : ''}`, `<span class="mut">Employeur : ${esc(leaderName(o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp))}.</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
 }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);

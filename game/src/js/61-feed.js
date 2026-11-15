@@ -28,10 +28,16 @@ function dealCard() {
   conflictPool(pool); pool.push({ w: 16, f: deedCard });
   const e = wpick(pool, x => x.w); e.f();
 }
-function missionCard() {
-  const pc = G.pc; const [t0, t1] = tiersForGrade();
-  let emp = (pc.faction !== 'civils' && chance(0.72)) ? pc.faction : ((pc.rep.noir || 0) >= 5 && pc.faction !== 'fa' && chance(0.4) ? 'noir' : 'civils');
-  const o = genOffer(emp, rint(Math.max(1, t0 - 1), t1)); o.feed = true; if (emp === 'fallen') o.fallen = true; missionApproach(o);
+function missionCard() { contractCard(); }
+// Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
+function contractCard(arrive) {
+  const pc = G.pc; const offers = getBoard().slice(); const L = [];
+  if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
+  const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
+  [...promo, ...rest].slice(0, 3).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
+  if (offers.length > 3) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
+  L.push(C('Poursuivre l’intrigue', hub, { cls: 'back', ic: '▶', sub: 'Laisser les contrats, la suite des événements arrive.' }));
+  show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.'], choices: L });
 }
 function stoneCard(s) {
   const hold = G.world.stoneHolder[s.id];

@@ -50,7 +50,7 @@ function vehicleGo(vid, to, wk, fuel, r) {
     const L = !v.legal ? fx({ heat: 2 }) : [];
     if (ctl) return controleFA(r);
     if (chance(0.32)) return (v.scope === 'any' || v.scope === 'cold' || chance(0.5)) ? (v.armed && chance(0.6) ? show({ kicker: 'Route', title: 'Pillards en vue', text: ['Des maraudeurs t’attendent… puis aperçoivent tes canons et décampent.'], fx: fx({ xp: 12 }), choices: [C('Continuer', hub)] }) : climateEvent()) : banditEvent();
-    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Continuer', hub)] });
+    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Voir les contrats d’ici', () => contractCard(), { ic: '🎯' }), C('Poursuivre l’intrigue', hub, { cls: 'back' })] });
   });
 }
 function vehicleCard() {

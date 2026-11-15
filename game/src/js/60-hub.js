@@ -22,6 +22,7 @@ function actionsMenu() {
   L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
   L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
+  L.unshift(C('Contrats ici', () => contractCard(), { ic: '🎯', sub: 'Missions de ta faction, du Marché Noir, de notables locaux.' }));
   L.unshift(C('Continuer l’aventure', hub, { ic: '▶', cls: 'safe', sub: 'Missions, rencontres, événements : tout arrive ici, carte après carte.' }));
   show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText().slice(0, 1), choices: L, tiles: true, banner: true });
 }
@@ -81,7 +82,7 @@ function travelGo(to, r, weeks) {
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();
-    show({ kicker: 'Orbitrail', title: `Arrivée à ${capName(to)}`, text: [`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : ''}`], choices: [C('Continuer', hub)] });
+    contractCard(`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '. ' : ''}Avant de reprendre l’intrigue, quelques contrats se présentent.`);
   });
 }
 function travelHover() {

@@ -100,12 +100,12 @@ function missionBoard() {
   offers.forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${o.roleOffer ? '🎭 ' + ROLES[o.roleOffer].name + ' — ' : ''}${a.n} (${o.empName}) — difficulté ${stars(o.tier)}`, () => missionBrief(o), { sub: `${o.tgtName} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, req: { ok: () => pc.faction === 'fa' && o.emp === 'noir' ? 'Impossible pour un officier de la F.A.' : null } })); });
   if (pc.implant) L.unshift(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   L.push(C('Chercher d’autres contrats (1 semaine)', () => { advance(1); if (G.status !== 'play') return; G.board = null; missionBoard(); }));
-  L.push(C('← Retour', actionsMenu));
+  L.push(C('← Retour', () => contractCard()));
   show({ kicker: 'Missions', title: 'Tableau de missions', text: ['Contrats de ta faction, du Marché Noir ou de notables locaux. La difficulté suit ton grade ; plus haut tu vises, plus ça paie — et plus ça mord.'], choices: L });
 }
 function missionBrief(o) {
   const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `Récompense : <b>${o.pay} ¢</b>, ${o.xp} XP${o.merit ? ', +' + o.merit + ' mérite' : ''}. Durée : ${o.weeks} semaine(s).${o.promo ? ' <b>Si tu réussis, tu montes en grade.</b>' : ''}`, `<span class="mut">Employeur : ${esc(leaderName(o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp))}.</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', missionBoard)] });
+  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `Récompense : <b>${o.pay} ¢</b>, ${o.xp} XP${o.merit ? ', +' + o.merit + ' mérite' : ''}. Durée : ${o.weeks} semaine(s).${o.promo ? ' <b>Si tu réussis, tu montes en grade.</b>' : ''}`, `<span class="mut">Employeur : ${esc(leaderName(o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp))}.</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
 }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
