@@ -11,15 +11,16 @@ function titleScreen() {
   UI.scene = { bare: true, extra: h('div', { class: 'hero' }, envBanner(city, 260, 'night'),
     h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Cratès · 2071'),
     h('p', { class: 'lore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
-    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('À propos & sources', aboutScreen)),
+    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('Règles', rulesScreen), btn('À propos & sources', aboutScreen)),
     h('div', { class: 'foot' }, '52 États · 31 factions · 441 personnages')) };
   UI.after = []; render(); runAfter();
 }
+function rulesScreen(back) { show({ kicker: 'Règles', title: 'Comment jouer', text: [], extra: tabAide(), choices: [C('← Retour', typeof back === 'function' ? back : titleScreen)] }); }
 function aboutScreen() {
   show({ kicker: 'À propos', title: 'Fidélité et libertés prises', text: [
     '<b>Repris tel quel des documents :</b> l’histoire (2048 → 2071+), les 52 États et leurs capitales, les 31 factions (26 du protocole ANTI + 5 secrètes) et la Force d’Autorité, les 3 types de pouvoirs + hybrides, l’annuaire complet de 434 pouvoirs avec leurs porteurs, les 441 personnages du tableur, les 8 styles de combat, les 16 pierres antiques (royaumes, souverains, clans Bidh/Kaos, glyphes), la frise d’Ora (juin 2071 → 2074), la carte de l’Orbitrail (13 lignes).',
     '<b>Improvisé (à valider) :</b> les 5 attributs (choix de l’utilisateur), les règles de jeu (jets, énergie, éveil, primes), les relations précises entre factions (déduites de la timeline), les faiblesses de pouvoir, la liste des détenteurs de pierres au début de la partie (déduite des textes), les temples des pierres cachées, les dates intermédiaires de certains arcs, les prix, les ennemis types.',
-    '<b>Orbitrail :</b> transcrite à la main depuis l’image : vérifie les lignes sur la carte (onglet Carte) et dis-moi s’il manque ou s’il y a trop d’un lien.',
+    '<b>Orbitrail :</b> transcrite à la main depuis l’image : vérifie les lignes sur la carte (quand tu voyages) et dis-moi s’il manque ou s’il y a trop d’un lien.',
     '<b>Notes sur les sources :</b> le PDF dit « Sanctuaire Shūshì » alors que le tableur écrit « Hépíng » ; « costumier » apparaît deux fois dans ta liste de rôles (une seule entrée conservée) ; quelques erreurs de description dans l’annuaire des pouvoirs (par exemple l’Éléphant décrit « du poisson hérisson ») ont été ignorées : les noms et numéros de porteurs sont gardés.',
   ], choices: [C('← Retour', titleScreen)] });
 }
@@ -34,6 +35,7 @@ function newGameMenu() {
     C('Personnage customisé', () => { CR = { name: '', gender: 'N/B', age: 24, faction: null, origin: null, ptype: null, powers: [], style: null, base: { corps: 2, agilite: 2, intellect: 2, charisme: 2, maitrise: 2 }, add: { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }, canon: true }; crName(); }, { sub: 'Nom, faction, origine, pouvoir, style de combat, attributs. À chaque étape tu peux tirer au hasard (🎲).', cls: 'safe' }),
     C('Un personnage existant, au hasard', () => randomChar(), { sub: 'Tu es tiré au sort parmi les 441 personnages du tableur, tout est pré-rempli.' }),
     C('Choisir un personnage existant dans la liste', browseChars, { sub: 'Filtrer par faction.' }),
+    C('📖 Règles du jeu', () => rulesScreen(newGameMenu), { sub: 'À lire avant de commencer : but, jets, grades, primes.' }),
     C('← Retour', titleScreen)] });
 }
 // ── personnage existant ──

@@ -113,7 +113,7 @@ function tipEl() {
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
 // ───────── Panneau latéral (bureau) / tiroir + dock (mobile) ─────────
-const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions'], ['pierres', '💎', 'Pierres'], ['carte', '🗺', 'Carte'], ['journal', '📜', 'Journal'], ['aide', '❓', 'Règles']];
+const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions'], ['pierres', '💎', 'Pierres']];
 const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
@@ -121,9 +121,9 @@ function sideEl() {
   box.append(TABFN()[UI.tab]()); return box;
 }
 function dockEl() {
-  return h('nav', { class: 'dock' }, h('button', { class: 'dk agir', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, h('span', { class: 'i' }, '⚡'), h('span', { class: 'n' }, 'Agir')), TABS.filter(t => t[0] !== 'aide' && t[0] !== 'factions' || true).map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
+  return h('nav', { class: 'dock' }, h('button', { class: 'dk agir', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, h('span', { class: 'i' }, '⚡'), h('span', { class: 'n' }, 'Agir')), TABS.map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
 }
-function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i][0] === tab)); }
+function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i - 1] && TABS[i - 1][0] === tab)); }
 function closeSheet() { UI.sheetOpen = false; const s = $('#sheet'); if (s) s.classList.remove('open'); document.querySelectorAll('.dk').forEach(b => b.classList.remove('on')); }
 function fillSheet() {
   let s = $('#sheet'); if (!s) { s = h('div', { id: 'sheet' }); document.body.append(s); }
@@ -183,8 +183,8 @@ function tabGroupe() {
 }
 function charPowerText(c) { const ps = (c.powers.length ? c.powers : fallbackPowers(c)).map(id => PW[id].name); return ps.length ? ps.join(' + ') : 'sans pouvoir'; }
 function tabFactions() {
-  const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, 'Trahir une faction braque ses alliés contre toi.'));
-  const ids = Object.keys(F).filter(f => f !== 'civils').sort((a, b) => (pc.rep[b] || 0) - (pc.rep[a] || 0));
+  const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, 'Seules les factions avec lesquelles tu as un lien (amitié ou hostilité) sont listées. Trahir une faction braque ses alliés contre toi.'));
+  const ids = Object.keys(F).filter(f => f !== 'civils' && (f === pc.faction || Math.abs(pc.rep[f] || 0) >= 15)).sort((a, b) => (pc.rep[b] || 0) - (pc.rep[a] || 0));
   const wl = (G.world.warLog || []).slice(0, 5); if (wl.length) { box.append(h('h3', {}, '⚔ Conflits en cours')); wl.forEach(x => box.append(h('div', { class: 'small' }, x))); }
   const t = h('table', { class: 't' }); ids.forEach(fid => { const v = pc.rep[fid] || 0; t.append(h('tr', {}, h('td', {}, F[fid].name + (fid === pc.faction ? ' ★' : '')), h('td', { class: v >= 15 ? 'good' : v <= -20 ? 'badc' : 'mut' }, repLevel(v)), h('td', {}, v))); });
   box.append(t); return box;

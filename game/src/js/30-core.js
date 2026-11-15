@@ -47,7 +47,7 @@ const dcOf = (tier, mod = 0) => 10 + 3 * tier + mod;
 function checkLine(r) { return `🎲 d20 ${r.r} + ${r.mod} = ${r.total} contre ${r.dc} — ${r.crit ? 'RÉUSSITE CRITIQUE' : r.fumble ? 'ÉCHEC CRITIQUE' : r.ok ? 'réussite' : 'échec'}`; }
 
 // ───────── Réputation / prime ─────────
-function repLevel(v) { return v <= -60 ? 'Ennemi juré' : v <= -20 ? 'Hostile' : v < 15 ? 'Neutre' : v < 50 ? 'Amical' : v < 80 ? 'Allié' : 'Frère d’armes'; }
+function repLevel(v) { return v <= -60 ? 'Ennemi juré' : v <= -20 ? 'Hostile' : v <= -10 ? 'Méfiant' : v < 15 ? 'Neutre' : v < 50 ? 'Amical' : v < 80 ? 'Allié' : 'Frère d’armes'; }
 function addRep(fid, d, opts = {}) {
   if (!F[fid] || !d) return;
   const pc = G.pc; const before = pc.rep[fid] || 0; pc.rep[fid] = clamp(before + d, -100, 100);
