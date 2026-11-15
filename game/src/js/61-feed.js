@@ -25,7 +25,7 @@ function dealCard() {
   if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
-  conflictPool(pool);
+  conflictPool(pool); pool.push({ w: 16, f: deedCard });
   const e = wpick(pool, x => x.w); e.f();
 }
 function missionCard() {
