@@ -69,7 +69,7 @@ function diceEl(r, still) {
 document.addEventListener('keydown', e => {
   if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key === 'm' || e.key === 'M') { toggleMute(); if (G && G.status === 'play') render(true); return; }
-  if (e.key === 'Escape') { if (UI.sheetOpen) closeSheet(); return; }
+  if (e.key === 'Escape' || e.key === 'Backspace') { if (UI.sheetOpen) closeSheet(); else if (UI.back && !document.querySelector('.splash')) { e.preventDefault(); UI.back(); } return; }
   const bs = [...document.querySelectorAll('.choices .ch')].filter(b => !b.disabled);
   if (/^[1-9]$/.test(e.key)) { const b = document.querySelector(`.choices .ch[data-k="${e.key}"]`); if (b && !b.disabled) b.click(); }
   else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === document.body) { const c = document.querySelector('.choices .ch.cta:not([disabled])'); if (c) { e.preventDefault(); c.click(); } }

@@ -366,6 +366,19 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .map .st.go circle:first-child{animation:none!important}.map .recoring{animation:none!important}
 .map.lod text:not(.recotxt):not(.keytxt){display:none}
 .mapscroll{contain:layout paint;overscroll-behavior:contain}
+
+/* ── UX : navigation fluide ── */
+.rv{animation-duration:.28s;animation-delay:calc(var(--d,0s) + var(--i,0)*28ms)}
+.backchip{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #34344f;color:var(--mut,#9aa0c8);font:700 .82rem var(--fm,monospace);letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;margin:0 0 8px;cursor:pointer;min-height:36px}
+.backchip:hover,.backchip:active{border-color:var(--acc);color:#fff}
+.tip{display:flex;gap:8px;align-items:flex-start;background:#15152a;border:1px dashed #fcee09;color:#e9ebff;font-size:.85rem;line-height:1.35;padding:8px 10px;margin:6px 0}.tip .x{background:none;border:0;color:#9aa0c8;font-size:1rem;cursor:pointer;min-width:30px;min-height:30px}
+.ch .s{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+@media(max-width:700px){
+  .hud-pills .pill:nth-child(n+4){display:none}
+  .scene .title{font-size:1.15rem;margin-bottom:4px}
+  .scene{padding:10px 12px}
+  .ch{min-height:52px}
+}
 </style>
 <div id="app"></div>
 <script>
@@ -1037,17 +1050,25 @@ function render(quiet) {
   const live = G && G.status === 'play';
   const rollEl = sc.roll ? diceEl(sc.roll, quiet || sc.rolled) : null; if (sc.roll) sc.rolled = true;
   const d = sc.roll && !quiet ? 1.05 : 0;
+  const back = (sc.choices || []).filter(Boolean).find(c => /^←/.test(c.label)); UI.back = back ? back.go : null;
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
+    back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
-  if (live) { app.append(hudEl()); if (!sc.banner) app.append(envBanner(G.loc, innerWidth < 640 ? 70 : 92)); const tk = tickerEl(); if (tk) app.append(tk); }
+  if (live) { app.append(hudEl()); if (!sc.banner && !back) app.append(envBanner(G.loc, innerWidth < 640 ? 70 : 92)); const tk = tickerEl(); if (tk) app.append(tk); const tip = tipEl(); if (tip) app.append(tip); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
   if (live) app.append(dockEl());
   if (live && UI.sheetOpen) fillSheet();
   if (sc.after && !sc.afterRan) { sc.afterRan = true; UI.after.push(sc.after); }
   if (d && !quiet) { const ch = $('.choices', main); if (ch) { ch.style.pointerEvents = 'none'; setTimeout(() => { ch.style.pointerEvents = ''; }, d * 1000 + 200); } }
+  if (!quiet) { try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { } }
   runAfter();
+}
+function tipEl() {
+  let seen = 0; try { seen = +localStorage.getItem('ne_tip') || 0; } catch (e) { } if (seen >= 3 || UI.tipHide) return null;
+  try { if (UI.tipShown !== G.wk) { UI.tipShown = G.wk; localStorage.setItem('ne_tip', seen + 1); } } catch (e) { }
+  return h('div', { class: 'tip' }, h('span', {}, '💡 Touche un choix pour avancer. ⚡ = menu d’actions (voyage, ville, faction). Barre du bas = fiche, sac, carte.'), h('button', { class: 'x', onclick: () => { UI.tipHide = 1; try { localStorage.setItem('ne_tip', 9); } catch (e) { } render(true); } }, '✕'));
 }
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
@@ -1339,7 +1360,7 @@ function diceEl(r, still) {
 document.addEventListener('keydown', e => {
   if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key === 'm' || e.key === 'M') { toggleMute(); if (G && G.status === 'play') render(true); return; }
-  if (e.key === 'Escape') { if (UI.sheetOpen) closeSheet(); return; }
+  if (e.key === 'Escape' || e.key === 'Backspace') { if (UI.sheetOpen) closeSheet(); else if (UI.back && !document.querySelector('.splash')) { e.preventDefault(); UI.back(); } return; }
   const bs = [...document.querySelectorAll('.choices .ch')].filter(b => !b.disabled);
   if (/^[1-9]$/.test(e.key)) { const b = document.querySelector(`.choices .ch[data-k="${e.key}"]`); if (b && !b.disabled) b.click(); }
   else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === document.body) { const c = document.querySelector('.choices .ch.cta:not([disabled])'); if (c) { e.preventDefault(); c.click(); } }
@@ -1970,12 +1991,12 @@ function actionsMenu() {
   L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
   L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
-  show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
+  show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText().slice(0, 1), choices: L, tiles: true, banner: true });
 }
 function cityMenu() {
   const pc = G.pc; const L = [];
   L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
+  L.push(C('Marché', () => shopMenu(false), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
   L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
   L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
   L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Terminer la partie avec un bonus de score (×1,25).', cls: 'danger' }));
@@ -2062,33 +2083,9 @@ function lieLow() {
 }
 
 // ───────── Marché ─────────
-function shopMenu() {
-  const pc = G.pc; const blackOk = (pc.rep.noir || 0) >= 10 || ['galleon', 'check', 'arena', 'slummer', 'rapinas', 'manacorp', 'gamma', 'necropunks', 'committed'].includes(pc.faction) || pc.faction === 'fallen';
-  const L = [];
-  L.push(C('Marché légal de la ville', () => shopList(SHOP_LEGAL, 1, false), { sub: wantedStars() >= 2 ? '⚠ Tu es recherché : risque d’être reconnu.' : 'Boutiques, enseignes, bornes automatisées.' }));
-  L.push(C('Marché Noir', () => shopList(SHOP_BLACK, 1.35, true), { sub: 'Armes lourdes, faux papiers, brouilleurs, hover… à prix fort.', req: { ok: () => blackOk ? null : 'Il faut un contact : 10 de réputation avec le Marché Noir (rends-lui un service) ou appartenir à une faction liée à lui' } }));
-  L.push(C('Vendre un équipement', sellMenu, { req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
-  L.push(C('← Retour', cityMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
-}
-function shopList(ids, mult, black) {
-  const pc = G.pc; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); const L = [];
-  [...new Set(ids)].forEach(id => {
-    const it = ITEMS[id]; const price = Math.round(it.price * mult * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1));
-    L.push(C(`${it.n} — ${price} ¢`, () => buy(id, price, ids, mult, black), { sub: it.desc, req: { money: price } }));
-  });
-  L.push(C('← Retour', shopMenu)); show({ kicker: black ? 'Marché Noir' : 'Marché', title: black ? 'Le Marché Noir' : 'Boutiques de la ville', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
-}
-function buy(id, price, ids, mult, black) {
-  const pc = G.pc; pc.money -= price; giveItem(id);
-  const it = ITEMS[id]; if ((it.t === 'arme' && !pc.eq.arme) || (it.t === 'armure' && !pc.eq.armure)) pc.eq[it.t === 'arme' ? 'arme' : 'armure'] = id;
-  if (it.use === 'faux') { pc.faux += 3; takeItem('faux'); } if (it.use === 'brouil') { pc.brouil += 3; takeItem('brouilleur'); }
-  const L = [];
-  if (!black && wantedStars() >= 2 && chance(0.12 * wantedStars())) { return show({ kicker: 'Marché', title: 'Reconnu !', text: ['Un vendeur lève les yeux de son écran… puis vers la caméra. Il t’a reconnu.'], fx: fx({ heat: 5 }), choices: [C('Filer', hub)] }); }
-  shopList(ids, mult, black);
-}
 function sellMenu() {
   const L = []; Object.keys(G.pc.inv).forEach(id => { const it = ITEMS[id]; const v = Math.round(it.price * 0.4); L.push(C(`Vendre ${it.n} — ${v} ¢`, () => { takeItem(id); G.pc.money += v; if (G.pc.eq.arme === id && !hasItem(id)) G.pc.eq.arme = null; if (G.pc.eq.armure === id && !hasItem(id)) G.pc.eq.armure = null; sellMenu(); }, { sub: it.desc })); });
-  L.push(C('← Retour', shopMenu)); show({ kicker: 'Marché', title: 'Vendre', text: [`Tu as ${fmt(G.pc.money)} ¢.`], choices: L });
+  L.push(C('← Retour', () => shopMenu())); show({ kicker: 'Marché', title: 'Vendre', text: [`Tu as ${fmt(G.pc.money)} ¢.`], choices: L });
 }
 
 // ───────── Recrutement et rencontres ─────────
@@ -2213,7 +2210,7 @@ function restCard() {
   show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent. Un faux pas de plus et ça tourne mal.'], choices: [C('Dormir une semaine', () => doRest(1), { ic: '🛏', cls: 'safe' }), C('Se faire soigner (80 ¢)', () => doRest(2, 80), { ic: '💊', req: { money: 80 } }), C('Continuer quand même', () => dealCard(), { cls: 'risk' })] });
 }
 function townCard() {
-  show({ kicker: capName(G.loc).toUpperCase(), title: 'Un moment de répit', text: ['Entre deux coups durs, la ville offre ses boutiques, ses visages et ses salles d’entraînement.'], choices: [C('Faire le tour des marchés', shopMenu, { ic: '🛒' }), C('Chercher des recrues', recruitMenu, { ic: '🤝' }), C('S’entraîner', trainMenu, { ic: '🎓' }), C('Passer son chemin', hub, { cls: 'back' })] });
+  show({ kicker: capName(G.loc).toUpperCase(), title: 'Un moment de répit', text: ['Entre deux coups durs, la ville offre ses boutiques, ses visages et ses salles d’entraînement.'], choices: [C('Faire le tour des marchés', () => shopMenu(false), { ic: '🛒' }), C('Chercher des recrues', recruitMenu, { ic: '🤝' }), C('S’entraîner', trainMenu, { ic: '🎓' }), C('Passer son chemin', hub, { cls: 'back' })] });
 }
 function travelCard() {
   const arcs = (G.world.arcs || []).filter(a => a.state !== G.loc); const nb = neighbors(G.loc); if (!nb.length && !arcs.length) return missionCard(); const to = arcs.length && chance(0.6) ? pick(arcs).state : pick(nb); const r = otRoute(G.loc, to);
@@ -2394,17 +2391,31 @@ const PK_SUB = {
   'Équidés & camélidés': [['c_mobility', 2], ['travel', 5], ['rest', 1]], 'Bovidés': [['dmg', 1], ['def', 1], ['stun', 15]], 'Cervidés & girafidés': [['dodge', 1], ['c_scout', 1], ['c_mobility', 1]], 'Pachydermes & suidés': [['def', 2], ['dmg', 2], ['shield', 5]],
   'Félins': [['crit', 1], ['first', 1], ['c_stealth', 2]], 'Canidés': [['bond', 1], ['c_scout', 2], ['dmg', 1]], 'Ours & pandas': [['def', 2], ['dmg', 2], ['regen', 1]], 'Mustélidés & autres carnivores': [['c_stealth', 1], ['dodge', 1], ['weaken', 1]],
 };
-const _perkCache = {};
-function perkOf(p) {
-  if (!p) return null; if (_perkCache[p.id]) return _perkCache[p.id];
-  let e = PK_TABLE[p.name]; let title;
-  if (e) { title = e[2]; e = [e[0], e[1]]; }
-  else { const opts = PK_SUB[p.sub] || [['dodge', 1]]; e = opts[hashStr(p.name + p.cat) % opts.length]; title = PERKS[e[0]][0]; }
-  const def = PERKS[e[0]]; return _perkCache[p.id] = { id: e[0], mag: e[1], title, desc: def[1](e[1]), kind: e[0].startsWith('c_') ? 'jets' : ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'bond', 'night'].includes(e[0]) ? 'hors combat' : 'combat' };
+// Chaque pouvoir : une particularité signature = un effet principal + un effet secondaire, combinaison unique parmi tous les pouvoirs
+const PK_SECOND = [['dodge', 1], ['shield', 3], ['dmg', 1], ['regen', 1], ['energy', 1], ['stun', 10], ['thorns', 1], ['first', 1], ['def', 1], ['weaken', 1], ['allyheal', 1], ['drain', 1], ['pierce', 1], ['cash', 5], ['xp', 5], ['quiet', 10], ['travel', 3], ['rest', 1], ['fix', 3], ['clue', 1], ['loot', 5], ['bond', 1], ['night', 1],
+  ['c_stealth', 1], ['c_scout', 1], ['c_social', 1], ['c_hack', 1], ['c_tech', 1], ['c_heal', 1], ['c_mobility', 1], ['c_defense', 1], ['c_combat', 1], ['c_control', 1]];
+let _perkAll = null;
+function buildPerks() {
+  _perkAll = {}; const used = new Set(), titles = {}; const list = Object.values(PW).sort((a, b) => String(a.id).localeCompare(String(b.id), 'fr', { numeric: true }));
+  list.forEach(p => {
+    let e = PK_TABLE[p.name], title;
+    if (e) { title = e[2]; e = [e[0], e[1]]; } else { const opts = PK_SUB[p.sub] || [['dodge', 1]]; e = opts[hashStr(p.name + p.cat) % opts.length]; title = PERKS[e[0]][0] + ' ' + (/^[aeiouyéèêâîôûh]/i.test(p.name) ? 'd’' : 'de ') + p.name; }
+    let k = hashStr('s' + p.name + p.id) % PK_SECOND.length, e2, key;
+    for (let n = 0; n < PK_SECOND.length; n++) { e2 = PK_SECOND[(k + n) % PK_SECOND.length]; key = e[0] + e[1] + '|' + e2[0] + e2[1]; if (e2[0] !== e[0] && !used.has(key)) break; }
+    if (used.has(key) || e2[0] === e[0]) { const alt = PK_SECOND.filter(x => x[0] !== e[0]); for (const x of alt) { for (const m of [1, 2, 3]) { const kk = e[0] + e[1] + '|' + x[0] + (x[1] * m); if (!used.has(kk)) { e2 = [x[0], x[1] * m]; key = kk; break; } } if (!used.has(key) || e2[0] !== e[0]) { if (!used.has(key)) break; } } }
+    used.add(key); (titles[title] = titles[title] || []).push(p);
+    const effs = [{ id: e[0], mag: e[1] }, { id: e2[0], mag: e2[1] }];
+    _perkAll[p.id] = { title, effs, key };
+  });
+  Object.values(titles).forEach(ps => { if (ps.length > 1) ps.forEach(p => { _perkAll[p.id].title += ` (${p.name})`; }); });
+  { const seen = {}; list.forEach(p => { const k = _perkAll[p.id]; if (seen[k.title]) k.title += ' · ' + (p.cat || p.id); seen[k.title] = 1; }); }
+  Object.values(_perkAll).forEach(k => { k.desc = k.effs.map(x => PERKS[x.id][1](x.mag)).join(' ; '); k.kind = k.effs.some(x => !x.id.startsWith('c_') && !HORS.includes(x.id)) ? 'combat' : k.effs.some(x => HORS.includes(x.id)) ? 'hors combat' : 'jets'; });
 }
+const HORS = ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'bond', 'night'];
+function perkOf(p) { if (!p) return null; if (!_perkAll) buildPerks(); return _perkAll[p.id] || null; }
 function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) : []; }
-function PK(id) { return perkList().reduce((t, k) => t + (k.id === id ? k.mag : 0), 0); }
-function perkChk(tags) { let b = 0; perkList().forEach(k => { if (k.id.startsWith('c_') && tags.includes(k.id.slice(2))) b += k.mag; }); return Math.min(3, b); }
+function PK(id) { let t = 0; perkList().forEach(k => k.effs.forEach(x => { if (x.id === id) t += x.mag; })); return t; }
+function perkChk(tags) { let b = 0; perkList().forEach(k => k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag; })); return Math.min(3, b); }
 const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };
 
 // ───────── Conflits entre factions : guerres, incidents de frontière, embuscades, choix de camp ─────────
@@ -2469,6 +2480,86 @@ function conflictPool(pool) {
   pool.push({ w: 6 + 4 * hostile + 4 * Math.min(3, wantedStars()), f: () => ambushCard() });
   pool.push({ w: 10, f: sideCard });
   const owner = W.terr[G.loc]; if (owner && owner !== pc.faction && owner !== 'pc' && F[owner] && relation(pc.faction, owner) <= -2) pool.push({ w: 28, f: () => ambushCard(owner) });
+}
+
+// ───────── Nouveaux objets terre-à-terre + boutique rangée par rayons (acheter ou voler) ─────────
+Object.assign(ITEMS, {
+  poing: { n: 'Poing américain', t: 'arme', dmg: 1, price: 30, desc: 'Un classique de ruelle.', tags: ['combat'] },
+  couteau: { n: 'Couteau de cuisine', t: 'arme', dmg: 1, price: 45, desc: 'Discret, silencieux, bon marché.', tags: ['combat', 'stealth'] },
+  batte: { n: 'Batte de baseball', t: 'arme', dmg: 2, price: 65, desc: 'Du bois, du poids, aucun mode d’emploi.', tags: ['combat'] },
+  pied: { n: 'Pied-de-biche', t: 'arme', dmg: 2, price: 75, desc: 'Arme et outil : ouvre les portes comme les têtes.', tags: ['combat', 'tech'] },
+  hache: { n: 'Hache de pompier', t: 'arme', dmg: 3, price: 140, desc: 'Lourde, efficace contre les portes et les armures.', tags: ['combat'] },
+  arbalete: { n: 'Arbalète de chasse', t: 'arme', dmg: 3, price: 210, desc: 'Silencieuse, à distance, sans capsule.', tags: ['ranged', 'stealth'], ranged: true },
+  cloueur: { n: 'Pistolet à clous industriel', t: 'arme', dmg: 4, price: 290, desc: 'Fait pour les chantiers, détourné pour la rue.', tags: ['ranged'], ranged: true },
+  chasse: { n: 'Fusil de chasse', t: 'arme', dmg: 6, price: 640, desc: 'Brutal à courte portée. Pas d’ogénite nécessaire.', tags: ['ranged'], ranged: true, black: true },
+  blouson: { n: 'Blouson de cuir renforcé', t: 'armure', def: 1, price: 70, desc: 'Résiste aux griffures, pas aux balles.', tags: [] },
+  casque: { n: 'Casque de chantier & genouillères', t: 'armure', def: 2, price: 150, desc: 'Moche, solide, bon marché.', tags: [] },
+  pareballes: { n: 'Gilet pare-balles', t: 'armure', def: 3, price: 340, desc: 'Une plaque de céramique et du bon sens.', tags: [] },
+  motard: { n: 'Tenue de motard blindée', t: 'armure', def: 3, price: 410, desc: 'Coques aux articulations : protège sans entraver.', tags: ['mobility'] },
+  bouclier: { n: 'Bouclier anti-émeute', t: 'armure', def: 4, price: 620, desc: 'Transparent, lourd, dissuasif.', tags: ['defense'] },
+  cafe: { n: 'Café serré', t: 'conso', price: 35, desc: 'Recharge 8 énergie. Ça ne coûte presque rien.', use: 'en8', stack: true },
+  bandage: { n: 'Bandages & désinfectant', t: 'conso', price: 50, desc: 'Soigne 15 PV.', use: 'hp15', stack: true },
+  boisson: { n: 'Boisson énergisante', t: 'conso', price: 90, desc: '+3 à tous les jets du prochain combat ou test.', use: 'stim', stack: true },
+  jumelles: { n: 'Jumelles', t: 'gadget', price: 90, desc: '+2 aux jets de repérage.', tags: ['scout'] },
+  crochets: { n: 'Set de crochetage', t: 'gadget', price: 130, desc: '+2 aux jets de furtivité.', tags: ['stealth'] },
+  grappin: { n: 'Corde & grappin', t: 'gadget', price: 110, desc: '+2 aux jets de mobilité.', tags: ['mobility'] },
+  radio: { n: 'Radio chiffrée', t: 'gadget', price: 170, desc: '+2 aux jets sociaux (coordination, négociation).', tags: ['social'] },
+  laptop: { n: 'Ordinateur portable durci', t: 'gadget', price: 480, desc: 'Permet de pirater et donne +2 aux jets de piratage.', tags: ['hack'] },
+  trousse: { n: 'Trousse de médecin', t: 'gadget', price: 220, desc: 'Permet de soigner et donne +2 aux jets de soins.', tags: ['heal'] },
+  masque: { n: 'Masque à gaz', t: 'gadget', price: 150, desc: '+2 aux jets de défense (gaz, fumées, poussière).', tags: ['defense'] },
+  detecteur: { n: 'Détecteur de métaux', t: 'gadget', price: 260, desc: '+3 pour trouver des vestiges et des pierres antiques.', tags: ['relic'] },
+  lunettes: { n: 'Lunettes de vision nocturne', t: 'gadget', price: 300, desc: '+2 aux jets de repérage.', tags: ['scout'] },
+  scooter: { n: 'Scooter', t: 'vehicule', price: 300, desc: 'Trajets de 3 arrêts max, même continent. Légal, économique.', v: { ic: '🛵', spd: 2, max: 3, scope: 'continent', legal: 1 } },
+  quad: { n: 'Quad tout-terrain', t: 'vehicule', price: 720, desc: 'Sur terre, 4 arrêts max, même continent (pas d’îles). Légal.', v: { ic: '🏍', spd: 3, max: 4, scope: 'land', legal: 1 } },
+  moto: { n: 'Moto', t: 'vehicule', price: 950, desc: 'Sur terre, 5 arrêts max, même continent (pas d’îles). Légale.', v: { ic: '🏍', spd: 3.5, max: 5, scope: 'land', legal: 1 } },
+  pickup: { n: 'Pick-up', t: 'vehicule', price: 1300, desc: 'Sur terre, 8 arrêts max, même continent. Robuste et légal.', v: { ic: '🛻', spd: 3.5, max: 8, scope: 'land', legal: 1 } },
+  voilier: { n: 'Voilier', t: 'vehicule', price: 2400, desc: 'Va partout par la mer, lentement. Légal, non tracé.', v: { ic: '⛵', spd: 1.2, max: 99, scope: 'any', legal: 1 } },
+  moto_v: { n: 'Moto sans papiers', t: 'vehicule', price: 520, black: true, desc: 'Volée et repeinte : sur terre, 5 arrêts max. Illégale.', v: { ic: '🏍', spd: 3.5, max: 5, scope: 'land', legal: 0 } },
+  bateau_p: { n: 'Vedette armée de pirates', t: 'vehicule', price: 4200, black: true, desc: 'Canons légers et moteurs gonflés : va partout par la mer, +2 en combat. Illégale.', v: { ic: '🚤', spd: 4, max: 99, scope: 'any', legal: 0, armed: 1 } },
+});
+SHOP_LEGAL.push('poing', 'couteau', 'batte', 'pied', 'hache', 'arbalete', 'cloueur', 'blouson', 'casque', 'pareballes', 'motard', 'bouclier', 'cafe', 'bandage', 'boisson', 'jumelles', 'crochets', 'grappin', 'radio', 'laptop', 'trousse', 'masque', 'detecteur', 'lunettes', 'scooter', 'quad', 'moto', 'pickup', 'voilier');
+SHOP_BLACK.push('chasse', 'moto_v', 'bateau_p');
+const SHOP_CATS = [['arme', '⚔', 'Armes', 'Mains nues, lames, armes à distance'], ['armure', '🛡', 'Armures', 'Protections, du blouson au déflecteur'], ['vehicule', '🚗', 'Véhicules', 'Scooters, motos, voitures, vaisseaux'], ['conso', '💊', 'Soins & vivres', 'Soins, énergie, stimulants'], ['gadget', '🧰', 'Outils & gadgets', 'Pour pirater, grimper, espionner']];
+const SHOP = { black: false, steal: false };
+const shopPrice = id => { const it = ITEMS[id]; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); return Math.round(it.price * (SHOP.black ? 1.35 : 1) * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1)); };
+const shopIds = () => [...new Set(SHOP.black ? SHOP_BLACK : SHOP_LEGAL)].filter(id => ITEMS[id]);
+function shopMenu(black) {
+  if (black != null) SHOP.black = black; if (black == null && !SHOP._init) { SHOP.black = false; } SHOP._init = true; SHOP.steal = false;
+  const pc = G.pc; const blackOk = (pc.rep.noir || 0) >= 10 || ['galleon', 'check', 'arena', 'slummer', 'rapinas', 'manacorp', 'gamma', 'necropunks', 'committed'].includes(pc.faction) || pc.faction === 'fallen';
+  const ids = shopIds(); const L = [];
+  SHOP_CATS.forEach(([t, ic, n, sub]) => { const k = ids.filter(id => ITEMS[id].t === t).length; if (k) L.push(C(`${n} (${k})`, () => shopCat(t), { ic, sub })); });
+  L.push(SHOP.black ? C('← Marché légal', () => shopMenu(false), { ic: '🏪', sub: 'Revenir aux boutiques de la ville.' }) : C('Marché Noir', () => shopMenu(true), { ic: '🕶', sub: 'Armes lourdes, faux papiers, véhicules illégaux… à prix fort.', req: { ok: () => blackOk ? null : 'Il faut un contact : 10 de réputation avec le Marché Noir ou une faction liée' } }));
+  L.push(C('Vendre', sellMenu, { ic: '💰', req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
+  L.push(C('← Retour', cityMenu, { cls: 'back' }));
+  show({ kicker: SHOP.black ? 'Marché Noir' : 'Marché', title: SHOP.black ? 'Le Marché Noir' : 'Boutiques de la ville', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.${wantedStars() >= 2 && !SHOP.black ? ' ⚠ Tu es recherché : risque d’être reconnu.' : ''}`], choices: L, tiles: true });
+}
+function itemStat(it) { return it.t === 'arme' ? `dégâts +${it.dmg}${it.ranged ? ' · distance' : ''}` : it.t === 'armure' ? `défense +${it.def}` : it.t === 'vehicule' ? `${it.v.legal ? 'légal' : 'ILLÉGAL'}${it.v.armed ? ' · armé' : ''}` : ''; }
+function shopCat(cat) {
+  const pc = G.pc; const cn = SHOP_CATS.find(c => c[0] === cat); const ids = shopIds().filter(id => ITEMS[id].t === cat).sort((a, b) => ITEMS[a].price - ITEMS[b].price); const L = [];
+  if (!SHOP.black) L.push(C(SHOP.steal ? '💸 Mode : VOL — touche pour acheter à la place' : '🕶 Passer en mode VOL (discret, risqué)', () => { SHOP.steal = !SHOP.steal; shopCat(cat); }, { cls: SHOP.steal ? 'danger' : 'back', sub: SHOP.steal ? 'Chaque objet touché sera volé : jet d’agilité (furtivité), alerte et combat en cas d’échec.' : '' }));
+  ids.forEach(id => {
+    const it = ITEMS[id]; const price = shopPrice(id); const eq = pc.eq.arme === id || pc.eq.armure === id; const own = pc.inv[id] || 0;
+    const stat = [itemStat(it), own ? `possédé ×${own}${eq ? ' · équipé' : ''}` : ''].filter(Boolean).join(' · ');
+    if (SHOP.steal && !SHOP.black) { const dc = stealDc(id); L.push(C(`${it.n} — voler`, () => stealItem(id, cat), { sub: `${stat ? stat + ' · ' : ''}${it.desc}`, odds: ['agilite', dc, ['stealth', 'disguise']], cls: 'risk' })); }
+    else L.push(C(`${it.n} — ${price} ¢`, () => buy(id, price, cat), { sub: `${stat ? stat + ' · ' : ''}${it.desc}`, req: { money: price } }));
+  });
+  L.push(C('← Rayons', () => shopMenu(), { cls: 'back' }));
+  show({ kicker: SHOP.black ? 'Marché Noir' : 'Marché', title: `${cn[1]} ${cn[2]}`, text: [`Tu as <b>${fmt(pc.money)} ¢</b>${SHOP.steal ? ' · <b class="badc">MODE VOL</b>' : ''}`], choices: L });
+}
+function equipIfFree(id) { const pc = G.pc, it = ITEMS[id]; if ((it.t === 'arme' && !pc.eq.arme) || (it.t === 'armure' && !pc.eq.armure)) { pc.eq[it.t === 'arme' ? 'arme' : 'armure'] = id; return true; } return false; }
+function buy(id, price, cat) {
+  const pc = G.pc; pc.money -= price; giveItem(id); const it = ITEMS[id]; equipIfFree(id); sfx('coin');
+  if (it.use === 'faux') { pc.faux += 3; takeItem('faux'); } if (it.use === 'brouil') { pc.brouil += 3; takeItem('brouilleur'); }
+  if (!SHOP.black && wantedStars() >= 2 && chance(0.12 * wantedStars())) return show({ kicker: 'Marché', title: 'Reconnu !', text: ['Un vendeur lève les yeux de son écran… puis vers la caméra. Il t’a reconnu.'], fx: fx({ heat: 5 }), choices: [C('Filer', hub)] });
+  toast(`${it.n} acheté`); shopCat(cat);
+}
+function stealDc(id) { const it = ITEMS[id]; return 12 + Math.min(5, Math.floor(it.price / 450)) * 2 + wantedStars() + (it.t === 'vehicule' ? 2 : 0); }
+function stealItem(id, cat) {
+  const pc = G.pc, it = ITEMS[id]; const dc = stealDc(id); const r = check('agilite', dc, ['stealth', 'disguise']);
+  if (r.ok) { giveItem(id); equipIfFree(id); const L = r.crit ? [] : fx({ heat: it.price > 1000 ? 3 : 1 }); G.score.stolen = (G.score.stolen || 0) + 1; logEntry(`Tu voles : ${it.n}.`); return show({ kicker: 'Vol', title: r.crit ? 'Un vol parfait' : 'Dans la poche', text: [`${it.n} disparaît sous ton manteau. Personne n’a rien vu${r.crit ? ' — pas même une caméra' : ' (ou presque)'}.`, checkLine(r)], fx: L, choices: [C('Continuer à fouiner', () => shopCat(cat)), C('Partir', cityMenu, { cls: 'back' })] }); }
+  const tier = Math.min(3, 1 + Math.floor(it.price / 900));
+  if (chance(0.5)) return show({ kicker: 'Vol', title: 'Tu files les mains vides', text: ['Une alarme, un cri. Tu cours à travers la foule et tu disparais.', checkLine(r)], fx: fx({ heat: 3, rep: { civils: -2 } }), choices: [C('Continuer', cityMenu)] });
+  show({ kicker: 'Vol', title: 'Pris sur le fait !', text: ['Des vigiles te barrent la route.', checkLine(r)], choices: [C('Se battre', () => startCombat({ title: 'Vigiles du marché', foes: [mkFoe('garde', tier), mkFoe('garde', tier)], intro: 'Les vigiles dégainent leurs matraques.', lethal: wantedStars() >= 2 ? 'capture' : 'robbed', canFlee: true, onWin: L => { giveItem(id); equipIfFree(id); show({ kicker: 'Vol', title: 'Tu repars avec', text: [`Les vigiles à terre, tu prends ${it.n} et tu files.`], fx: [...L, ...fx({ heat: 5, rep: { civils: -3 } })], choices: [C('Continuer', cityMenu)] }); }, onFlee: () => show({ title: 'En fuite', text: ['Tu t’échappes, mais sans rien.'], fx: fx({ heat: 3 }), choices: [C('Continuer', cityMenu)] }) }), { cls: 'danger' }), C('Rendre l’objet et s’excuser', () => { const r2 = check('charisme', 13, ['social']); if (r2.ok) show({ title: 'Ils te laissent partir', text: ['Un sourire gêné, un faux prétexte.', checkLine(r2)], choices: [C('Continuer', cityMenu)] }); else show({ title: 'Amende', text: ['On te fait payer.', checkLine(r2)], fx: fx({ money: -Math.min(pc.money, Math.round(it.price * 0.5)), heat: 2 }), choices: [C('Continuer', cityMenu)] }); }, { odds: ['charisme', 13, ['social']] })] });
 }
 
 // ───────── Missions : générateur d'archétypes + résolution par approches ─────────

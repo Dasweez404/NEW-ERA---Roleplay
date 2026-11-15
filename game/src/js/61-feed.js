@@ -49,7 +49,7 @@ function restCard() {
   show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent. Un faux pas de plus et ça tourne mal.'], choices: [C('Dormir une semaine', () => doRest(1), { ic: '🛏', cls: 'safe' }), C('Se faire soigner (80 ¢)', () => doRest(2, 80), { ic: '💊', req: { money: 80 } }), C('Continuer quand même', () => dealCard(), { cls: 'risk' })] });
 }
 function townCard() {
-  show({ kicker: capName(G.loc).toUpperCase(), title: 'Un moment de répit', text: ['Entre deux coups durs, la ville offre ses boutiques, ses visages et ses salles d’entraînement.'], choices: [C('Faire le tour des marchés', shopMenu, { ic: '🛒' }), C('Chercher des recrues', recruitMenu, { ic: '🤝' }), C('S’entraîner', trainMenu, { ic: '🎓' }), C('Passer son chemin', hub, { cls: 'back' })] });
+  show({ kicker: capName(G.loc).toUpperCase(), title: 'Un moment de répit', text: ['Entre deux coups durs, la ville offre ses boutiques, ses visages et ses salles d’entraînement.'], choices: [C('Faire le tour des marchés', () => shopMenu(false), { ic: '🛒' }), C('Chercher des recrues', recruitMenu, { ic: '🤝' }), C('S’entraîner', trainMenu, { ic: '🎓' }), C('Passer son chemin', hub, { cls: 'back' })] });
 }
 function travelCard() {
   const arcs = (G.world.arcs || []).filter(a => a.state !== G.loc); const nb = neighbors(G.loc); if (!nb.length && !arcs.length) return missionCard(); const to = arcs.length && chance(0.6) ? pick(arcs).state : pick(nb); const r = otRoute(G.loc, to);

@@ -365,3 +365,16 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .map .st.go circle:first-child{animation:none!important}.map .recoring{animation:none!important}
 .map.lod text:not(.recotxt):not(.keytxt){display:none}
 .mapscroll{contain:layout paint;overscroll-behavior:contain}
+
+/* ── UX : navigation fluide ── */
+.rv{animation-duration:.28s;animation-delay:calc(var(--d,0s) + var(--i,0)*28ms)}
+.backchip{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #34344f;color:var(--mut,#9aa0c8);font:700 .82rem var(--fm,monospace);letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;margin:0 0 8px;cursor:pointer;min-height:36px}
+.backchip:hover,.backchip:active{border-color:var(--acc);color:#fff}
+.tip{display:flex;gap:8px;align-items:flex-start;background:#15152a;border:1px dashed #fcee09;color:#e9ebff;font-size:.85rem;line-height:1.35;padding:8px 10px;margin:6px 0}.tip .x{background:none;border:0;color:#9aa0c8;font-size:1rem;cursor:pointer;min-width:30px;min-height:30px}
+.ch .s{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+@media(max-width:700px){
+  .hud-pills .pill:nth-child(n+4){display:none}
+  .scene .title{font-size:1.15rem;margin-bottom:4px}
+  .scene{padding:10px 12px}
+  .ch{min-height:52px}
+}

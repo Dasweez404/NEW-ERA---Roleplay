@@ -48,15 +48,29 @@ const PK_SUB = {
   'Équidés & camélidés': [['c_mobility', 2], ['travel', 5], ['rest', 1]], 'Bovidés': [['dmg', 1], ['def', 1], ['stun', 15]], 'Cervidés & girafidés': [['dodge', 1], ['c_scout', 1], ['c_mobility', 1]], 'Pachydermes & suidés': [['def', 2], ['dmg', 2], ['shield', 5]],
   'Félins': [['crit', 1], ['first', 1], ['c_stealth', 2]], 'Canidés': [['bond', 1], ['c_scout', 2], ['dmg', 1]], 'Ours & pandas': [['def', 2], ['dmg', 2], ['regen', 1]], 'Mustélidés & autres carnivores': [['c_stealth', 1], ['dodge', 1], ['weaken', 1]],
 };
-const _perkCache = {};
-function perkOf(p) {
-  if (!p) return null; if (_perkCache[p.id]) return _perkCache[p.id];
-  let e = PK_TABLE[p.name]; let title;
-  if (e) { title = e[2]; e = [e[0], e[1]]; }
-  else { const opts = PK_SUB[p.sub] || [['dodge', 1]]; e = opts[hashStr(p.name + p.cat) % opts.length]; title = PERKS[e[0]][0]; }
-  const def = PERKS[e[0]]; return _perkCache[p.id] = { id: e[0], mag: e[1], title, desc: def[1](e[1]), kind: e[0].startsWith('c_') ? 'jets' : ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'bond', 'night'].includes(e[0]) ? 'hors combat' : 'combat' };
+// Chaque pouvoir : une particularité signature = un effet principal + un effet secondaire, combinaison unique parmi tous les pouvoirs
+const PK_SECOND = [['dodge', 1], ['shield', 3], ['dmg', 1], ['regen', 1], ['energy', 1], ['stun', 10], ['thorns', 1], ['first', 1], ['def', 1], ['weaken', 1], ['allyheal', 1], ['drain', 1], ['pierce', 1], ['cash', 5], ['xp', 5], ['quiet', 10], ['travel', 3], ['rest', 1], ['fix', 3], ['clue', 1], ['loot', 5], ['bond', 1], ['night', 1],
+  ['c_stealth', 1], ['c_scout', 1], ['c_social', 1], ['c_hack', 1], ['c_tech', 1], ['c_heal', 1], ['c_mobility', 1], ['c_defense', 1], ['c_combat', 1], ['c_control', 1]];
+let _perkAll = null;
+function buildPerks() {
+  _perkAll = {}; const used = new Set(), titles = {}; const list = Object.values(PW).sort((a, b) => String(a.id).localeCompare(String(b.id), 'fr', { numeric: true }));
+  list.forEach(p => {
+    let e = PK_TABLE[p.name], title;
+    if (e) { title = e[2]; e = [e[0], e[1]]; } else { const opts = PK_SUB[p.sub] || [['dodge', 1]]; e = opts[hashStr(p.name + p.cat) % opts.length]; title = PERKS[e[0]][0] + ' ' + (/^[aeiouyéèêâîôûh]/i.test(p.name) ? 'd’' : 'de ') + p.name; }
+    let k = hashStr('s' + p.name + p.id) % PK_SECOND.length, e2, key;
+    for (let n = 0; n < PK_SECOND.length; n++) { e2 = PK_SECOND[(k + n) % PK_SECOND.length]; key = e[0] + e[1] + '|' + e2[0] + e2[1]; if (e2[0] !== e[0] && !used.has(key)) break; }
+    if (used.has(key) || e2[0] === e[0]) { const alt = PK_SECOND.filter(x => x[0] !== e[0]); for (const x of alt) { for (const m of [1, 2, 3]) { const kk = e[0] + e[1] + '|' + x[0] + (x[1] * m); if (!used.has(kk)) { e2 = [x[0], x[1] * m]; key = kk; break; } } if (!used.has(key) || e2[0] !== e[0]) { if (!used.has(key)) break; } } }
+    used.add(key); (titles[title] = titles[title] || []).push(p);
+    const effs = [{ id: e[0], mag: e[1] }, { id: e2[0], mag: e2[1] }];
+    _perkAll[p.id] = { title, effs, key };
+  });
+  Object.values(titles).forEach(ps => { if (ps.length > 1) ps.forEach(p => { _perkAll[p.id].title += ` (${p.name})`; }); });
+  { const seen = {}; list.forEach(p => { const k = _perkAll[p.id]; if (seen[k.title]) k.title += ' · ' + (p.cat || p.id); seen[k.title] = 1; }); }
+  Object.values(_perkAll).forEach(k => { k.desc = k.effs.map(x => PERKS[x.id][1](x.mag)).join(' ; '); k.kind = k.effs.some(x => !x.id.startsWith('c_') && !HORS.includes(x.id)) ? 'combat' : k.effs.some(x => HORS.includes(x.id)) ? 'hors combat' : 'jets'; });
 }
+const HORS = ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'bond', 'night'];
+function perkOf(p) { if (!p) return null; if (!_perkAll) buildPerks(); return _perkAll[p.id] || null; }
 function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) : []; }
-function PK(id) { return perkList().reduce((t, k) => t + (k.id === id ? k.mag : 0), 0); }
-function perkChk(tags) { let b = 0; perkList().forEach(k => { if (k.id.startsWith('c_') && tags.includes(k.id.slice(2))) b += k.mag; }); return Math.min(3, b); }
+function PK(id) { let t = 0; perkList().forEach(k => k.effs.forEach(x => { if (x.id === id) t += x.mag; })); return t; }
+function perkChk(tags) { let b = 0; perkList().forEach(k => k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag; })); return Math.min(3, b); }
 const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };

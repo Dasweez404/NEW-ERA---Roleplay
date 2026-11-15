@@ -24,12 +24,12 @@ function actionsMenu() {
   L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
   L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
   L.push(C('← Reprendre le fil de l’histoire', hub, { cls: 'back' }));
-  show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText(), choices: L, tiles: true, banner: true });
+  show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText().slice(0, 1), choices: L, tiles: true, banner: true });
 }
 function cityMenu() {
   const pc = G.pc; const L = [];
   L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', shopMenu, { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
+  L.push(C('Marché', () => shopMenu(false), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
   L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
   L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
   L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Terminer la partie avec un bonus de score (×1,25).', cls: 'danger' }));
@@ -116,33 +116,9 @@ function lieLow() {
 }
 
 // ───────── Marché ─────────
-function shopMenu() {
-  const pc = G.pc; const blackOk = (pc.rep.noir || 0) >= 10 || ['galleon', 'check', 'arena', 'slummer', 'rapinas', 'manacorp', 'gamma', 'necropunks', 'committed'].includes(pc.faction) || pc.faction === 'fallen';
-  const L = [];
-  L.push(C('Marché légal de la ville', () => shopList(SHOP_LEGAL, 1, false), { sub: wantedStars() >= 2 ? '⚠ Tu es recherché : risque d’être reconnu.' : 'Boutiques, enseignes, bornes automatisées.' }));
-  L.push(C('Marché Noir', () => shopList(SHOP_BLACK, 1.35, true), { sub: 'Armes lourdes, faux papiers, brouilleurs, hover… à prix fort.', req: { ok: () => blackOk ? null : 'Il faut un contact : 10 de réputation avec le Marché Noir (rends-lui un service) ou appartenir à une faction liée à lui' } }));
-  L.push(C('Vendre un équipement', sellMenu, { req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
-  L.push(C('← Retour', cityMenu)); show({ kicker: 'Marché', title: 'Boutiques', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
-}
-function shopList(ids, mult, black) {
-  const pc = G.pc; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100); const L = [];
-  [...new Set(ids)].forEach(id => {
-    const it = ITEMS[id]; const price = Math.round(it.price * mult * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1));
-    L.push(C(`${it.n} — ${price} ¢`, () => buy(id, price, ids, mult, black), { sub: it.desc, req: { money: price } }));
-  });
-  L.push(C('← Retour', shopMenu)); show({ kicker: black ? 'Marché Noir' : 'Marché', title: black ? 'Le Marché Noir' : 'Boutiques de la ville', text: [`Tu as <b>${fmt(pc.money)} ¢</b>.`], choices: L });
-}
-function buy(id, price, ids, mult, black) {
-  const pc = G.pc; pc.money -= price; giveItem(id);
-  const it = ITEMS[id]; if ((it.t === 'arme' && !pc.eq.arme) || (it.t === 'armure' && !pc.eq.armure)) pc.eq[it.t === 'arme' ? 'arme' : 'armure'] = id;
-  if (it.use === 'faux') { pc.faux += 3; takeItem('faux'); } if (it.use === 'brouil') { pc.brouil += 3; takeItem('brouilleur'); }
-  const L = [];
-  if (!black && wantedStars() >= 2 && chance(0.12 * wantedStars())) { return show({ kicker: 'Marché', title: 'Reconnu !', text: ['Un vendeur lève les yeux de son écran… puis vers la caméra. Il t’a reconnu.'], fx: fx({ heat: 5 }), choices: [C('Filer', hub)] }); }
-  shopList(ids, mult, black);
-}
 function sellMenu() {
   const L = []; Object.keys(G.pc.inv).forEach(id => { const it = ITEMS[id]; const v = Math.round(it.price * 0.4); L.push(C(`Vendre ${it.n} — ${v} ¢`, () => { takeItem(id); G.pc.money += v; if (G.pc.eq.arme === id && !hasItem(id)) G.pc.eq.arme = null; if (G.pc.eq.armure === id && !hasItem(id)) G.pc.eq.armure = null; sellMenu(); }, { sub: it.desc })); });
-  L.push(C('← Retour', shopMenu)); show({ kicker: 'Marché', title: 'Vendre', text: [`Tu as ${fmt(G.pc.money)} ¢.`], choices: L });
+  L.push(C('← Retour', () => shopMenu())); show({ kicker: 'Marché', title: 'Vendre', text: [`Tu as ${fmt(G.pc.money)} ¢.`], choices: L });
 }
 
 // ───────── Recrutement et rencontres ─────────
