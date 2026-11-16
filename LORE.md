@@ -39,4 +39,16 @@ Ces points complètent les documents d'origine (PDF V.11, CSV, XLSX) là où ils
 | Opinion publique | Massivement hostile aux porteurs (la propagande a réussi). |
 | Néo | Un porteur au pouvoir immense, dissimulé. |
 
+## Série 4
+| Sujet | Décision |
+|---|---|
+| Éveil d'un pouvoir | Une émotion forte, souvent à l'adolescence. |
+| Radar à géno | Détecte l'ogénite dans le corps, portée limitée ; les zoologiques émettent peu et passent plus facilement. |
+| Gamma Lab | Indépendant, ouvert à l'offre la plus haute. |
+| Monnaie (¢) | Monnaie numérique du régime, traçable ; le Marché Noir utilise des jetons hors réseau. |
+| Zones administratives de la F.A. | Surtout : un gouverneur militaire par zone, lois communes appliquées à sa façon. Un peu d'uniformité stricte, très peu de rivalité entre zones. |
+| Refuges | Quelques villes tolérées mais fragiles, ET des villes qui tiennent par les factions ANTI armées. |
+| Incognito / Oudatchi | Brouilleurs et couverture civile, ET complices au sein du régime qui les couvrent. |
+| Fin d'une partie réussie | Fin libre (retraite, domination, libération, renoncement selon les actes) ET chute de Néo comme grande issue possible. |
+
 À intégrer dans le jeu : dialogues, descriptions de factions, missions Omega (infiltration de factions recherchées), retrait d'implant via Gamma Lab.
