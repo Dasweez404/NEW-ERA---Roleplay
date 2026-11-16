@@ -32,11 +32,18 @@ function reqReason(rq) {
 }
 // fabrique de choix
 function C(label, go, o = {}) {
-  const lock = reqReason(o.req); let sub = o.sub || ''; let pct = null;
-  if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; pct = Math.round(odds(a, dc, tags || [], ex || 0) * 100); sub = `${AT[a].short} contre ${dc}` + (sub ? ' · ' + sub : ''); }
-  return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, ic: o.ic, img: o.img };
+  const lock = reqReason(o.req); let sub = o.sub || ''; let pct = null; let att = null;
+  if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; pct = Math.round(odds(a, dc, tags || [], ex || 0) * 100); att = AT[a].short; }
+  return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, att, ic: o.ic, img: o.img };
 }
-const fxHTML = L => L && L.length ? h('div', { class: 'chips' }, L.map((l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t))) : null;
+function fxHTML(L) {
+  if (!L || !L.length) return null; let xp = 0; const rest = [];
+  L.forEach(l => { const m = /^\+(\d+)\s*XP/i.exec(l.t || ''); if (m) xp += +m[1]; else rest.push(l); });
+  const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest); const MAX = 4; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
+  const box = h('div', { class: 'chips' }, items.slice(0, MAX).map(chip));
+  if (items.length > MAX) { const more = items.slice(MAX); box.append(h('button', { class: 'chip morechip', onclick: e => { e.currentTarget.remove(); more.forEach((l, i) => box.append(chip(l, i))); } }, `+${more.length} autre${more.length > 1 ? 's' : ''}`)); }
+  return box;
+}
 
 function show(sc) {
   if (G && G.status !== 'play' && !sc.final) return;
@@ -75,16 +82,16 @@ function choicesEl(list, tiles) {
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); c.go(); } } },
       !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
       h('span', { class: 'body' }, h('span', { class: 'l' }, c.label), c.sub ? h('span', { class: 's' }, c.sub) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
-      c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%') : null, cta ? h('span', { class: 'arrow' }, '›') : null);
+      c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%', c.att ? h('small', {}, c.att) : null) : null, cta ? h('span', { class: 'arrow' }, '›') : null);
   }));
 }
 
 function tickerEl() {
-  const n = G.world.news[0]; if (!n || G.wk - n.wk > 5 || UI.tickerWk === n.wk + n.t) return null;
+  const n = G.world.news[0]; if (!n || G.wk - n.wk > 5 || UI.tickerWk === n.wk + n.t) return null; const key = n.wk + n.t; if (UI.tickerSeen === key && UI.tickerScene !== UI.scene) { UI.tickerWk = key; return null; } UI.tickerSeen = key; UI.tickerScene = UI.scene;
   return h('div', { class: 'ticker', onclick: () => { UI.tickerWk = n.wk + n.t; render(true); } }, h('span', { class: 'tk' }, '⚡ ACTU'), h('span', { class: 'tt' }, n.t), h('span', { class: 'x' }, '✕'));
 }
 function render(quiet) {
-  const app = $('#app'); app.innerHTML = ''; app.className = quiet ? 'quiet' : ''; UI.after = [];
+  const app = $('#app'); app.innerHTML = ''; app.className = (quiet ? 'quiet ' : '') + ((UI.scene && UI.scene.compact) ? 'lite' : ''); UI.after = [];
   const sc = UI.scene; if (!sc) return;
   if (sc.bare) { app.append(h('div', {}, sc.extra)); runAfter(); return; }
   const live = G && G.status === 'play';
@@ -95,7 +102,7 @@ function render(quiet) {
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
-  if (live) { app.append(hudEl()); if (!sc.banner && !back && !sc.compact) app.append(envBanner(G.loc, innerWidth < 640 ? 70 : 92)); const tk = tickerEl(); if (tk) app.append(tk); const tip = sc.compact ? null : tipEl(); if (tip) app.append(tip); }
+  if (live) { app.append(hudEl()); if (!sc.banner && !back && !sc.compact && !(sc.fx && sc.fx.length) && !sc.roll) app.append(envBanner(G.loc, innerWidth < 640 ? 70 : 92)); const tk = tickerEl(); if (tk) app.append(tk); const tip = sc.compact ? null : tipEl(); if (tip) app.append(tip); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
   if (live) app.append(dockEl());
@@ -106,7 +113,7 @@ function render(quiet) {
   runAfter();
 }
 function tipEl() {
-  let seen = 0; try { seen = +localStorage.getItem('ne_tip') || 0; } catch (e) { } if (seen >= 3 || UI.tipHide) return null;
+  let seen = 0; try { seen = +localStorage.getItem('ne_tip') || 0; } catch (e) { } if (seen >= 1 || UI.tipHide) return null;
   try { if (UI.tipShown !== G.wk) { UI.tipShown = G.wk; localStorage.setItem('ne_tip', seen + 1); } } catch (e) { }
   return h('div', { class: 'tip' }, h('span', {}, '💡 Touche un choix pour avancer. ⚡ = menu d’actions (voyage, ville, faction). Barre du bas = fiche, sac, groupe.'), h('button', { class: 'x', onclick: () => { UI.tipHide = 1; try { localStorage.setItem('ne_tip', 9); } catch (e) { } render(true); } }, '✕'));
 }

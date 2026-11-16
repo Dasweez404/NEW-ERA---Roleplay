@@ -385,3 +385,26 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .rp.w{border-color:#5be3a0;color:#5be3a0}.rp.l{border-color:#ff3d7f;color:#ff3d7f}.rp.d{color:#9aa0c8}.rp.cur{border-color:#fcee09;color:#fcee09}
 .mom{display:flex;gap:8px;align-items:center;margin:2px 0 8px}.mom .ml{font:600 .8rem var(--fm);color:#9aa0c8;text-transform:uppercase;letter-spacing:.08em}.mom .mb{display:flex;gap:2px;flex:1}.mc{flex:1;height:12px;background:#12121f;border:1px solid #2a2a44}.mc.z{border-color:#9aa0c8}.mc.p{background:#5be3a0}.mc.n{background:#ff3d7f}.mc.on{outline:2px solid #fcee09;outline-offset:1px}.mom .mv{font:800 1rem var(--fd);min-width:28px;text-align:right}
 .sit{margin:6px 0;padding:8px 10px;border-left:3px solid #27f0ff;background:#12121f}
+/* ── Épuration : moins d'informations, plus de clarté ── */
+.dparts{display:none}.dicebox.open .dparts{display:flex}.dicebox{cursor:pointer}.dicebox .dsub{font-size:.8rem}
+.dicebox::after{content:"détail ▾";display:block;font:400 .66rem var(--fm);color:#6f7499;text-align:right;margin-top:2px}.dicebox.open::after{content:"réduire ▴"}
+#app.lite .hud-pills{display:none}#app.lite .hud{padding-bottom:8px}
+.pct{display:flex;flex-direction:column;align-items:center;line-height:1.05}.pct small{font:400 .6rem var(--fm);color:#9aa0c8;text-transform:uppercase;letter-spacing:.06em}
+.morechip{background:transparent;border:1px dashed #34344f;color:#9aa0c8;cursor:pointer;font:600 .75rem var(--fm)}
+@media(max-width:700px){
+  .hud{padding:8px 10px}.hud-top{gap:8px}.hud .av,.hud .avatar{width:36px;height:36px}.hud .nm{font-size:1rem}.hud .sub{font-size:.62rem}
+  .hud-bars{gap:2px}.hud-pills .pill{padding:0 8px;font-size:.72rem}
+  .ticker{padding:6px 8px;font-size:.8rem}
+  .rlog{font-size:.9rem}
+}
+/* animations douces */
+@keyframes pip{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+.rp.w,.rp.l,.rp.d{animation:pip .4s cubic-bezier(.2,1.4,.4,1)}
+.mc{transition:background .35s,outline-color .2s}.mc.on{animation:momp .6s ease}@keyframes momp{50%{transform:scaleY(1.7)}}
+.chip.rv{animation-name:chipin;animation-duration:.35s;animation-timing-function:cubic-bezier(.2,1.5,.4,1)}@keyframes chipin{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+.fcard{animation:cardin .35s both}.fcard:nth-child(2){animation-delay:.08s}.fcard:nth-child(3){animation-delay:.16s}@keyframes cardin{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.sit{animation:sitin .3s both}@keyframes sitin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.frow.hit{animation:fhit .35s}@keyframes fhit{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ch:active{transform:scale(.985)}
+@media(prefers-reduced-motion:reduce){.rp,.mc,.chip,.fcard,.sit,.frow{animation:none!important}}
+#app.lite .scene .title{font-size:.95rem;margin:0 0 6px;color:#9aa0c8;letter-spacing:.04em}

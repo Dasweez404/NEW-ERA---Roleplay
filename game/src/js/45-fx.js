@@ -46,7 +46,7 @@ function burstAt(el, color, n) { if (!el) return; const r = el.getBoundingClient
 
 // ───────── Dé ─────────
 function diceEl(r, still) {
-  const wrap = h('div', { class: 'dicebox ' + (still ? '' : 'rolling') });
+  const wrap = h('div', { class: 'dicebox ' + (still ? '' : 'rolling'), onclick: () => wrap.classList.toggle('open'), title: 'Touche pour voir le détail du jet' });
   const num = h('span', { class: 'dnum' }, still ? r.r : '?'); const face = h('div', { class: 'dface' }, h('div', { class: 'dsq' }, num));
   const res = h('div', { class: 'dres' }, still ? '' : 'jet en cours…'); const sub = h('div', { class: 'dsub' }, `Difficulté ${r.dc} sur d20`);
   const parts = h('div', { class: 'dparts' });

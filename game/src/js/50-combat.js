@@ -119,7 +119,6 @@ function play(m) {
   if (res === 'loss') CB.Lz++;
   if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
   CB.hist.push(res === 'win' ? 'w' : res === 'loss' ? 'l' : 'd'); momUpdate(res, m);
-  pc.party.forEach(a => { if (a.inj <= 0 && res === 'win' && chance(0.3)) clog(`${CH[a.id].name} appuie ton attaque.`, 'good'); });
   pc.en = Math.min(pc.enMax, pc.en + PK('energy')); if (PK('regen') && pc.hp < pc.hpMax) { pc.hp = Math.min(pc.hpMax, pc.hp + PK('regen')); }
   if (PK('allyheal')) pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
   if (CB.halve > 0) CB.halve--; aliveFoes().forEach(x => { if (x.stun > 0) x.stun--; });
@@ -190,7 +189,7 @@ function renderCombat() {
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const me = h('div', { class: 'frow me', 'data-k': 'pc' }, h('span', { class: 'fn' }, 'Toi'), h('div', { class: 'bar hp mini' }, h('i', { style: `width:${pc.hp / pc.hpMax * 100}%` })), h('span', { class: 'fv' }, `${pc.hp}/${pc.hpMax} · ⚡${pc.en}`));
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
-  const rlog = h('div', { class: 'rlog' }, CB.log.slice(-5).map(l => h('div', { class: l.c }, l.t)));
+  const rlog = h('div', { class: 'rlog' }, CB.log.slice(-3).map(l => h('div', { class: l.c }, l.t)));
   const tw = CB.twist ? h('div', { class: 'small badc' }, '⚠ ' + CB.twist.t) : null; const sit = currentSit(); const sitEl = h('div', { class: 'sit' }, h('b', {}, sit.n), ' — ', sit.t);
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
