@@ -2,32 +2,28 @@
 function sigMove() {
   const ps = pcPowers(); if (!ps.length) return null; CB.sig = CB.sig || {};
   const p = ps.find(x => !CB.sig[x.id]) || ps[0]; const k = perkOf(p); if (!k) return null; const lv = pxLevel(p.id); const used = (CB.sig[p.id] || 0) >= (lv >= 3 ? 2 : 1); const cost = lv >= 2 ? 1 : 2;
-  return { id: 'sig', pid: p.id, ic: '✦', label: `Signature : ${k.title}`, sub: `${p.name} · ${SIG_TXT[k.effs[0].id] || 'effet de pouvoir'} · ${cost} énergie · ${lv >= 3 ? 'deux' : 'une'} fois par combat · niv. ${lv}`, kind: 'sig', cost, cls: 'safe', lock: used ? 'Déjà utilisée dans ce combat' : null };
+  return { id: 'sig', pid: p.id, ic: '✦', label: `Signature : ${k.title}`, sub: `${p.name} · ${SIG_TXT[k.effs[0].id] || 'effet de pouvoir'} · ${cost} énergie · round gagné d’office · ${lv >= 3 ? 'deux' : 'une'} fois · niv. ${lv}`, kind: 'sig', cost, cls: 'safe', lock: used ? 'Déjà utilisée dans ce combat' : null };
 }
 const SIG_TXT = { dodge: 'esquive les 2 prochaines ripostes', shield: 'bouclier massif', dmg: 'frappe surpuissante', regen: 'soigne 30 % de ta vie', energy: 'recharge la moitié de ton énergie', stun: 'sidère tous les ennemis', thorns: 'renvoie les coups reçus', crit: 'coup critique garanti', first: 'frappe éclair puis esquive', def: 'garde de fer', weaken: 'affaiblit tous les ennemis', allyheal: 'soigne ton équipe', drain: 'frappe qui te soigne', lastbreath: 'te remet debout et te protège', pierce: 'frappe qui ignore les boucliers', night: 'frappe de l’ombre', cash: 'butin garanti en cas de victoire', xp: 'expérience doublée en cas de victoire', quiet: 'ta prime ne monte pas', loot: 'butin garanti', bond: 'galvanise ton équipe', travel: 'te dérobe aux coups', rest: 'te soigne 20 %', fix: 'bouclier improvisé', clue: 'analyse : +3 pour toucher' };
 function sigDo(m) {
-  const pc = G.pc; const p = PW[m.pid]; const k = perkOf(p); const e = k.effs[0]; const id = e.id; const f = firstFoe(); CB.sig[m.pid] = (CB.sig[m.pid] || 0) + 1; CB.sev = 0.2; pxGain(m.pid, 1);
-  clog(`✦ ${k.title} !`, 'acc'); const lvl = pxLevel(m.pid); const big = (mul, crit) => { if (f) hurtFoe(f, dmgBase() * (mul + 0.25 * (lvl - 1)) + e.mag, crit, `${k.title} frappe`); };
+  const pc = G.pc; const p = PW[m.pid]; const k = perkOf(p); const e = k.effs[0]; const id = e.id; CB.sig[m.pid] = (CB.sig[m.pid] || 0) + 1; pxGain(m.pid, 1);
+  clog(`✦ ${k.title} ! Round gagné d’office.`, 'acc'); pop('f0', 'ROUND GAGNÉ', 'crit');
   const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
-  if (id === 'dodge' || id === 'travel') { CB.dodge += 2; CB.sev = 0; }
-  else if (id === 'shield' || id === 'fix' || id === 'def') { CB.shield += 6 + e.mag * 2; CB.sev = 0.1; }
-  else if (id === 'dmg' || id === 'night') big(1.8, false);
-  else if (id === 'crit') big(1.5, true);
-  else if (id === 'pierce') { if (f) f.shield = 0; big(1.6, false); }
-  else if (id === 'first') { big(1.3, false); CB.dodge++; }
-  else if (id === 'drain') { big(1.4, false); heal(0.15); }
+  if (id === 'dodge' || id === 'travel') CB.dodge += 2;
+  else if (id === 'shield' || id === 'fix' || id === 'def') CB.shield += 6 + e.mag * 2;
   else if (id === 'regen' || id === 'rest') heal(id === 'rest' ? 0.2 : 0.3);
+  else if (id === 'drain') heal(0.15);
   else if (id === 'energy') { pc.en = Math.min(pc.enMax, pc.en + Math.ceil(pc.enMax / 2)); clog('Énergie rechargée.', 'good'); }
-  else if (id === 'stun') { aliveFoes().forEach(x => { x.stun = Math.max(x.stun, 1); }); CB.sev = 0; clog('Tous les ennemis sont sidérés.', 'good'); }
-  else if (id === 'thorns') { CB.counter = 4 + e.mag * 2; clog('Tes ennemis paieront chaque coup.', 'good'); }
-  else if (id === 'weaken') { aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - 2); x.def = Math.max(0, x.def - 1); }); clog('Les ennemis vacillent.', 'good'); }
+  else if (id === 'stun') { aliveFoes().forEach(x => { x.stun = 1; }); CB.nextBonus += 2; clog('Les ennemis sont sidérés : prochain round +2.', 'good'); }
+  else if (id === 'thorns') CB.dodge += 1;
+  else if (id === 'weaken') aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - 2); });
   else if (id === 'allyheal' || id === 'bond') { heal(0.15); pc.party.forEach(a => { a.hp = Math.min(a.hpMax, a.hp + Math.round(a.hpMax * 0.3)); if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 3); } }); CB.hitBuff += 1; }
   else if (id === 'lastbreath') { CB.lb = true; heal(0.15); CB.shield += 4; }
   else if (id === 'cash') CB.bonusMoney = (CB.bonusMoney || 0) + 100; else if (id === 'xp') CB.bonusXp = 1;
   else if (id === 'loot') CB.bonusLoot = 1; else if (id === 'quiet') CB.quiet = 1;
-  else { CB.hitBuff += 3; clog('Ton pouvoir affûte tes gestes : +3 pour toucher.', 'good'); }
+  else if (id === 'first' || id === 'crit' || id === 'dmg' || id === 'pierce' || id === 'night') CB.nextBonus += 3 + Math.floor(e.mag / 2);
+  else { CB.hitBuff += 2; clog('Ton pouvoir affûte tes gestes : +2 aux jets.', 'good'); }
 }
-// ── Aperçu visuel de l'adversaire (silhouette vectorielle) ──
 // Visuel d'adversaire : uniquement un sprite fourni (personnage identifié). Sinon rien n'est affiché.
 function foeIcon(f, px) { return (f.cid && typeof hasSpr === 'function' && hasSpr(f.cid)) ? h('span', { class: 'foeico' }, sprFit(f.cid, px)) : null; }
 function foeSpecialChips(f) { return (f.sp || []).map(s => ANTI[s] ? h('span', { class: 'tag', title: ANTI[s].d }, ANTI[s].n) : null).filter(Boolean); }
