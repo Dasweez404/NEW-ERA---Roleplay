@@ -194,7 +194,7 @@ function tabFactions() {
   const ids = Object.keys(F).filter(f => f !== 'civils' && (f === pc.faction || Math.abs(pc.rep[f] || 0) >= 15)).sort((a, b) => (pc.rep[b] || 0) - (pc.rep[a] || 0));
   const wl = (G.world.warLog || []).slice(0, 5); if (wl.length) { box.append(h('h3', {}, '⚔ Conflits en cours')); wl.forEach(x => box.append(h('div', { class: 'small' }, x))); }
   const t = h('table', { class: 't' }); ids.forEach(fid => { const v = pc.rep[fid] || 0; t.append(h('tr', {}, h('td', {}, F[fid].name + (fid === pc.faction ? ' ★' : '')), h('td', { class: v >= 15 ? 'good' : v <= -20 ? 'badc' : 'mut' }, repLevel(v)), h('td', {}, v))); });
-  box.append(t); return box;
+  box.append(t); box.append(h('button', { class: 'tab', style: 'margin-top:8px', onclick: () => { closeSheet(); relationGraph(); } }, '🕸 Voir l’arbre des relations')); return box;
 }
 function tabPierres() {
   const box = h('div'); const g = h('div', { class: 'stones' });

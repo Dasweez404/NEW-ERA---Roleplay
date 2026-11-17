@@ -4,7 +4,7 @@ function factionMenu() {
   const pc = G.pc; const f = F[pc.faction]; const W = G.world; const L = [];
   if (pc.faction === 'civils') return joinMenu();
   const nxt = MERIT_STEPS[pc.grade + 1]; const lead = W.leader[pc.faction];
-  L.push(C('Rapport de faction', factionReport, { sub: 'Puissance, alliés, ennemis, territoires.' }));
+  L.push(C('Relations entre factions', () => relationGraph(), { ic: '🕸', sub: 'L’arbre géant : qui est allié ou ennemi, autour de la tienne.' }));
   if (pc.grade < 4) L.push(C(`Épreuve de grade (${gradeNames(pc)[pc.grade + 1]})`, () => { const o = promoOffer(); if (o) missionBrief(o); }, { req: { ok: () => pc.merit >= nxt ? null : `Il te faut ${nxt} de mérite (tu as ${pc.merit}) : fais des missions pour ta faction` }, sub: 'Réussis une mission d’épreuve : tu montes en grade, tu pèses plus, mais ta prime augmente aussi.' }));
   L.push(C('Réunion des décisions (conseil)', () => EVENT_FN.council(), { sub: pc.grade === 0 ? 'Recrue : tu n’as aucune voix au chapitre.' : `Ton niveau de décision : ${['aucun', 'voter', 'proposer', 'décider localement', 'décider en grand', 'trancher'][pc.grade]}.` }));
   if (pc.grade === 4) L.push(C('Prétendre à la tête de la faction', successionMenu, { sub: 'Relève, duel, attente ou fondation de ta propre faction.' }));
@@ -15,13 +15,7 @@ function factionMenu() {
   L.push(C('Quitter la faction', leaveFaction, { cls: 'danger', sub: 'Traître pour ses alliés.' }));
   L.push(C('← Retour', actionsMenu));
   const nm = lead === 'pc' ? 'toi' : lead && CH[lead] ? CH[lead].name : 'personne (vacant)';
-  show({ extra: lead && lead !== 'pc' && CH[lead] ? portrait(lead, 110) : null, kicker: `Fondée en ${f.founded}`, title: f.name, text: [esc(f.desc), `<i>${esc(f.lore ? f.lore.slice(0, 380) + (f.lore.length > 380 ? '…' : '') : '')}</i>`, `Objectif : ${esc(f.goal)}`, `Chef : <b>${esc(nm)}</b>. Ton grade : ${esc(gradeName())} ${'★'.repeat(pc.grade)}. Mérite : ${pc.merit}${nxt ? ' / ' + nxt : ''}.`], choices: L });
-}
-function factionReport() {
-  const pc = G.pc; const f = F[pc.faction]; const W = G.world; const wf = W.fac[pc.faction] || { power: 10, money: 0 };
-  const al = Object.keys(F).filter(x => x !== pc.faction && relation(pc.faction, x) >= 2).map(x => F[x].name); const en = Object.keys(F).filter(x => x !== pc.faction && relation(pc.faction, x) <= -2).map(x => F[x].name);
-  const mem = DATA.chars.filter(c => c.faction === pc.faction && W.npc[c.id].alive).length;
-  show({ kicker: f.name, title: 'Rapport de faction', text: [`Puissance estimée : <b>${wf.power}/100</b>. Trésorerie : ${fmt(wf.money)} ¢. Membres connus vivants : ${mem}. QG : ${esc(stateName(f.hq))}.`, `Alliés : ${esc(al.join(', ') || '—')}.`, `Ennemis : ${esc(en.join(', ') || '—')}.`, `Territoires que tu contrôles : ${ownedStates().map(s => esc(s.name)).join(', ') || 'aucun'}.`, `Tes liens : ${Object.keys(F).filter(x => x !== 'civils' && (pc.rep[x] || 0) >= 30).map(x => esc(F[x].name)).slice(0, 8).join(', ') || 'aucun'}.`], choices: [C('← Retour', factionMenu)] });
+  show({ extra: lead && lead !== 'pc' && CH[lead] ? portrait(lead, 110) : null, kicker: `Fondée en ${f.founded}`, title: f.name, text: [`Objectif : ${esc(f.goal)}`, `Chef : <b>${esc(nm)}</b> · ton grade : ${esc(gradeName())} ${'★'.repeat(pc.grade)} · mérite ${pc.merit}${nxt ? ' / ' + nxt : ''}.`, `<span class="mut">Puissance ${(W.fac[pc.faction] || { power: 10 }).power}/100 · trésorerie ${fmt((W.fac[pc.faction] || { money: 0 }).money)} ¢ · ${DATA.chars.filter(c => c.faction === pc.faction && W.npc[c.id].alive).length} membres vivants · QG : ${esc(stateName(f.hq))}${ownedStates().length ? ' · tes territoires : ' + ownedStates().map(s => esc(s.name)).join(', ') : ''}.</span>`], choices: L });
 }
 // ───────── Rejoindre une faction ─────────
 function joinMenu() {
