@@ -550,3 +550,5 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 
 .tlogo{display:block;margin:4px 0 14px;font-size:0}.tlogo img{display:block;width:min(78vw,430px);height:auto;filter:drop-shadow(0 0 2px rgba(255,255,255,.55)) drop-shadow(0 0 16px rgba(39,240,255,.35));animation:logoin .7s cubic-bezier(.2,1.2,.4,1) both;-webkit-user-drag:none}
 .tlogo span:last-child::after{display:none}
+
+.env .envimg.pxart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 100%;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated;filter:none;animation:pxin .5s ease both}@keyframes pxin{from{opacity:0}}.env.px{background:#07140f;border-color:#1f6b3a}
