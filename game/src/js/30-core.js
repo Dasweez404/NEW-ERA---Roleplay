@@ -30,7 +30,7 @@ function skill(attrId, tags = []) {
   const pb = perkChk(tags); if (pb) { parts.push(['particularité', pb]); mod += pb; }
   if (PK('night') && typeof envTime === 'function' && envTime() === 'night') { parts.push(['nuit', PK('night')]); mod += PK('night'); }
   if (pc.stim > 0) { parts.push(['stimulant', 3]); mod += 3; }
-  if (pc.hp < pc.hpMax * 0.3) { parts.push(['blessé', -2]); mod -= 2; }
+  { const hr = pc.hp / pc.hpMax; const wp = hr < 0.2 ? 3 : hr < 0.4 ? 2 : hr < 0.6 ? 1 : 0; if (wp) { parts.push(['blessé', -wp]); mod -= wp; } }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
   return { mod, parts };
 }
@@ -72,7 +72,7 @@ function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
   if (o.money) { pc.money = Math.max(0, pc.money + o.money); line(`${o.money > 0 ? '+' : ''}${fmt(o.money)} ¢`, o.money > 0 ? 'good' : 'badc'); }
   if (o.xp) { const p0 = pc.pts; addXp(o.xp); line(`+${o.xp} XP`, 'good'); if (pc.pts > p0) line(`Niveau supérieur : +${pc.pts - p0} point${pc.pts - p0 > 1 ? 's' : ''}`, 'acc'); }
-  if (o.hp) { const before = pc.hp; pc.hp = clamp(pc.hp + o.hp, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
+  if (o.hp) { const before = pc.hp; const dmg = o.hp < 0 && pc.hp < pc.hpMax * 0.4 ? Math.round(o.hp * 1.2) : o.hp; pc.hp = clamp(pc.hp + dmg, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
   if (o.en) { const b = pc.en; pc.en = clamp(pc.en + o.en, 0, pc.enMax); line(`${o.en > 0 ? '+' : ''}${pc.en - b} énergie`, o.en > 0 ? 'good' : 'badc'); }
   if (o.heat) addHeat(o.heat, L);
   if (o.merit && pc.faction !== 'civils') { pc.merit = Math.max(0, pc.merit + o.merit); line(`${o.merit > 0 ? '+' : ''}${o.merit} mérite (${F[pc.faction].name})`, o.merit > 0 ? 'good' : 'badc'); }
@@ -110,7 +110,7 @@ function advance(weeks) {
   for (let i = 0; i < weeks; i++) {
     G.wk++;
     const pc = G.pc;
-    pc.hp = Math.min(pc.hpMax, pc.hp + 1); pc.en = Math.min(pc.enMax, pc.en + 2);
+    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + 2);
     pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
     if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;

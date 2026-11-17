@@ -98,18 +98,17 @@ function play(m) {
   if (!CB || CB.over) return; CB.preview = false; CB.spec = false; CB.stance = CB.stance || 'equilibre'; CB.sit = null; CB.log = []; CB.pops = [];
   const pc = G.pc; if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   let res = 'draw', sev = 1; const nb = CB.nextBonus; CB.nextBonus = 0;
-  if (m.kind === 'awaken') { awaken(); res = 'win'; }
-  else if (m.kind === 'sig') { sigDo(m); res = 'win'; }
+  if (m.kind === 'sig') { sigDo(m); res = 'win'; }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); sev = 0.4; res = 'loss0'; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); sev = 0.4; res = 'loss0'; }
   else {
     const r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + twistMod(m.cat) + elanBonus() + stanceBonus(m)); CB.lastR = r; const f = firstFoe(); const crit = r.crit || (PK('crit') && r.r >= 19);
     if (r.ok) {
-      res = 'win'; const win = { hit: [`Ton coup passe la garde de ${fname(f)}.`, `${fname(f)} recule sous l’impact.`, `Un enchaînement net : ${fname(f)} encaisse.`], feint: [`Tu dupes ${fname(f)} et ripostes.`, 'Une feinte parfaite.'], intim: ['Ton regard les glace : ils reculent.'], bind: ['Les ennemis sont entravés.'], hack: [`${fname(aliveFoes().find(x => x.m) || f)} est neutralisé.`], guard: ['Tu tiens bon, l’ennemi s’épuise.'], tech: ['Ta technique fait mouche.'] }[m.kind] || ['Tu gagnes ce round.'];
+      res = 'win'; const win = { hit: [`Ton coup passe la garde de ${fname(f)}.`, `${fname(f)} recule sous l’impact.`, `Un enchaînement net : ${fname(f)} encaisse.`], feint: [`Tu dupes ${fname(f)} et ripostes.`, 'Une feinte parfaite.'], intim: ['Ton regard les glace : ils reculent.'], bind: ['Les ennemis sont entravés.'], hack: [`${fname(aliveFoes().find(x => x.m) || f)} est neutralisé.`], guard: ['Tu tiens bon, l’ennemi s’épuise.'], tech: ['Ta technique fait mouche.'], awaken: ['⚡ Ton pouvoir s’éveille !'] }[m.kind] || ['Tu gagnes ce round.'];
       clog(pick(win) + (crit ? ' (CRITIQUE)' : ''), 'log-hit'); pop('f0', 'ROUND GAGNÉ', crit ? 'crit' : 'dmg');
       if (m.kind === 'intim') CB.halve = 2; if (m.kind === 'bind') { CB.nextBonus += 2; aliveFoes().forEach(x => { x.stun = 1; }); } if (m.kind === 'guard') pc.en = Math.min(pc.enMax, pc.en + 2);
       if (m.kind === 'hack') { const mc = aliveFoes().find(x => x.m); if (mc) mc.dmg = 1; }
-      if (m.kind === 'tech') techEffect();
+      if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken();
       if (crit) CB.nextBonus += 1;
     } else {
       res = 'loss'; sev = m.kind === 'feint' ? 0.5 : m.kind === 'guard' ? 0.4 : m.kind === 'gamble' ? 1.5 : 1; if (r.fumble) sev *= 1.5; sev *= (CB.stance === 'offensive' ? 1.4 : CB.stance === 'prudente' ? 0.6 : 1); clog(pick([`${fname(f)} lit ton mouvement et réplique.`, `Ton geste échoue : ${fname(f)} te contre.`, 'Tu perds le rythme.']), 'log-miss'); pop('pc', 'ROUND PERDU', 'miss');
@@ -144,7 +143,7 @@ function hurtPc(sev) {
   if (CB.dodge > 0 && sev >= 0.5) { CB.dodge--; pop('pc', 'ESQUIVE', 'ok'); clog('Tu esquives la riposte !', 'good'); return; }
   let total = 0;
   hostile.forEach(f => {
-    const dmg = Math.max(1, Math.round(f.dmg * 0.6 * sev * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
+    const dmg = Math.max(1, Math.round(f.dmg * 0.85 * sev * (G.pc.hp < G.pc.hpMax * 0.4 ? 1.2 : 1) * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
     const allies = pc.party.filter(a => a.inj <= 0);
     if (allies.length && chance(0.2)) { const a = pick(allies); a.hp -= dmg; clog(`${fname(f)} blesse ${CH[a.id].name} (${dmg}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     total += Math.max(1, dmg - PK('def') - Math.floor(pcArm() / 2) - (hasRole('gardien') ? 1 : 0));

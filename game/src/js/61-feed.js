@@ -45,7 +45,7 @@ function dealCard() {
   if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
   pool.push({ w: 26, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
   pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
-  if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
+  if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
   conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool); lot2Pool(pool);

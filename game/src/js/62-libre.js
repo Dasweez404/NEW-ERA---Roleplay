@@ -24,7 +24,7 @@ function setupLibre() {
 }
 EVENT_FN.premise = function () {
   const p = G.world.premise; if (!p) return hub();
-  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text], choices: [C('Commencer', hub)] });
+  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text, typeof startNote === 'function' ? startNote() : ''], choices: [C('Commencer', hub)] });
 };
 function libreMonth() {
   const W = G.world; const pc = G.pc;

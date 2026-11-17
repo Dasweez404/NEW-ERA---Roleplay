@@ -36,7 +36,7 @@ const CAMPS = {
 };
 function campCard() {
   const pc = G.pc, f = pc.flags; let c = f.camp; const done = f.campDone = f.campDone || [];
-  if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
+  if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k) && !uniqSkip('camps', k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
   const def = CAMPS[c.id]; const ch = def.ch[c.ch]; f.campWk = G.wk; const place = esc(capName(G.loc));
   const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
@@ -89,11 +89,11 @@ const CITY_EV = [
   { k: 'Fête de quartier', x: 'Un quartier entier danse : musique, odeurs de cuisine, rires. Personne ne te pose de questions.', o: [['Te joindre à la fête', null, 'Tu te laisses porter. Tu te sens mieux.', { rep: 3, heal: 1 }], ['Écouter les conversations', ['intellect', ['scout']], 'Tu glanes une rumeur utile.', { xp: 15 }, 'Rien d’intéressant.', {}]] },
   { k: 'Grève générale', x: 'Les ouvriers ont posé les outils. La ville est à l’arrêt, les esprits chauffent.', o: [['Les soutenir', ['charisme', ['social']], 'Tu portes leur voix. On t’adopte.', { rep: 6, heat: 1 }, 'On te prend pour un provocateur.', { rep: -2 }], ['En profiter', null, 'Tu glisses dans les bureaux vides.', { money: 100, rep: -4, heat: 1 }]] }
 ];
-function cityEventNow() { const i = (hashStr(G.loc) + Math.floor(G.wk / 6)) % CITY_EV.length; return { i, ev: CITY_EV[i], key: G.loc + ':' + Math.floor(G.wk / 6) }; }
+function cityEventNow() { let i = (hashStr(G.loc) + Math.floor(G.wk / 6)) % CITY_EV.length; for (let n = 0; n < CITY_EV.length && uniqSkip('cityEv', i); n++) i = (i + 1) % CITY_EV.length; return { i, ev: CITY_EV[i], key: G.loc + ':' + Math.floor(G.wk / 6) }; }
 function cityEventCard() {
   const pc = G.pc; const { ev, key } = cityEventNow(); pc.flags.cityEv = pc.flags.cityEv || {}; if (pc.flags.cityEv[key]) return missionCard(); pc.flags.cityEv[key] = 1;
   const dc = 11 + wTier(); const rep = n => { addCityRep(n); };
-  const res = (title, txt, e, L) => { if (e.rep) rep(e.rep); if (e.heal) { pc.hp = pc.hpMax; pc.en = pc.enMax; } show({ kicker: ev.k.toUpperCase(), title, text: [txt].concat(L || []), fx: fx({ money: e.money || 0, xp: e.xp || 0, heat: e.heat || 0 }), choices: [C('Continuer', hub)] }); };
+  const res = (title, txt, e, L) => { if (e.rep) rep(e.rep); if (e.heal) { pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.4)); pc.en = pc.enMax; } show({ kicker: ev.k.toUpperCase(), title, text: [txt].concat(L || []), fx: fx({ money: e.money || 0, xp: e.xp || 0, heat: e.heat || 0 }), choices: [C('Continuer', hub)] }); };
   show({ kicker: capName(G.loc).toUpperCase() + ' · CE SOIR', title: ev.k, text: [ev.x], choices: ev.o.map(([lab, chk, okT, okE, koT, koE]) => C(lab, () => {
     if (chk === 'bet') { if (pc.money < 100) return toast('Il te faut 100 ¢'); pc.money -= 100; const win = chance(0.45); return show({ kicker: ev.k.toUpperCase(), title: win ? 'Gagné !' : 'Perdu', text: [win ? 'Ton champion l’emporte. Tu encaisses le double.' : 'Ton champion s’écroule au deuxième round.'], fx: fx({ money: win ? 200 : 0 }), choices: [C('Continuer', hub)] }); }
     if (chk === 'shop') { if (pc.money < 80) return toast('Il te faut 80 ¢'); pc.money -= 80; const id = pick(['capsule', 'kit', 'jumelles', 'grappin', 'radio', 'stimulant', 'bandage', 'crochets']); giveItem(id); return res('Une trouvaille', `Tu repars avec : ${ITEMS[id].n}.`, {}); }
@@ -150,7 +150,7 @@ function lot2Pool(pool) {
   const sp = (w, f) => pool.push({ w, f: spMark(f) });
   if (pc.flags.squad && G.wk >= pc.flags.squad.back) pool.push({ w: 60, f: squadReturn });
   if (!ok) return;
-  if (feat('camp') && (pc.flags.camp || Object.keys(CAMPS).some(k => !(pc.flags.campDone || []).includes(k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : 12, campCard);
+  if (feat('camp') && (pc.flags.camp || Object.keys(CAMPS).some(k => !(pc.flags.campDone || []).includes(k) && !uniqSkip('camps', k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : 12, campCard);
   if (feat('comp') && pc.party.some(a => !a.story && a.loy >= 60 && a.inj <= 0)) sp(14, companionCard);
   if (feat('ville') && !(pc.flags.cityEv || {})[cityEventNow().key]) sp(14, cityEventCard);
 }

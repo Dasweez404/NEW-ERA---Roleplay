@@ -31,7 +31,9 @@ function reqReason(rq) {
   return null;
 }
 // fabrique de choix
+const HEAVY = [/Le dénoncer à la Force/, /Le livrer et toucher la prime/, /^Défier .* en duel/, /Éliminer le chef/, /Fonder ta propre faction/, /Accepter l’implant/, /Organiser ma disparition/];
 function C(label, go, o = {}) {
+  if (o.heavy || HEAVY.some(r => r.test(label))) { const g = go; const txt = o.heavy || 'Ce choix est irréversible.'; go = () => decisive(txt, g); }
   const lock = reqReason(o.req); let sub = o.sub || ''; let pct = null; let att = null;
   if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; pct = Math.round(odds(a, dc, tags || [], ex || 0) * 100); att = AT[a].short; }
   return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, att, ic: o.ic, img: o.img };
@@ -172,7 +174,7 @@ function fillSheet() {
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`));
+  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', {}, 'Traits'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
   pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });

@@ -105,7 +105,7 @@ function missionBoard() {
 }
 function missionBrief(o) {
   const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
+  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o), ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? { heavy: 'Cette mission est sans retour : des gens en subiront les conséquences.' } : {}), C('Refuser', () => contractCard())] });
 }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
@@ -176,7 +176,7 @@ function finishMission(o, quality, lines, extraFx) {
   logEntry(`Mission « ${a.n} » (${o.empName}) : ${quality === 'crit' ? 'triomphe' : quality === 'partial' ? 'demi-succès' : 'réussie'}.`);
   const after = () => {
     if (o.promo && quality !== 'partial') return promote(L);
-    show({ kicker: 'Succès', title: quality === 'crit' ? 'Un triomphe !' : quality === 'partial' ? 'Demi-succès' : 'Mission accomplie', text: lines.filter(x => typeof x === 'string'), fx: L, choices: [C('Continuer', hub)] });
+    show({ kicker: 'Succès', title: quality === 'crit' ? 'Un triomphe !' : quality === 'partial' ? 'Demi-succès' : 'Mission accomplie', text: lines.filter(x => typeof x === 'string'), fx: L, choices: [C('Continuer', () => (quality === 'partial' ? hub() : lootPick(o, quality)))] });
   };
   // choix moral pour les chasses à la prime
   if (o.tchar && (o.arch === 'prime' || o.arch === 'ordre') && quality !== 'partial') {
@@ -190,7 +190,7 @@ function finishMission(o, quality, lines, extraFx) {
 }
 function promote(L0) {
   const pc = G.pc; pc.grade++; const f = F[pc.faction]; const s0 = wantedStars(); addHeat(0); pc.heat = Math.max(pc.heat, minHeat()); const s1 = wantedStars();
-  recalc(); pc.hp = pc.hpMax; splash({ title: 'PROMOTION', sub: `${gradeName()} ${'★'.repeat(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
+  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.25)); splash({ title: 'PROMOTION', sub: `${gradeName()} ${'★'.repeat(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
   const L = [...(L0 || [])]; if (s1 > s0) L.push({ t: `Plus tu es gradé, plus on te cherche : prime ${starStr(s1)} — ${WANTED_TXT[s1]}.`, c: 'badc' });
   const dec = ['aucune décision', 'tu votes dans les décisions de ta faction', 'tu peux proposer des opérations', 'tu décides des opérations locales', 'tu pèses sur les grandes décisions', 'tu décides de tout'][pc.grade];
   show({ kicker: 'PROMOTION', title: `${gradeName()} ${'★'.repeat(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });

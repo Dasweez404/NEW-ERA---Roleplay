@@ -39,7 +39,7 @@ function protectMove() {
 }
 function powerMove() {
   const pc = G.pc; const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
-  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return { id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Round gagné d’office · risqué', kind: 'awaken', cls: 'danger' };
+  if (pcPowers().length && pc.hp <= pc.hpMax * 0.5 && !CB.wasAwake) return { id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], cat: 'tac', bonus: Math.round((1 - pc.hp / pc.hpMax) * 9), kind: 'awaken', cls: 'danger' };
   const fin = techMove(); fin.label = `Pouvoir : ${STYLES[pc.style].tech.name}`; fin.bonus = 3; fin.cat = 'atk'; fin.sub = `${cap(STYLES[pc.style].tech.text)} · ${STYLES[pc.style].tech.cost} énergie`;
   const ready = (CB.mom || 0) >= 2 || CB.round === CB.N; if (ok(fin) && ready) return fin;
   const sg = sigMove(); if (ok(sg)) { sg.label = sg.label.replace('Signature : ', 'Pouvoir : '); sg.sub = 'Round gagné d’office · ' + sg.cost + ' énergie'; return sg; }

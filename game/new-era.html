@@ -916,7 +916,7 @@ function startGame(spec) {
     shuffle(mem.slice()).slice(0, Math.ceil(mem.length / 2)).forEach(c => { G.world.npc[c.id].loc = G.loc; }); }
   pc.inv = { capsule: 2, kit: 2 }; startKit(pc);
   if (G.settings.mode === 'libre') setupLibre();
-  initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type));
+  initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type)); if (typeof rollUnique === 'function') rollUnique();
   if (spec.recruits) spec.recruits.forEach(cid => addAlly(cid, 70));
   pc.heat = Math.max(pc.heat, minHeat());
   recalc(); pc.hp = pc.hpMax; pc.en = pc.enMax;
@@ -1025,7 +1025,7 @@ function skill(attrId, tags = []) {
   const pb = perkChk(tags); if (pb) { parts.push(['particularité', pb]); mod += pb; }
   if (PK('night') && typeof envTime === 'function' && envTime() === 'night') { parts.push(['nuit', PK('night')]); mod += PK('night'); }
   if (pc.stim > 0) { parts.push(['stimulant', 3]); mod += 3; }
-  if (pc.hp < pc.hpMax * 0.3) { parts.push(['blessé', -2]); mod -= 2; }
+  { const hr = pc.hp / pc.hpMax; const wp = hr < 0.2 ? 3 : hr < 0.4 ? 2 : hr < 0.6 ? 1 : 0; if (wp) { parts.push(['blessé', -wp]); mod -= wp; } }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
   return { mod, parts };
 }
@@ -1067,7 +1067,7 @@ function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
   if (o.money) { pc.money = Math.max(0, pc.money + o.money); line(`${o.money > 0 ? '+' : ''}${fmt(o.money)} ¢`, o.money > 0 ? 'good' : 'badc'); }
   if (o.xp) { const p0 = pc.pts; addXp(o.xp); line(`+${o.xp} XP`, 'good'); if (pc.pts > p0) line(`Niveau supérieur : +${pc.pts - p0} point${pc.pts - p0 > 1 ? 's' : ''}`, 'acc'); }
-  if (o.hp) { const before = pc.hp; pc.hp = clamp(pc.hp + o.hp, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
+  if (o.hp) { const before = pc.hp; const dmg = o.hp < 0 && pc.hp < pc.hpMax * 0.4 ? Math.round(o.hp * 1.2) : o.hp; pc.hp = clamp(pc.hp + dmg, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
   if (o.en) { const b = pc.en; pc.en = clamp(pc.en + o.en, 0, pc.enMax); line(`${o.en > 0 ? '+' : ''}${pc.en - b} énergie`, o.en > 0 ? 'good' : 'badc'); }
   if (o.heat) addHeat(o.heat, L);
   if (o.merit && pc.faction !== 'civils') { pc.merit = Math.max(0, pc.merit + o.merit); line(`${o.merit > 0 ? '+' : ''}${o.merit} mérite (${F[pc.faction].name})`, o.merit > 0 ? 'good' : 'badc'); }
@@ -1105,7 +1105,7 @@ function advance(weeks) {
   for (let i = 0; i < weeks; i++) {
     G.wk++;
     const pc = G.pc;
-    pc.hp = Math.min(pc.hpMax, pc.hp + 1); pc.en = Math.min(pc.enMax, pc.en + 2);
+    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + 2);
     pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
     if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;
@@ -1171,7 +1171,9 @@ function reqReason(rq) {
   return null;
 }
 // fabrique de choix
+const HEAVY = [/Le dénoncer à la Force/, /Le livrer et toucher la prime/, /^Défier .* en duel/, /Éliminer le chef/, /Fonder ta propre faction/, /Accepter l’implant/, /Organiser ma disparition/];
 function C(label, go, o = {}) {
+  if (o.heavy || HEAVY.some(r => r.test(label))) { const g = go; const txt = o.heavy || 'Ce choix est irréversible.'; go = () => decisive(txt, g); }
   const lock = reqReason(o.req); let sub = o.sub || ''; let pct = null; let att = null;
   if (o.odds && !lock) { const [a, dc, tags, ex] = o.odds; pct = Math.round(odds(a, dc, tags || [], ex || 0) * 100); att = AT[a].short; }
   return { label, go, sub, cls: o.cls || (pct != null && pct < 40 ? 'risk' : ''), lock, pct, att, ic: o.ic, img: o.img };
@@ -1312,7 +1314,7 @@ function fillSheet() {
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`));
+  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', {}, 'Traits'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
   pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
@@ -1977,18 +1979,17 @@ function play(m) {
   if (!CB || CB.over) return; CB.preview = false; CB.spec = false; CB.stance = CB.stance || 'equilibre'; CB.sit = null; CB.log = []; CB.pops = [];
   const pc = G.pc; if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   let res = 'draw', sev = 1; const nb = CB.nextBonus; CB.nextBonus = 0;
-  if (m.kind === 'awaken') { awaken(); res = 'win'; }
-  else if (m.kind === 'sig') { sigDo(m); res = 'win'; }
+  if (m.kind === 'sig') { sigDo(m); res = 'win'; }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); sev = 0.4; res = 'loss0'; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); sev = 0.4; res = 'loss0'; }
   else {
     const r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + twistMod(m.cat) + elanBonus() + stanceBonus(m)); CB.lastR = r; const f = firstFoe(); const crit = r.crit || (PK('crit') && r.r >= 19);
     if (r.ok) {
-      res = 'win'; const win = { hit: [`Ton coup passe la garde de ${fname(f)}.`, `${fname(f)} recule sous l’impact.`, `Un enchaînement net : ${fname(f)} encaisse.`], feint: [`Tu dupes ${fname(f)} et ripostes.`, 'Une feinte parfaite.'], intim: ['Ton regard les glace : ils reculent.'], bind: ['Les ennemis sont entravés.'], hack: [`${fname(aliveFoes().find(x => x.m) || f)} est neutralisé.`], guard: ['Tu tiens bon, l’ennemi s’épuise.'], tech: ['Ta technique fait mouche.'] }[m.kind] || ['Tu gagnes ce round.'];
+      res = 'win'; const win = { hit: [`Ton coup passe la garde de ${fname(f)}.`, `${fname(f)} recule sous l’impact.`, `Un enchaînement net : ${fname(f)} encaisse.`], feint: [`Tu dupes ${fname(f)} et ripostes.`, 'Une feinte parfaite.'], intim: ['Ton regard les glace : ils reculent.'], bind: ['Les ennemis sont entravés.'], hack: [`${fname(aliveFoes().find(x => x.m) || f)} est neutralisé.`], guard: ['Tu tiens bon, l’ennemi s’épuise.'], tech: ['Ta technique fait mouche.'], awaken: ['⚡ Ton pouvoir s’éveille !'] }[m.kind] || ['Tu gagnes ce round.'];
       clog(pick(win) + (crit ? ' (CRITIQUE)' : ''), 'log-hit'); pop('f0', 'ROUND GAGNÉ', crit ? 'crit' : 'dmg');
       if (m.kind === 'intim') CB.halve = 2; if (m.kind === 'bind') { CB.nextBonus += 2; aliveFoes().forEach(x => { x.stun = 1; }); } if (m.kind === 'guard') pc.en = Math.min(pc.enMax, pc.en + 2);
       if (m.kind === 'hack') { const mc = aliveFoes().find(x => x.m); if (mc) mc.dmg = 1; }
-      if (m.kind === 'tech') techEffect();
+      if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken();
       if (crit) CB.nextBonus += 1;
     } else {
       res = 'loss'; sev = m.kind === 'feint' ? 0.5 : m.kind === 'guard' ? 0.4 : m.kind === 'gamble' ? 1.5 : 1; if (r.fumble) sev *= 1.5; sev *= (CB.stance === 'offensive' ? 1.4 : CB.stance === 'prudente' ? 0.6 : 1); clog(pick([`${fname(f)} lit ton mouvement et réplique.`, `Ton geste échoue : ${fname(f)} te contre.`, 'Tu perds le rythme.']), 'log-miss'); pop('pc', 'ROUND PERDU', 'miss');
@@ -2023,7 +2024,7 @@ function hurtPc(sev) {
   if (CB.dodge > 0 && sev >= 0.5) { CB.dodge--; pop('pc', 'ESQUIVE', 'ok'); clog('Tu esquives la riposte !', 'good'); return; }
   let total = 0;
   hostile.forEach(f => {
-    const dmg = Math.max(1, Math.round(f.dmg * 0.6 * sev * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
+    const dmg = Math.max(1, Math.round(f.dmg * 0.85 * sev * (G.pc.hp < G.pc.hpMax * 0.4 ? 1.2 : 1) * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
     const allies = pc.party.filter(a => a.inj <= 0);
     if (allies.length && chance(0.2)) { const a = pick(allies); a.hp -= dmg; clog(`${fname(f)} blesse ${CH[a.id].name} (${dmg}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     total += Math.max(1, dmg - PK('def') - Math.floor(pcArm() / 2) - (hasRole('gardien') ? 1 : 0));
@@ -2214,7 +2215,7 @@ function protectMove() {
 }
 function powerMove() {
   const pc = G.pc; const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
-  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return { id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Round gagné d’office · risqué', kind: 'awaken', cls: 'danger' };
+  if (pcPowers().length && pc.hp <= pc.hpMax * 0.5 && !CB.wasAwake) return { id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], cat: 'tac', bonus: Math.round((1 - pc.hp / pc.hpMax) * 9), kind: 'awaken', cls: 'danger' };
   const fin = techMove(); fin.label = `Pouvoir : ${STYLES[pc.style].tech.name}`; fin.bonus = 3; fin.cat = 'atk'; fin.sub = `${cap(STYLES[pc.style].tech.text)} · ${STYLES[pc.style].tech.cost} énergie`;
   const ready = (CB.mom || 0) >= 2 || CB.round === CB.N; if (ok(fin) && ready) return fin;
   const sg = sigMove(); if (ok(sg)) { sg.label = sg.label.replace('Signature : ', 'Pouvoir : '); sg.sub = 'Round gagné d’office · ' + sg.cost + ' énergie'; return sg; }
@@ -2256,9 +2257,10 @@ function npcsHere() { return DATA.chars.filter(c => { const n = G.world.npc[c.id
 function parkOpen(fn) { if (CB) return toast('Pas pendant un combat'); if (!UI.parked) UI.parked = UI.scene; closeSheet(); fn(); }
 function resumeScene() { const s = UI.parked; UI.parked = null; if (s) { UI.scene = s; render(true); return; } if (G.pc.flags.stage === 'ville') return cityMenu(); hub(); }
 function actionsMenu() { resumeScene(); }
-function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 3 + (b ? 1 : 0); cityMenu(); }
+function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 1; cityMenu(); }
 function cityMenu() {
-  const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 3; const left = f.cityActs; const L = [];
+  const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 1; const left = f.cityActs; const L = [];
+  if (left <= 0) return travelMenu();
   if (left > 0) {
     const T = []; baseTile(T); atelierTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
@@ -2268,7 +2270,7 @@ function cityMenu() {
     T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
   }
   L.push(C(left > 0 ? 'Partir pour une autre ville' : 'Partir pour une autre ville', () => travelMenu(), { ic: '🚆', cls: left > 0 ? '' : 'cta', sub: left > 0 ? 'Terminer ton séjour.' : 'Il est temps de changer de destination.' }));
-  coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
+  coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: 'Une action ici, puis tu repars', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -2279,15 +2281,15 @@ const EVENT_FN = {};
 
 // ───────── Voyager ─────────
 function travelMenu(pre) {
-  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates();
+  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates(); const freeSet = new Set(neighbors(here));
   const info = h('div', { class: 'travelinfo' }, h('div', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
   const ownerName = to => { const o = G.world.terr[to]; return o === 'pc' ? 'ta faction' : F[o] ? F[o].name : (o || '—'); };
   const select = to => {
-    const r = otRoute(here, to); if (!r) return; const weeks = 1 + Math.floor((r.hops - 1) / 4);
+    let r = otRoute(here, to); if (!r) return; if (freeSet.has(to)) r = Object.assign({}, r, { cost: 0 }); const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
     sel = to; sfx('click'); box.setRoute(r); const poor = G.pc.money < r.cost;
     info.innerHTML = ''; info.append(...[
-      h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, `${capName(here)} → ${capName(to)}`), h('span', { class: 'tvm' }, h('span', { class: poor ? 'badc' : 'acc' }, `${r.cost} ¢`), ` · ${weeks} sem.`)),
+      h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, `${capName(here)} → ${capName(to)}`), h('span', { class: 'tvm' }, h('span', { class: poor ? 'badc' : 'acc' }, r.cost ? `${r.cost} ¢` : 'Gratuit'), ` · ${weeks} sem.`)),
       h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, '🏴 ' + ownerName(to)), h('span', { class: 'pvc' }, `contrôle ${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' ✔ faux papiers' : ''}`), r.legs.length > 1 ? h('span', { class: 'pvc' }, `${r.legs.length - 1} corresp.`) : null, reco.has(to) ? h('span', { class: 'pvc rec' }, '★ ' + reco.get(to)[0]) : null),
       h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
@@ -2354,21 +2356,21 @@ function hoverGo(to) {
 function restMenu() {
   const pc = G.pc; const L = [];
   L.push(C('Dormir quelques jours (1 semaine)', () => doRest(1), { sub: 'Récupère ~25 % PV et énergie. Gratuit.' }));
-  L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère tout. Soigne aussi les alliés.', req: { money: 80 } }));
-  L.push(C('Se mettre au vert pendant 1 mois', () => lieLow(), { sub: 'La prime baisse ; tu récupères tout, mais ton argent fond (coût de la vie 60 ¢).', req: { money: 60 } }));
+  L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère ~55 % PV et toute l’énergie. Soigne les alliés.', req: { money: 80 } }));
+  L.push(C('Se mettre au vert pendant 1 mois', () => lieLow(), { sub: 'La prime baisse ; tu récupères tout, mais +70 % PV, ton argent fond (60 ¢).', req: { money: 60 } }));
   L.push(C('Chercher un contact des Siha Mujahaz (soins clandestins)', () => { addRep('siha', 2, { spill: false }); doRest(1, 0, true); }, { sub: 'Soins gratuits mais discrets, si la Siha t’apprécie.', req: { rep: { siha: 10 } } }));
   L.push(C('← Retour', cityMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
 }
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
-  const full = weeks >= 2 || free; const dh = full ? pc.hpMax : Math.round(pc.hpMax * 0.25), de = full ? pc.enMax : Math.round(pc.enMax * 0.25);
-  pc.hp = Math.min(pc.hpMax, pc.hp + dh + PK('rest') * 4); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
+  const full = weeks >= 2 || free; const dh = Math.round(pc.hpMax * (free ? 0.5 : weeks >= 2 ? 0.55 : 0.25)), de = full ? pc.enMax : Math.round(pc.enMax * 0.25);
+  pc.hp = Math.min(pc.hpMax, pc.hp + dh + PK('rest') * 3); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
   const ev = chance(0.18) && randomHubEvent(); if (ev) return ev();
   show({ kicker: 'Repos', title: 'Tu te sens mieux', text: ['Les jours passent. Les bleus s’effacent.'], choices: [C('Continuer', hub)] });
 }
 function lieLow() {
   const pc = G.pc; pc.money -= 60; const L = []; advance(4); if (G.status !== 'play') return;
-  if (pc.heat > minHeat()) { addHeat(-12, L); } pc.hp = pc.hpMax; pc.en = pc.enMax; pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
+  if (pc.heat > minHeat()) { addHeat(-12, L); } pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.7)); pc.en = pc.enMax; pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
   show({ kicker: 'Profil bas', title: 'Un mois dans l’ombre', text: ['Tu changes de quartier, de coupe, de manières. On t’oublie un peu.'], fx: L, choices: [C('Continuer', hub)] });
 }
 
@@ -2424,13 +2426,13 @@ function betray(cid) {
 // ───────── Entraînement et rôles ─────────
 function trainMenu() {
   const pc = G.pc; const L = [];
-  L.push(C('Entraînement intensif (1 semaine, 100 ¢)', () => { pc.money -= 100; advance(1); if (G.status !== 'play') return; const L2 = fx({ xp: rint(20, 40) }); show({ kicker: 'Entraînement', title: 'Sueur et progrès', text: ['Une semaine à repousser tes limites.'], fx: L2, choices: [C('Continuer', trainMenu)] }); }, { req: { money: 100 } }));
+  ATTRS.forEach(a => { const hv = (pc.half || {})[a.id] || 0; const [ic] = (typeof ATTR_LOOK !== 'undefined' && ATTR_LOOK[a.id]) || ['◆']; L.push(C(a.name, () => trainAttr(a.id), { ic, sub: `½ point · ${hv}/2 · actuel ${A(a.id)} · 100 ¢`, req: { money: 100, ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })); });
   L.push(C('Formation aux techniques anti-geno (3 semaines, 500 ¢)', () => { pc.money -= 500; advance(3); if (G.status !== 'play') return; pc.flags.antigeno = true; show({ kicker: 'Formation', title: 'Techniques anti-geno', text: ['Buff, Rebound, Shield, Restore, Foresight, Shock, Dash : accessibles à toutes, enseignées à la F.A. — tu les maîtrises désormais (+2 dégâts, +1 défense en combat).'], choices: [C('Continuer', hub)] }); }, { req: { money: 500, notFlag: 'antigeno' } }));
   const cap = 1 + Math.floor(pc.grade / 2);
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
   L.push(C('← Retour', cityMenu));
   const left = capActs(L, 'train', /rôle/i);
-  show({ kicker: 'Progression', title: 'S’entraîner', text: [`<span class="mut">XP ${pc.xp} · ${left ? 'une séance possible' : 'séance déjà faite'} dans cette ville</span>`], choices: L });
+  show({ kicker: 'Progression', title: 'S’entraîner', text: [`<span class="mut">XP ${pc.xp} · ${left ? 'une séance possible' : 'séance déjà faite'} dans cette ville</span>`], choices: L, tiles: true });
 }
 function roleMenu() {
   const pc = G.pc; const cap = 1 + Math.floor(pc.grade / 2); const L = [];
@@ -2515,7 +2517,7 @@ function dealCard() {
   if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
   pool.push({ w: 26, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
   pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
-  if (pc.grade >= 1 && pc.faction !== 'civils') pool.push({ w: 8, f: () => EVENT_FN.council() });
+  if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
   conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool); lot2Pool(pool);
@@ -2588,7 +2590,7 @@ function setupLibre() {
 }
 EVENT_FN.premise = function () {
   const p = G.world.premise; if (!p) return hub();
-  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text], choices: [C('Commencer', hub)] });
+  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text, typeof startNote === 'function' ? startNote() : ''], choices: [C('Commencer', hub)] });
 };
 function libreMonth() {
   const W = G.world; const pc = G.pc;
@@ -2753,8 +2755,8 @@ const HORS = ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'b
 function perkOf(p) { if (!p) return null; if (!_perkAll) buildPerks(); return _perkAll[p.id] || null; }
 function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) : []; }
 const lvF = p => (typeof pxLevel === 'function' && G && G.pc) ? [1, 1, 1.25, 1.5][pxLevel(p.id)] : 1;
-function PK(id) { let t = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id === id) t += x.mag * lvF(p); }); }); return Math.ceil(t - 1e-9) + (typeof stoneBonusSum === 'function' ? stoneBonusSum(id) : 0); }
-function perkChk(tags) { let b = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag * lvF(p); }); }); if (typeof stoneBonusSum === 'function') tags.forEach(t => { b += stoneBonusSum('c_' + t); }); return Math.min(3, Math.round(b)); }
+function PK(id) { let t = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id === id) t += x.mag * lvF(p); }); }); return Math.ceil(t - 1e-9) + (typeof stoneBonusSum === 'function' ? stoneBonusSum(id) : 0) + (typeof traitSum === 'function' ? traitSum(id) : 0); }
+function perkChk(tags) { let b = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag * lvF(p); }); }); if (typeof stoneBonusSum === 'function') tags.forEach(t => { b += stoneBonusSum('c_' + t) + (typeof traitSum === 'function' ? traitSum('c_' + t) : 0); }); return Math.min(3, Math.round(b)); }
 const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };
 
 // ───────── Conflits entre factions : guerres, incidents de frontière, embuscades, choix de camp ─────────
@@ -3003,7 +3005,7 @@ function missionBoard() {
 }
 function missionBrief(o) {
   const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
+  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o), ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? { heavy: 'Cette mission est sans retour : des gens en subiront les conséquences.' } : {}), C('Refuser', () => contractCard())] });
 }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
@@ -3074,7 +3076,7 @@ function finishMission(o, quality, lines, extraFx) {
   logEntry(`Mission « ${a.n} » (${o.empName}) : ${quality === 'crit' ? 'triomphe' : quality === 'partial' ? 'demi-succès' : 'réussie'}.`);
   const after = () => {
     if (o.promo && quality !== 'partial') return promote(L);
-    show({ kicker: 'Succès', title: quality === 'crit' ? 'Un triomphe !' : quality === 'partial' ? 'Demi-succès' : 'Mission accomplie', text: lines.filter(x => typeof x === 'string'), fx: L, choices: [C('Continuer', hub)] });
+    show({ kicker: 'Succès', title: quality === 'crit' ? 'Un triomphe !' : quality === 'partial' ? 'Demi-succès' : 'Mission accomplie', text: lines.filter(x => typeof x === 'string'), fx: L, choices: [C('Continuer', () => (quality === 'partial' ? hub() : lootPick(o, quality)))] });
   };
   // choix moral pour les chasses à la prime
   if (o.tchar && (o.arch === 'prime' || o.arch === 'ordre') && quality !== 'partial') {
@@ -3088,7 +3090,7 @@ function finishMission(o, quality, lines, extraFx) {
 }
 function promote(L0) {
   const pc = G.pc; pc.grade++; const f = F[pc.faction]; const s0 = wantedStars(); addHeat(0); pc.heat = Math.max(pc.heat, minHeat()); const s1 = wantedStars();
-  recalc(); pc.hp = pc.hpMax; splash({ title: 'PROMOTION', sub: `${gradeName()} ${'★'.repeat(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
+  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.25)); splash({ title: 'PROMOTION', sub: `${gradeName()} ${'★'.repeat(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
   const L = [...(L0 || [])]; if (s1 > s0) L.push({ t: `Plus tu es gradé, plus on te cherche : prime ${starStr(s1)} — ${WANTED_TXT[s1]}.`, c: 'badc' });
   const dec = ['aucune décision', 'tu votes dans les décisions de ta faction', 'tu peux proposer des opérations', 'tu décides des opérations locales', 'tu pèses sur les grandes décisions', 'tu décides de tout'][pc.grade];
   show({ kicker: 'PROMOTION', title: `${gradeName()} ${'★'.repeat(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });
@@ -3213,7 +3215,7 @@ const DEEDS = [
   { k: 'Chasse au porteur', text: p => `La rumeur court à ${p} : « un géno-porteur se cache dans le quartier ». La foule fouille les maisons, les yeux fous.`, good: ['Détourner la foule', 'charisme', ['social', 'disguise'], 'Tu lances une autre rumeur, ailleurs. La foule s’éloigne.', 'La foule ne te croit pas. Ton nom est cité.', 0.3, 0], bad: ['Désigner un innocent', 'Un voisin impopulaire est traîné dehors. Tu te fonds dans la foule.', { rep: { civils: 3 }, xp: 10 }] },
 ];
 function deedCard() {
-  const pc = G.pc; const d = pick(DEEDS); const place = capName(G.loc); const t = wTier();
+  const pc = G.pc; const okd = DEEDS.filter((x, i) => !uniqSkip('deeds', i)); const d = pick(okd.length ? okd : DEEDS); const place = capName(G.loc); const t = wTier();
   const done = () => hub();
   const goodOpt = () => {
     const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 11 + 2 * t;
@@ -3329,7 +3331,7 @@ const CAMPS = {
 };
 function campCard() {
   const pc = G.pc, f = pc.flags; let c = f.camp; const done = f.campDone = f.campDone || [];
-  if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
+  if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k) && !uniqSkip('camps', k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
   const def = CAMPS[c.id]; const ch = def.ch[c.ch]; f.campWk = G.wk; const place = esc(capName(G.loc));
   const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
@@ -3382,11 +3384,11 @@ const CITY_EV = [
   { k: 'Fête de quartier', x: 'Un quartier entier danse : musique, odeurs de cuisine, rires. Personne ne te pose de questions.', o: [['Te joindre à la fête', null, 'Tu te laisses porter. Tu te sens mieux.', { rep: 3, heal: 1 }], ['Écouter les conversations', ['intellect', ['scout']], 'Tu glanes une rumeur utile.', { xp: 15 }, 'Rien d’intéressant.', {}]] },
   { k: 'Grève générale', x: 'Les ouvriers ont posé les outils. La ville est à l’arrêt, les esprits chauffent.', o: [['Les soutenir', ['charisme', ['social']], 'Tu portes leur voix. On t’adopte.', { rep: 6, heat: 1 }, 'On te prend pour un provocateur.', { rep: -2 }], ['En profiter', null, 'Tu glisses dans les bureaux vides.', { money: 100, rep: -4, heat: 1 }]] }
 ];
-function cityEventNow() { const i = (hashStr(G.loc) + Math.floor(G.wk / 6)) % CITY_EV.length; return { i, ev: CITY_EV[i], key: G.loc + ':' + Math.floor(G.wk / 6) }; }
+function cityEventNow() { let i = (hashStr(G.loc) + Math.floor(G.wk / 6)) % CITY_EV.length; for (let n = 0; n < CITY_EV.length && uniqSkip('cityEv', i); n++) i = (i + 1) % CITY_EV.length; return { i, ev: CITY_EV[i], key: G.loc + ':' + Math.floor(G.wk / 6) }; }
 function cityEventCard() {
   const pc = G.pc; const { ev, key } = cityEventNow(); pc.flags.cityEv = pc.flags.cityEv || {}; if (pc.flags.cityEv[key]) return missionCard(); pc.flags.cityEv[key] = 1;
   const dc = 11 + wTier(); const rep = n => { addCityRep(n); };
-  const res = (title, txt, e, L) => { if (e.rep) rep(e.rep); if (e.heal) { pc.hp = pc.hpMax; pc.en = pc.enMax; } show({ kicker: ev.k.toUpperCase(), title, text: [txt].concat(L || []), fx: fx({ money: e.money || 0, xp: e.xp || 0, heat: e.heat || 0 }), choices: [C('Continuer', hub)] }); };
+  const res = (title, txt, e, L) => { if (e.rep) rep(e.rep); if (e.heal) { pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.4)); pc.en = pc.enMax; } show({ kicker: ev.k.toUpperCase(), title, text: [txt].concat(L || []), fx: fx({ money: e.money || 0, xp: e.xp || 0, heat: e.heat || 0 }), choices: [C('Continuer', hub)] }); };
   show({ kicker: capName(G.loc).toUpperCase() + ' · CE SOIR', title: ev.k, text: [ev.x], choices: ev.o.map(([lab, chk, okT, okE, koT, koE]) => C(lab, () => {
     if (chk === 'bet') { if (pc.money < 100) return toast('Il te faut 100 ¢'); pc.money -= 100; const win = chance(0.45); return show({ kicker: ev.k.toUpperCase(), title: win ? 'Gagné !' : 'Perdu', text: [win ? 'Ton champion l’emporte. Tu encaisses le double.' : 'Ton champion s’écroule au deuxième round.'], fx: fx({ money: win ? 200 : 0 }), choices: [C('Continuer', hub)] }); }
     if (chk === 'shop') { if (pc.money < 80) return toast('Il te faut 80 ¢'); pc.money -= 80; const id = pick(['capsule', 'kit', 'jumelles', 'grappin', 'radio', 'stimulant', 'bandage', 'crochets']); giveItem(id); return res('Une trouvaille', `Tu repars avec : ${ITEMS[id].n}.`, {}); }
@@ -3443,7 +3445,7 @@ function lot2Pool(pool) {
   const sp = (w, f) => pool.push({ w, f: spMark(f) });
   if (pc.flags.squad && G.wk >= pc.flags.squad.back) pool.push({ w: 60, f: squadReturn });
   if (!ok) return;
-  if (feat('camp') && (pc.flags.camp || Object.keys(CAMPS).some(k => !(pc.flags.campDone || []).includes(k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : 12, campCard);
+  if (feat('camp') && (pc.flags.camp || Object.keys(CAMPS).some(k => !(pc.flags.campDone || []).includes(k) && !uniqSkip('camps', k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : 12, campCard);
   if (feat('comp') && pc.party.some(a => !a.story && a.loy >= 60 && a.inj <= 0)) sp(14, companionCard);
   if (feat('ville') && !(pc.flags.cityEv || {})[cityEventNow().key]) sp(14, cityEventCard);
 }
@@ -3536,7 +3538,7 @@ const TUTO = {
   contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Poursuivre l’intrigue ».'],
   trame: ['Voici un événement de la trame.', 'Choisis une option : un dé décide. Le pourcentage indique tes chances.'],
   combat: ['Un combat dure 3 rounds.', 'À chaque round : Attaquer, te protéger ou utiliser ton Pouvoir. Gagne plus de rounds que l’ennemi.'],
-  ville: ['Tu es en ville.', 'Tu as quelques actions (repos, marché, recruter, s’entraîner). Quand c’est fini, tu dois partir.'],
+  ville: ['Tu es en ville.', 'Tu as une seule action ici (repos, marché, recruter, s’entraîner), puis tu repars. La station voisine est toujours gratuite.'],
   voyage: ['Choisis ta destination.', 'Touche une ville sur la carte, puis touche-la encore pour partir. Le 💎 marque un indice sur une pierre.']
 };
 function tutoSeen(id) { try { return !!JSON.parse(localStorage.getItem('ne_tuto') || '{}')[id]; } catch (e) { return false; } }
@@ -3549,6 +3551,54 @@ function ambiance() {
   const z = DATA.stateZone[G.loc]; const zi = Math.max(0, DATA.zones.indexOf(z)); const hue = Math.round((zi * 360 / DATA.zones.length + 200 + (hashStr(G.loc) % 17)) % 360);
   const r = document.documentElement.style; r.setProperty('--amb', `hsl(${hue} 88% 60%)`); r.setProperty('--ambbg', `hsl(${hue} 55% 7%)`);
 }
+
+// ───────── Inspirations Night City Legend : butin à choisir, décisions décisives, vies uniques, demi-points d'attribut ─────────
+function decisive(text, go) {
+  const prev = UI.scene; flash('#ff3d7f'); sfx('lose');
+  show({ compact: true, kicker: 'DÉCISION DÉCISIVE', title: 'Es-tu sûr ?', text: [text, '<span class="badc">Ce choix aura des conséquences durables.</span>'], choices: [C('Je confirme', go, { cls: 'danger', ic: '⚠' }), C('Revenir en arrière', () => { if (prev) { UI.scene = prev; render(true); } else hub(); }, { cls: 'back' })] });
+}
+// ── Butin : on choisit UNE récompense parmi trois ──
+function lootPick(o, quality) {
+  const pc = G.pc; const crit = quality === 'crit'; const pool = [];
+  const money = Math.max(60, Math.round((o.pay || 100) * 0.5 * (crit ? 1.5 : 1)));
+  pool.push({ w: 3, ic: '💰', t: `${money} ¢`, d: 'De l’argent frais', ap: () => fx({ money }) });
+  pool.push({ w: pc.hp < pc.hpMax * 0.7 ? 6 : 2, ic: '🩹', t: 'Soins', d: `+${crit ? 50 : 35} % de santé`, ap: () => { pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * (crit ? 0.5 : 0.35))); } });
+  const id = pick(['capsule', 'kit', 'nanosoin', 'stimulant', 'bandage', 'cafe', 'boisson', 'jumelles', 'crochets', 'grappin', 'radio']); if (ITEMS[id]) pool.push({ w: 3, ic: '🎁', t: ITEMS[id].n, d: 'Un objet utile', ap: () => giveItem(id) });
+  const xp = 20 + 8 * (o.tier || 1) + (crit ? 15 : 0); pool.push({ w: 2, ic: '⭐', t: `+${xp} XP`, d: 'De l’expérience', ap: () => fx({ xp }) });
+  const at = pick(ATTRS); pool.push({ w: 2, ic: '🧬', t: 'Un demi-point', d: `${at.name} +½`, ap: () => addHalf(at.id) });
+  if (G.wk >= 6) pool.push({ w: 2, ic: '💎', t: 'Un indice', d: 'Sur les pierres antiques', ap: () => { const l = stoneClueGain(); toast(l ? '💎 ' + cap(l).slice(0, 70) : 'Rien de neuf'); } });
+  if (feat('rep')) pool.push({ w: 2, ic: '🤝', t: 'Réputation', d: `+8 dans la zone ${zoneOf()}`, ap: () => addCityRep(8) });
+  const opts = []; const bag = pool.slice(); while (opts.length < 3 && bag.length) { const tw = bag.reduce((t, x) => t + x.w, 0); let r = Math.random() * tw, k = 0; for (; k < bag.length; k++) { r -= bag[k].w; if (r <= 0) break; } opts.push(bag.splice(Math.min(k, bag.length - 1), 1)[0]); }
+  sfx('crit'); flash('#fcee09');
+  show({ kicker: 'BUTIN', title: crit ? 'Choisis ta récompense ★' : 'Choisis ta récompense', text: [], choices: opts.map(p => C(p.t, () => { p.ap(); sfx('coin'); buzz(30); logEntry(`Butin : ${p.t}.`); hub(); }, { ic: p.ic, sub: p.d })), tiles: true });
+}
+// ── Demi-points d'attribut (entraînement, butin) ──
+function addHalf(id) { const pc = G.pc; pc.half = pc.half || {}; pc.half[id] = (pc.half[id] || 0) + 1; if (pc.half[id] >= 2) { pc.half[id] = 0; if (pc.attrs[id] < 12) { pc.attrs[id]++; recalc(); toast(`${AT[id].short} +1`); return true; } } else toast(`${AT[id].short} +½`); return false; }
+function trainAttr(id) {
+  const pc = G.pc; pc.money -= 100; advance(1); if (G.status !== 'play') return; const up = addHalf(id);
+  show({ kicker: 'Entraînement', title: up ? `${AT[id].name} +1 !` : 'Un demi-point', text: [up ? 'La séance paie : l’attribut monte.' : 'Une séance de plus et l’attribut montera.'], fx: fx({ xp: 5 }), choices: [C('Continuer', cityMenu, { cls: 'cta' })] });
+}
+// ── Traits permanents et coups du sort : chaque vie est différente ──
+const TRAITS = { dur: ['Dur à cuire', 'shield', 3], vif: ['Vif', 'dodge', 1], chanceux: ['Chanceux', 'loot', 10], charmeur: ['Charmeur', 'c_social', 1], bricoleur: ['Bricoleur', 'c_tech', 1], discret: ['Discret', 'quiet', 15], voyageur: ['Voyageur', 'travel', 5], endurant: ['Endurant', 'regen', 1] };
+function traitSum(id) { const pc = G && G.pc; if (!pc || !pc.traits) return 0; return pc.traits.reduce((t, k) => t + (TRAITS[k] && TRAITS[k][1] === id ? TRAITS[k][2] : 0), 0); }
+const traitNames = () => (G.pc.traits || []).map(k => `${TRAITS[k][0]} (${PERKS[TRAITS[k][1]][1](TRAITS[k][2])})`);
+const TWISTS = [
+  ['Un héritage inattendu', 'Un oncle lointain t’a laissé 800 ¢.', pc => { pc.money += 800; }],
+  ['Un ami bien placé', 'Quelqu’un de ton passé te doit un service : un allié te rejoint.', pc => { const c = DATA.chars.find(x => x.faction === pc.faction && x.stars <= 2 && G.world.npc[x.id].st === 'free' && x.id !== pc.charId); if (c) addAlly(c.id, 60); else pc.money += 300; }],
+  ['Du matériel volé', 'Tu as mis la main sur une arme qui n’aurait pas dû être là.', pc => { const id = pick(['hache', 'arbalete', 'cloueur', 'pareballes']); giveItem(id); equipIfFree(id); }],
+  ['Une vieille dette', 'Tu dois 300 ¢ à quelqu’un de peu commode.', pc => { pc.money = Math.max(0, pc.money - 300); pc.heat = (pc.heat || 0) + 4; }],
+  ['Un casier', 'Tes ennuis passés te rattrapent : on te connaît déjà un peu.', pc => { pc.heat = (pc.heat || 0) + 10; }],
+  ['Une rumeur', 'Un vieux conteur t’a glissé quelque chose sur les pierres antiques.', pc => { const w = G.wk; G.wk = 99; stoneClueGain(); G.wk = w; }],
+  ['Blessé au départ', 'Tu commences la partie amoindri, une vieille blessure.', pc => { pc.hp = Math.max(1, Math.round(pc.hpMax * 0.7)); }]
+];
+function rollUnique() {
+  const pc = G.pc; if (pc.flags.uniq) return; const smp = (n, k) => shuffle([...Array(n).keys()]).slice(0, k);
+  pc.flags.uniq = { deeds: smp(DEEDS.length, Math.round(DEEDS.length * 0.35)), cityEv: smp(CITY_EV.length, 2), camps: [pick(Object.keys(CAMPS))] };
+  pc.traits = shuffle(Object.keys(TRAITS)).slice(0, 2);
+  const t = pick(TWISTS); try { t[2](pc); } catch (e) { } pc.flags.twist = { n: t[0], d: t[1] };
+}
+const uniqSkip = (kind, key) => ((G.pc.flags.uniq || {})[kind] || []).includes(key);
+const startNote = () => { const pc = G.pc; if (!pc.flags.twist) return ''; return `<span class="mut">Coup du sort : <b>${esc(pc.flags.twist.n)}</b>. ${esc(pc.flags.twist.d)} · Traits : ${traitNames().map(esc).join(', ')}.</span>`; };
 
 // ───────── Monde vivant : tic mensuel, événements canon, simulation PNJ/factions, événements aléatoires ─────────
 const CANON_NAMES = ['Ora', 'Dafa', 'Multi', 'Guano', 'Vracia', 'Jinsei', 'Shinda', 'Alíngua', 'Myrsky', 'Rozko', 'Bot', 'Blackout', 'Rènào', 'Kuini Wai', 'Inkho', 'Viscous', 'Scatter', 'Kiné', 'Crâne', 'Levit', 'Moon Fang', 'Rènào'];
@@ -4086,6 +4136,93 @@ EVENT_FN.council = function () {
   L.push(C('S’abstenir', hub));
   show({ kicker: `${f.name} · ${gradeName()}`, title: `Conseil : ${tp.t}`, text: [esc(tp.d), `Plus ton grade est élevé, plus ta voix pèse : tu peux ${g >= 3 ? 'décider' : g >= 2 ? 'proposer' : 'voter'}.`], choices: L });
 };
+
+// ───────── Conseil de faction : sujets variés, vrais choix, jets, conséquences différentes ─────────
+(function () {
+  const en = fid => { const e = enemiesOf(fid); return e.length ? pick(e) : 'fa'; };
+  const TOP = [
+    { id: 'cible', t: 'Prochaine cible', d: f => `${f.name} doit choisir sa prochaine cible.`, o: [
+      ['Frapper la Force d’Autorité', { g: 1, chk: ['corps', 13, ['combat']], ok: ['L’opération réussit : la F.A. recule.', { rep: { fa: -6 }, merit: 5, heat: 2, _pow: 2 }], ko: ['L’opération tourne court. Des blessés.', { hp: -8, merit: 1, heat: 3 }] }],
+      ['Viser un rival, discrètement', { g: 2, chk: ['agilite', 14, ['stealth']], ok: ['Un coup précis : le rival est affaibli.', { merit: 7, xp: 20, _rival: -5 }], ko: ['Le rival flaire le piège et riposte.', { merit: 1, rep: { civils: -2 } }] }],
+      ['Lancer une grande offensive', { g: 3, chk: ['charisme', 15, ['social', 'ally']], ok: ['Tu rallies tout le monde : l’offensive est un succès.', { merit: 10, xp: 30, _pow: 4, heat: 3 }], ko: ['La faction ne suit pas. Tu perds la face.', { merit: -2, rep: { '$me': -4 } }] }],
+      ['Temporiser : rassembler des infos', { chk: ['intellect', 12, ['scout']], ok: ['Ton rapport est précieux.', { merit: 4, xp: 15, _clue: true }], ko: ['Tu perds du temps, sans rien trouver.', { xp: 5 }] }]] },
+    { id: 'budget', t: 'Que faire des fonds ?', d: () => 'Il reste des fonds dans la caisse. À quoi les consacrer ?', o: [
+      ['L’armement', { g: 1, ok: ['La faction s’arme mieux.', { merit: 4, _pow: 2, xp: 10 }] }],
+      ['Des abris et des soins', { g: 2, ok: ['Les quartiers voisins te remercient.', { rep: { civils: 7 }, merit: 6 }] }],
+      ['Une cellule de recherche sur les pierres', { g: 3, ok: ['Les chercheurs ont déjà une piste.', { merit: 8, xp: 10, _clue: true }] }],
+      ['Des primes pour les membres', { pay: 150, ok: ['Le moral grimpe. Les loyautés aussi.', { merit: 5, _loy: 6 }] }]] },
+    { id: 'dissension', t: 'Deux lieutenants s’affrontent', d: () => 'Deux lieutenants s’opposent sur la stratégie. Le conseil se tourne vers toi.', o: [
+      ['Soutenir l’aile dure', { g: 1, ok: ['L’aile dure l’emporte, la faction se radicalise.', { merit: 3, heat: 2, _pow: 1 }] }],
+      ['Les réconcilier', { g: 2, chk: ['charisme', 14, ['social']], ok: ['Un compromis solide : tout le monde te remercie.', { merit: 7, xp: 15 }], ko: ['Les deux se vexent.', { merit: 1, rep: { '$me': -3 } }] }],
+      ['Trancher et exclure l’un des deux', { g: 3, ok: ['Tu exclus le plus remuant. L’autre te doit sa place.', { merit: 6, xp: 10, _karma: -1 }] }],
+      ['Demander l’avis d’un allié', { party: 1, ok: ['Ton allié a un avis tranché, et juste.', { merit: 4, xp: 10, _loy: 4 }] }]] },
+    { id: 'regime', t: 'Une offre du Nouveau Régime', d: () => 'Un émissaire propose l’amnistie à la faction en échange de noms.', o: [
+      ['Refuser net', { g: 1, ok: ['La faction refuse, la tête haute.', { merit: 4, rep: { '$me': 3 } }] }],
+      ['Lui livrer de faux noms', { g: 2, chk: ['intellect', 15, ['social', 'tech']], ok: ['Tu l’as piégé : la F.A. perd du temps.', { merit: 8, xp: 20, rep: { fa: 2 } }], ko: ['Il s’en rend compte.', { merit: -2, heat: 5 }] }],
+      ['Accepter et sacrifier un rival', { g: 3, ok: ['Un rival tombe. Ta faction hésite à te faire confiance.', { merit: 9, money: 400, rep: { fa: 5, $me: -6 }, _karma: -2 }] }],
+      ['Négocier plus que ce qu’il propose', { chk: ['charisme', 16, ['social']], ok: ['L’émissaire cède : amnistie ET fonds.', { merit: 6, money: 500, xp: 20 }], ko: ['Il rompt les pourparlers.', { merit: 1 }] }]] },
+    { id: 'prisonniers', t: 'Des prisonniers', d: f => `Des hommes de ${F[en(fid0())].name} sont tombés entre vos mains.`, o: [
+      ['Les libérer contre une faveur', { g: 1, ok: ['Ils t’en doivent une.', { merit: 3, rep: { '$me': 1 }, xp: 10 }] }],
+      ['Demander une rançon', { g: 2, ok: ['La rançon tombe.', { merit: 3, money: 350 }] }],
+      ['Les interroger', { chk: ['charisme', 14, ['social']], ok: ['L’un parle : tu apprends quelque chose.', { merit: 5, _clue: true, xp: 15 }], ko: ['Ils se taisent. L’ambiance est lourde.', { _karma: -1 }] }],
+      ['Les laisser filer en secret', { chk: ['agilite', 13, ['stealth']], ok: ['Personne ne l’a su. Eux, si.', { rep: { civils: 3 }, xp: 10, _karma: 1 }], ko: ['On t’a surpris à les aider.', { merit: -4 }] }]] },
+    { id: 'recrue', t: 'Une recrue suspecte', d: () => 'Une nouvelle recrue pose trop de questions.', o: [
+      ['La tester', { chk: ['intellect', 13, ['scout']], ok: ['Elle est réglo : une bonne recrue.', { merit: 3, xp: 10, _ally: true }], ko: ['Le test ne prouve rien. Le doute reste.', { xp: 5 }] }],
+      ['L’accueillir sans question', { ok: ['Elle se révèle loyale. Un peu naïve aussi.', { merit: 2, _loy: 3 }] }],
+      ['La bannir', { g: 2, ok: ['Elle disparaît. La faction respire… ou pas.', { merit: 3, _karma: -1 }] }],
+      ['La faire surveiller', { pay: 80, ok: ['Un rapport complet : elle était bien infiltrée.', { merit: 6, xp: 20, rep: { fa: -3 } }] }]] },
+    { id: 'territoire', t: 'Un territoire contesté', d: () => 'Un quartier voisin est disputé par un rival.', o: [
+      ['Envoyer des renforts', { g: 1, fight: 'rival', ok: ['Tu tiens le quartier.', { merit: 6, xp: 20, _pow: 2 }], ko: ['Vous reculez.', { merit: 1 }] }],
+      ['Négocier un partage', { g: 2, chk: ['charisme', 15, ['social']], ok: ['Un partage tendu mais durable.', { merit: 7, xp: 15, _pow: 1 }], ko: ['Il refuse et tire la couverture.', { merit: 0 }] }],
+      ['Saboter le rival', { chk: ['intellect', 14, ['tech', 'hack']], ok: ['Ses dépôts sont HS. Il n’a plus de souffle.', { merit: 5, xp: 15, heat: 2 }], ko: ['Ton sabotage est remonté jusqu’à vous.', { heat: 4, merit: -1 }] }],
+      ['Céder le quartier', { ok: ['Tu laisses faire. Les cadres soupirent.', { merit: -1 }] }]] },
+    { id: 'fuite', t: 'Une fuite', d: () => 'Des informations sensibles ont fuité. Quelqu’un parle.', o: [
+      ['Mener l’enquête', { chk: ['intellect', 14, ['scout', 'hack']], ok: ['Tu démasques le coupable.', { merit: 6, xp: 20 }], ko: ['Tu accuses le mauvais.', { merit: -2, _karma: -1 }] }],
+      ['Purger les suspects', { g: 3, ok: ['Les fuites s’arrêtent. L’ambiance aussi.', { merit: 4, _karma: -2, _loy: -5 }] }],
+      ['Tendre un piège avec une fausse info', { chk: ['charisme', 14, ['social']], ok: ['Le piège se referme sur le traître.', { merit: 8, xp: 20 }], ko: ['Personne ne mord.', { xp: 5 }] }],
+      ['Ignorer', { ok: ['Rien ne se passe… pour l’instant.', { heat: 2 }] }]] },
+    { id: 'moral', t: 'Le moral est bas', d: () => 'La faction est fatiguée. Il faut remonter le moral.', o: [
+      ['Organiser une fête', { pay: 120, ok: ['Une nuit mémorable. Les liens se renforcent.', { merit: 4, _loy: 6, xp: 10 }] }],
+      ['Un entraînement collectif', { chk: ['corps', 13, ['combat']], ok: ['Tout le monde sort plus solide.', { merit: 5, xp: 20, _pow: 1 }], ko: ['Un blessé, des rancœurs.', { hp: -6 }] }],
+      ['Un discours', { g: 1, chk: ['charisme', 13, ['social']], ok: ['La salle se lève.', { merit: 5, xp: 15 }], ko: ['Un silence gêné.', { merit: 0 }] }],
+      ['Punir les déserteurs', { g: 2, ok: ['L’exemple est fait. La peur change de camp.', { merit: 3, _karma: -1, _loy: -3 }] }]] },
+    { id: 'allie', t: 'Un allié demande de l’aide', d: () => 'Une faction amie réclame du soutien.', o: [
+      ['Envoyer des combattants', { g: 1, ok: ['L’alliance se renforce.', { merit: 4, rep: { '$ally': 5 }, _pow: -1 }] }],
+      ['Envoyer des fonds', { pay: 200, ok: ['Un chèque bien reçu.', { merit: 3, rep: { '$ally': 6 } }] }],
+      ['Demander une contrepartie', { chk: ['charisme', 14, ['social']], ok: ['Ils paient d’avance.', { merit: 5, money: 300 }], ko: ['Ils se vexent.', { rep: { '$ally': -4 } }] }],
+      ['Refuser poliment', { ok: ['L’allié encaisse, rancunier.', { rep: { '$ally': -2 } }] }]] },
+    { id: 'artefact', t: 'Une trouvaille étrange', d: () => 'Un membre rapporte un objet ancien, couvert de glyphes.', o: [
+      ['L’étudier', { chk: ['intellect', 14, ['relic', 'scout']], ok: ['Ces glyphes parlent d’une pierre antique.', { merit: 6, _clue: true, xp: 20 }], ko: ['Rien de lisible. L’objet s’abîme.', { xp: 5 }] }],
+      ['Le vendre au Marché Noir', { ok: ['Un bon prix, sans questions.', { money: 450, rep: { noir: 2 } }] }],
+      ['Le garder pour la faction', { g: 2, ok: ['Un trophée, et un porte-bonheur.', { merit: 4, _item: 'detecteur' }] }],
+      ['Le détruire', { ok: ['On ne sait jamais ce que ça fait.', { merit: 1, _karma: 1 }] }]] },
+    { id: 'civils', t: 'Un quartier en danger', d: () => 'Un quartier civil est menacé. La faction peut intervenir.', o: [
+      ['Défendre le quartier', { g: 1, fight: 'fa', ok: ['Le quartier est sauvé.', { merit: 6, rep: { civils: 8 }, xp: 20 }], ko: ['Vous êtes repoussés.', { hp: -6, rep: { civils: 2 } }] }],
+      ['Organiser l’évacuation', { chk: ['charisme', 13, ['social', 'logi']], ok: ['Tout le monde sort à temps.', { merit: 5, rep: { civils: 7 } }], ko: ['La panique fait des blessés.', { rep: { civils: 1 }, hp: -4 }] }],
+      ['Négocier avec l’agresseur', { g: 2, chk: ['charisme', 15, ['social']], ok: ['Il se retire, bredouille.', { merit: 7, xp: 20 }], ko: ['Il rit.', { merit: 0 }] }],
+      ['Ne rien faire', { ok: ['La faction regarde ailleurs.', { rep: { civils: -4 }, _karma: -1 }] }]] }
+  ];
+  function fid0() { return G.pc.faction; }
+  function alliedOf() { const a = Object.keys(F).filter(x => !['civils', 'noir', 'fallen', 'own'].includes(x) && x !== G.pc.faction && relation(G.pc.faction, x) >= 2); return a.length ? pick(a) : 'civils'; }
+  EVENT_FN.council = function () {
+    const pc = G.pc; const fid = pc.faction; const f = F[fid]; const g = pc.grade; const wf = G.world.fac[fid] || { power: 15 }; const fl = pc.flags;
+    if (g === 0) return show({ kicker: f.name, title: 'Réunion de ta faction', text: [`Les cadres tranchent sans toi. Recrue, tu écoutes au fond de la salle.`], choices: [C('Écouter et retenir (+XP)', () => { show({ title: 'Tu apprends', text: ['Tu retiens les noms et les rapports de force.'], fx: fx({ xp: 12 }), choices: [C('Continuer', hub)] }); }), C('Partir', hub, { cls: 'back' })] });
+    fl.councilSeen = fl.councilSeen || []; const pool = TOP.filter(t => !fl.councilSeen.includes(t.id)); const tp = pick(pool.length ? pool : TOP); fl.councilSeen.push(tp.id); if (fl.councilSeen.length > 8) fl.councilSeen.shift(); fl.councilWk = G.wk;
+    const done = (txt, e) => { e = Object.assign({}, e || {}); const clue = e._clue, ally = e._ally, item = e._item, pow = e._pow, loy = e._loy, kar = e._karma, riv = e._rival; ['_clue', '_ally', '_item', '_pow', '_loy', '_karma', '_rival'].forEach(k => delete e[k]);
+      if (e.rep) { const r2 = {}; Object.entries(e.rep).forEach(([k, v]) => { r2[k === '$me' ? fid : k === '$ally' ? alliedOf() : k] = v; }); e.rep = r2; }
+      const L = fx(e); if (clue) { const l = stoneClueGain(); if (l) L.push({ t: '💎 ' + cap(l).slice(0, 80), c: 'acc' }); } if (item) giveItem(item); if (pow) wf.power = clamp((wf.power || 0) + pow, 6, 100); if (loy) pc.party.forEach(a => { a.loy = clamp(a.loy + loy, 0, 100); }); if (kar) addKarma(kar);
+      if (ally && pc.party.length < partyMax()) { const c = DATA.chars.find(x => x.faction === fid && x.stars <= 2 && G.world.npc[x.id].st === 'free'); if (c) { addAlly(c.id, 55); L.push({ t: `${c.name} te rejoint`, c: 'good' }); } }
+      if (riv) { const e2 = en(fid); if (G.world.fac[e2]) G.world.fac[e2].power = clamp(G.world.fac[e2].power + riv, 6, 100); }
+      advance(1); if (G.status !== 'play') return; show({ kicker: f.name, title: 'Décision prise', text: [txt], fx: L, choices: [C('Continuer', hub)] }); };
+    const run = spec => { if (spec.pay) { if (pc.money < spec.pay) return toast('Pas assez de crédits'); pc.money -= spec.pay; }
+      if (spec.fight) { const foeF = spec.fight === 'fa' ? 'fa' : en(fid); return startCombat({ title: tp.t, foes: foesFor(foeF, Math.max(1, Math.min(4, g)), 2), intro: 'Le conseil a tranché : à vous de jouer.', lethal: 'robbed', canFlee: true, onWin: L => done(spec.ok[0], spec.ok[1]), onFlee: () => done(spec.ko[0], spec.ko[1]) }); }
+      if (spec.chk) { const r = check(spec.chk[0], spec.chk[1], spec.chk[2]); return r.ok ? done(spec.ok[0] + ' ' + checkLine(r), spec.ok[1]) : done(spec.ko[0] + ' ' + checkLine(r), spec.ko[1]); }
+      done(spec.ok[0], spec.ok[1]); };
+    const L = tp.o.map(([lab, spec]) => C(lab, () => run(spec), { odds: spec.chk ? [spec.chk[0], spec.chk[1], spec.chk[2]] : null, sub: spec.pay ? `${spec.pay} ¢` : spec.fight ? 'Combat' : '', req: { grade: spec.g || 0, party: spec.party || 0 } }));
+    L.push(C('S’abstenir', hub, { cls: 'back' }));
+    show({ kicker: `${f.name} · conseil`, title: tp.t, text: [tp.d(f)], choices: L });
+  };
+})();
 
 // ───────── Écran titre, création de personnage, fin de partie ─────────
 const NAME_A = ['Ka', 'Mi', 'Ro', 'Ta', 'Ne', 'Sa', 'Lu', 'Vo', 'Ze', 'Ari', 'Bo', 'Cy', 'Da', 'El', 'Fa', 'Gi', 'Hy', 'Io', 'Ju', 'Ko', 'Le', 'Ma', 'No', 'Os', 'Pa', 'Qu', 'Ri', 'Su', 'Th', 'Un', 'Vi', 'Wa', 'Xe', 'Yu'];

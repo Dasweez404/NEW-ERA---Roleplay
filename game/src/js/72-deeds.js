@@ -34,7 +34,7 @@ const DEEDS = [
   { k: 'Chasse au porteur', text: p => `La rumeur court à ${p} : « un géno-porteur se cache dans le quartier ». La foule fouille les maisons, les yeux fous.`, good: ['Détourner la foule', 'charisme', ['social', 'disguise'], 'Tu lances une autre rumeur, ailleurs. La foule s’éloigne.', 'La foule ne te croit pas. Ton nom est cité.', 0.3, 0], bad: ['Désigner un innocent', 'Un voisin impopulaire est traîné dehors. Tu te fonds dans la foule.', { rep: { civils: 3 }, xp: 10 }] },
 ];
 function deedCard() {
-  const pc = G.pc; const d = pick(DEEDS); const place = capName(G.loc); const t = wTier();
+  const pc = G.pc; const okd = DEEDS.filter((x, i) => !uniqSkip('deeds', i)); const d = pick(okd.length ? okd : DEEDS); const place = capName(G.loc); const t = wTier();
   const done = () => hub();
   const goodOpt = () => {
     const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 11 + 2 * t;

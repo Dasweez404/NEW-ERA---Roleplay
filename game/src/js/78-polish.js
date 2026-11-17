@@ -3,7 +3,7 @@ const TUTO = {
   contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Poursuivre l’intrigue ».'],
   trame: ['Voici un événement de la trame.', 'Choisis une option : un dé décide. Le pourcentage indique tes chances.'],
   combat: ['Un combat dure 3 rounds.', 'À chaque round : Attaquer, te protéger ou utiliser ton Pouvoir. Gagne plus de rounds que l’ennemi.'],
-  ville: ['Tu es en ville.', 'Tu as quelques actions (repos, marché, recruter, s’entraîner). Quand c’est fini, tu dois partir.'],
+  ville: ['Tu es en ville.', 'Tu as une seule action ici (repos, marché, recruter, s’entraîner), puis tu repars. La station voisine est toujours gratuite.'],
   voyage: ['Choisis ta destination.', 'Touche une ville sur la carte, puis touche-la encore pour partir. Le 💎 marque un indice sur une pierre.']
 };
 function tutoSeen(id) { try { return !!JSON.parse(localStorage.getItem('ne_tuto') || '{}')[id]; } catch (e) { return false; } }
