@@ -546,6 +546,8 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .dock{border-top-color:var(--amb,#27f0ff)}.dk.on,.dk.on .n{color:var(--amb,#fcee09)}
 .tabs .tab.on,.shopcats .tab.on{background:var(--amb,#fcee09);color:#000}
 .sit{border-left-color:var(--amb,#27f0ff)}.rp.cur{border-color:var(--amb,#fcee09);color:var(--amb,#fcee09)}
+.map .leaddot{filter:drop-shadow(0 0 5px #ff2a3d);animation:ldp 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center;pointer-events:none}@keyframes ldp{50%{transform:scale(1.35)}}
+.maplegend .lg.r2{color:#ff2a3d}.pvc.lead{border-color:#ff2a3d;color:#ff6a78}.leadwhy{font:700 .92rem var(--fb);color:#ff8a94}
 </style>
 <div id="app"></div>
 <script>
@@ -1417,6 +1419,7 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
+    if (o.leads && o.leads.get(state)) g.append(el('circle', { cx: x - 17, cy: y - 22, r: 10, fill: '#ff2a3d', stroke: '#fff', 'stroke-width': 3, class: 'leaddot' }));
     if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 16},${y - 24} ${x + 23},${y - 16} ${x + 16},${y - 8} ${x + 9},${y - 16}`, fill: full ? '#b026ff' : 'none', stroke: '#e9ebff', 'stroke-width': 2.5, class: 'stdia' + (full ? ' full' : '') })); }
     if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
@@ -1472,7 +1475,7 @@ function mapBox(o = {}) {
   svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
-    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, h('span', { class: 'lg c' }, '● toi')) : null,
+    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, o.leads && o.leads.size ? h('span', { class: 'lg r2' }, '● opportunité') : null, h('span', { class: 'lg c' }, '● toi')) : null,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
@@ -2278,11 +2281,12 @@ function travelMenu(pre) {
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
     sel = to; sfx('click'); box.setRoute(r); const poor = G.pc.money < r.cost;
     info.innerHTML = ''; info.append(...[
+      leadMap().has(to) ? h('div', { class: 'leadwhy' }, LEAD_KINDS[leadMap().get(to).kind].ic + ' ' + leadTitle(leadMap().get(to))) : null,
       h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, `${capName(here)} → ${capName(to)}`), h('span', { class: 'tvm' }, h('span', { class: poor ? 'badc' : 'acc' }, r.cost ? `${r.cost} ¢` : 'Gratuit'), ` · ${weeks} sem.`)),
-      h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, '🏴 ' + ownerName(to)), h('span', { class: 'pvc' }, `contrôle ${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' ✔ faux papiers' : ''}`), r.legs.length > 1 ? h('span', { class: 'pvc' }, `${r.legs.length - 1} corresp.`) : null, reco.has(to) ? h('span', { class: 'pvc rec' }, '★ ' + reco.get(to)[0]) : null),
+      h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, '🏴 ' + ownerName(to)), h('span', { class: 'pvc' }, `contrôle ${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' ✔ faux papiers' : ''}`), r.legs.length > 1 ? h('span', { class: 'pvc' }, `${r.legs.length - 1} corresp.`) : null, reco.has(to) ? h('span', { class: 'pvc rec' }, '★ ' + reco.get(to)[0]) : null, leadMap().has(to) ? h('span', { class: 'pvc lead' }, '🔴 ' + LEAD_KINDS[leadMap().get(to).kind].d) : null),
       h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints() });
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap() });
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
@@ -2462,7 +2466,7 @@ function startVanish() {
 // ───────── Le fil de l'histoire : une carte, deux ou trois choix, un dé, la suite (style Destiny Eleven) ─────────
 function hub() {
   if (G.status !== 'play') return;
-  const pc = G.pc, fl = pc.flags; UI.parked = null; saveGame(); recalc(); announceFeats();
+  const pc = G.pc, fl = pc.flags; UI.parked = null; ensureLeads(); saveGame(); recalc(); announceFeats();
   if (fl.cap) return capturedMenu();
   let pend = pendingEvents(); if (pend) return pend();
   if (pc.pts > 0) return spendPoints();
@@ -2517,6 +2521,7 @@ function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); co
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
   const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; pc.flags.stoneStep = !!stoneQuestHere(); G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  ensureLeads(); { const ld = (G.world.leads || {})[G.loc]; if (ld && ld.exp >= G.wk) L.push(C(`${LEAD_KINDS[ld.kind].ic} ${leadTitle(ld)}`, () => leadAct(ld), { cls: 'risk', sub: '🔴 Opportunité · ' + LEAD_KINDS[ld.kind].d })); }
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
   [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
@@ -4212,6 +4217,40 @@ EVENT_FN.council = function () {
     show({ kicker: `${f.name} · conseil`, title: tp.t, text: [tp.d(f)], choices: L });
   };
 })();
+
+// ───────── Opportunités : des points rouges sur la carte, de bonnes raisons d'aller quelque part ─────────
+const LEAD_KINDS = {
+  contrat: { ic: '💰', t: s => `Un gros contrat t’attend à ${s}`, d: 'Paie doublée' },
+  recrue: { ic: '🤝', t: s => `Quelqu’un de talent cherche une équipe à ${s}`, d: 'Un allié potentiel' },
+  crise: { ic: '🆘', t: s => `Une crise éclate à ${s}`, d: 'Réputation et expérience' },
+  rival: { ic: '⚔', t: s => `Un rival de ta faction s’installe à ${s}`, d: 'Mérite et prise de guerre' },
+  butin: { ic: '📦', t: s => `Une cache sans surveillance à ${s}`, d: 'Un butin, avec un peu d’audace' },
+  indic: { ic: '🕵', t: s => `Un indic vend des infos à ${s}`, d: 'Indice sur les pierres' }
+};
+function ensureLeads() {
+  if (!G || !G.world || !G.pc) return; const W = G.world; W.leads = W.leads || {};
+  Object.keys(W.leads).forEach(k => { if (W.leads[k].exp < G.wk || k === G.loc && false) delete W.leads[k]; });
+  const n = () => Object.keys(W.leads).length; let guard = 0;
+  while (n() < 5 && guard++ < 30) {
+    const st = pick(DATA.states).id; if (st === G.loc || W.leads[st]) continue;
+    const kinds = ['contrat', 'contrat', 'recrue', 'crise', 'rival', 'butin', ...(G.wk >= 6 ? ['indic'] : [])]; const kind = pick(kinds); const l = { kind, st, exp: G.wk + rint(8, 14) };
+    if (kind === 'recrue') { const c = pick(DATA.chars.filter(c => c.stars >= 1 && c.stars <= 3 && c.faction !== 'civils' && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free' && !G.pc.party.some(p => p.id === c.id))); if (!c) continue; l.cid = c.id; G.world.npc[c.id].loc = st; }
+    if (kind === 'rival') { const e = enemiesOf(G.pc.faction); l.fid = e.length ? pick(e) : 'fa'; }
+    W.leads[st] = l;
+  }
+}
+const leadTitle = l => LEAD_KINDS[l.kind].t(capName(l.st)) + (l.kind === 'recrue' && CH[l.cid] ? ` : ${CH[l.cid].name}` : '');
+function leadMap() { const m = new Map(); const L = (G.world && G.world.leads) || {}; Object.keys(L).forEach(k => { if (L[k].exp >= G.wk) m.set(k, L[k]); }); return m; }
+function leadAct(l) {
+  const pc = G.pc; const W = G.world; delete W.leads[l.st]; const tier = clamp(Math.max(1, pc.grade), 1, 4);
+  if (l.kind === 'contrat') { const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', Math.min(5, tier + 1), {}); o.pay *= 2; o.xp = Math.round(o.xp * 1.5); return missionBrief(o); }
+  if (l.kind === 'crise') { const o = genOffer('civils', tier, { arch: pick(['humanitaire', 'climat']) }); o.pay = Math.round(o.pay * 1.5); o.xp = Math.round(o.xp * 2); return missionBrief(o); }
+  if (l.kind === 'recrue') return CH[l.cid] ? meetNpc(l.cid) : hub();
+  if (l.kind === 'rival') { const f = F[l.fid] || F.fa; return show({ kicker: 'OPPORTUNITÉ', title: `${f.name} s’installe ici`, text: ['Leurs hommes tiennent un entrepôt. Les chasser ferait du bruit, et de la gloire.'], choices: [C('Les attaquer', () => startCombat({ title: `Raid contre ${f.name}`, foes: foesFor(l.fid, tier, 2), intro: 'Ils ne vous attendaient pas.', lethal: lethalOf(l.fid), canFlee: true, onWin: L => show({ kicker: 'OPPORTUNITÉ', title: 'Entrepôt nettoyé', text: ['Tu repars avec les honneurs, et leur caisse.'], fx: [...L, ...fx({ merit: 4 + tier, money: 120 * tier, rep: { [l.fid]: -6, civils: 3 }, heat: 3 })], choices: [C('Continuer', hub)] }), onFlee: () => hub() }), { ic: '⚔', cls: 'risk' }), C('Passer', hub, { cls: 'back' })] }); }
+  if (l.kind === 'butin') { const dc = 12 + 2 * tier; return show({ kicker: 'OPPORTUNITÉ', title: 'Une cache sans gardien', text: ['Des caisses sous une bâche, une porte mal fermée. Personne en vue.'], choices: [C('S’y glisser', () => { const r = check('agilite', dc, ['stealth']); if (r.ok) lootPick({ pay: 200 * tier, tier }, 'crit'); else show({ kicker: 'OPPORTUNITÉ', title: 'Un piège', text: ['Une alarme, un chien, des coups.', checkLine(r)], fx: fx({ hp: -rint(6, 14), heat: 3 }), choices: [C('Continuer', hub)] }); }, { odds: ['agilite', dc, ['stealth']], ic: '🥷' }), C('Forcer la serrure à la brute', () => { const r = check('corps', dc - 1, ['combat']); if (r.ok) lootPick({ pay: 150 * tier, tier }, 'ok'); else show({ kicker: 'OPPORTUNITÉ', title: 'Le bruit attire du monde', text: ['Des gardes arrivent, trop tard pour t’arrêter mais pas pour te blesser.', checkLine(r)], fx: fx({ hp: -rint(8, 16), heat: 4 }), choices: [C('Continuer', hub)] }); }, { odds: ['corps', dc - 1, ['combat']], ic: '🔨' }), C('Passer', hub, { cls: 'back' })] }); }
+  if (l.kind === 'indic') return show({ kicker: 'OPPORTUNITÉ', title: 'Un indic', text: ['Un homme nerveux t’attire dans une ruelle : « Je sais des choses sur les pierres antiques. »'], choices: [C('Payer 150 ¢', () => { pc.money -= 150; const w = G.wk; G.wk = Math.max(G.wk, 6); const t = stoneClueGain(); G.wk = w; show({ kicker: 'OPPORTUNITÉ', title: 'Une piste', text: [t ? cap(t) : 'Il n’a rien de neuf à te vendre. Il s’excuse.'], fx: fx({ xp: 15 }), choices: [C('Continuer', hub)] }); }, { req: { money: 150 }, ic: '💰' }), C('Le faire parler', () => { const r = check('charisme', 14, ['social']); const w = G.wk; G.wk = Math.max(G.wk, 6); const t = r.ok ? stoneClueGain() : null; G.wk = w; show({ kicker: 'OPPORTUNITÉ', title: r.ok ? 'Il craque' : 'Il se rétracte', text: [r.ok ? (t ? cap(t) : 'Il ne sait rien de neuf.') : 'Il s’enfuit dans la nuit.', checkLine(r)], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['charisme', 14, ['social']], ic: '🗣' }), C('Passer', hub, { cls: 'back' })] });
+  hub();
+}
 
 // ───────── Écran titre, création de personnage, fin de partie ─────────
 const NAME_A = ['Ka', 'Mi', 'Ro', 'Ta', 'Ne', 'Sa', 'Lu', 'Vo', 'Ze', 'Ari', 'Bo', 'Cy', 'Da', 'El', 'Fa', 'Gi', 'Hy', 'Io', 'Ju', 'Ko', 'Le', 'Ma', 'No', 'Os', 'Pa', 'Qu', 'Ri', 'Su', 'Th', 'Un', 'Vi', 'Wa', 'Xe', 'Yu'];

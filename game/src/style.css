@@ -545,3 +545,5 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .dock{border-top-color:var(--amb,#27f0ff)}.dk.on,.dk.on .n{color:var(--amb,#fcee09)}
 .tabs .tab.on,.shopcats .tab.on{background:var(--amb,#fcee09);color:#000}
 .sit{border-left-color:var(--amb,#27f0ff)}.rp.cur{border-color:var(--amb,#fcee09);color:var(--amb,#fcee09)}
+.map .leaddot{filter:drop-shadow(0 0 5px #ff2a3d);animation:ldp 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center;pointer-events:none}@keyframes ldp{50%{transform:scale(1.35)}}
+.maplegend .lg.r2{color:#ff2a3d}.pvc.lead{border-color:#ff2a3d;color:#ff6a78}.leadwhy{font:700 .92rem var(--fb);color:#ff8a94}
