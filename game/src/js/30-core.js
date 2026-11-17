@@ -44,7 +44,7 @@ function check(attrId, dc, tags = [], extra = 0) {
   return res;
 }
 function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dc - m)) / 20, 0.05, 0.95); }
-const dcOf = (tier, mod = 0) => 10 + 3 * tier + mod;
+const dcOf = (tier, mod = 0) => 12 + 3 * tier + mod + ((typeof G !== 'undefined' && G && G.pc) ? (G.pc.grade >= 3 ? 1 : 0) + (G.pc.grade >= 5 ? 1 : 0) : 0);
 function checkLine(r) { return `🎲 d20 ${r.r} + ${r.mod} = ${r.total} contre ${r.dc} — ${r.crit ? 'RÉUSSITE CRITIQUE' : r.fumble ? 'ÉCHEC CRITIQUE' : r.ok ? 'réussite' : 'échec'}`; }
 
 // ───────── Réputation / prime ─────────

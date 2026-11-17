@@ -37,7 +37,7 @@ function deedCard() {
   const pc = G.pc; const okd = DEEDS.filter((x, i) => !uniqSkip('deeds', i)); const d = pick(okd.length ? okd : DEEDS); const place = capName(G.loc); const t = wTier();
   const done = () => hub();
   const goodOpt = () => {
-    const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 11 + 2 * t;
+    const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 13 + 2 * t;
     if (tags === 0 || tags === 1) { // combat contre soldats ou voyous
       return C(lab, () => startCombat({ title: d.k, foes: tags === 0 ? foesFor('fa', Math.min(3, t), 2) : [mkFoe('voyou', t), mkFoe('voyou', t)], intro: 'Ils se tournent vers toi.', lethal: tags === 0 ? 'capture' : 'robbed', canFlee: true, onWin: L => { addKarma(2); const L2 = fx({ rep: tags === 0 ? { civils: 9, fa: -8 } : { civils: 8 }, xp: 20 + 6 * t, heat: tags === 0 ? 5 : 1 }); show({ kicker: d.k.toUpperCase(), title: 'Bien joué', text: [okT], fx: [...L, ...L2], choices: [C('Continuer', () => (chance(exposureChance(expo)) ? backfire(done) : done()))] }); }, onFlee: () => show({ title: 'Repli', text: ['Tu t’éloignes, la mort dans l’âme.'], fx: fx({ rep: { civils: -2 } }), choices: [C('Continuer', done)] }) }), { ic: '🤝', odds: null, sub: 'Combat · bonne action' });
     }
