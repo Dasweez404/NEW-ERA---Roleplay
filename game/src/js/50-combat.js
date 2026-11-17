@@ -18,7 +18,7 @@ const FOE = {
 };
 function mkFoe(tid, tier, name, extra = {}) {
   const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier) * 0.45);
-  return Object.assign({ tid, tier, name: cap(name || b.n), hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
+  return Object.assign({ tid, tier, auto: Object.keys(extra).every(k => k === 'cid'), name: cap(name || b.n), hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
@@ -54,6 +54,7 @@ const firstFoe = () => aliveFoes()[0];
 function roundsFor(cfg, foes) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || Math.round(f.atk / 2))); return t >= 5 || (foes.length >= 3 && t >= 3) ? 5 : (t >= 3 || foes.length >= 3) ? 4 : 3; }
 function startCombat(cfg) {
   if (cfg.foes.length > 3) cfg.foes = cfg.foes.slice(0, 3);
+  scaleFoes(cfg);
   dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 5, mom: 0, stance: null, usedSit: [], sit: null, round: 1, W: 0, Lz: 0, hist: [], log: [], tier: Math.max(...cfg.foes.map(f => Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), weakDone: false, hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, halve: 0, pops: [], twist: null, sig: {} };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
@@ -251,4 +252,11 @@ function threat() {
   const foes = CB.foes; const t = Math.max(...foes.map(f => f.tier || Math.round(f.atk / 2))) + (foes.length >= 3 ? 1 : 0); const lv = pcLevel(); const gap = t - lv;
   const L = gap <= -2 ? ['Insignifiant', 0.25, '#5be3a0'] : gap === -1 ? ['Facile', 0.6, '#5be3a0'] : gap === 0 ? ['Équilibré', 1, '#fcee09'] : gap === 1 ? ['Dangereux', 1.3, '#ff8a1f'] : ['Écrasant', 1.6, '#ff3d7f'];
   return { gap, label: L[0], mul: L[1], col: L[2], foe: t, you: lv };
+}
+
+// Les ennemis suivent ton niveau : un perso gradé affronte des adversaires à sa mesure (on reste « petit »)
+function scaleFoes(cfg) {
+  if (cfg.noScale || !G || !G.pc) return; const lv = pcLevel(); if (lv < 4) return;
+  cfg.foes.forEach(f => { if (!f.auto) return; const want = clamp(lv + pick([-1, 0, 0, 0, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
+  if (lv >= 5 && cfg.foes.length < 3 && chance(0.3)) { const base = cfg.foes.find(f => f.auto); if (base) cfg.foes.push(mkFoe(base.tid, Math.max(1, base.tier - 2), null, {})); }
 }
