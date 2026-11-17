@@ -85,12 +85,12 @@ function travelGo(to, r, weeks) {
   const ctl = chance(detectChance());
   const stop = transferStop(r);
   if (stop) return transit(stop.r2, from, stop.state, () => {
-    G.loc = stop.state; pc.flags.stage = 'contrats'; pc.flags.cityActs = null; advance(stop.weeks); if (G.status !== 'play') return;
+    G.loc = stop.state; pc.flags.stage = 'contrats'; pc.flags.acts = {}; pc.flags.cityActs = null; advance(stop.weeks); if (G.status !== 'play') return;
     logEntry(`Escale forcée à ${capName(stop.state)}.`);
     show({ kicker: 'ORBITRAIL · ESCALE FORCÉE', title: stop.kind === 'fa' ? 'Le train s’arrête' : 'Des intrus à bord', text: [stop.kind === 'fa' ? `À la correspondance de ${esc(capName(stop.state))}, la Force d’Autorité fait descendre tout le monde : contrôle général.` : `À la correspondance de ${esc(capName(stop.state))}, des membres de ${esc(F[stop.fid].name)} montent dans ta rame. Ils te cherchaient.`, '<span class="mut">Tu devras refaire ton trajet depuis cette ville.</span>'], choices: [C('Continuer', () => (stop.kind === 'fa' ? controleFA(stop.r2) : ambushCard(stop.fid)), { cls: 'cta' })] });
   });
   transit(r, from, to, () => {
-    G.loc = to; pc.flags.stage = 'contrats'; pc.flags.cityActs = null; advance(weeks); if (G.status !== 'play') return;
+    G.loc = to; pc.flags.stage = 'contrats'; pc.flags.acts = {}; pc.flags.cityActs = null; advance(weeks); if (G.status !== 'play') return;
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();

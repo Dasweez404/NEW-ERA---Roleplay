@@ -14,8 +14,9 @@ function factionMenu() {
   L.push(C('Fonder ta propre faction', foundFaction, { req: { grade: 3, money: 3000, party: 2, ok: () => pc.ownFaction ? 'Tu en diriges déjà une' : null }, sub: 'Nom, objectif, QG. Tu pars avec ton groupe : tu es le chef.' }));
   L.push(C('Quitter la faction', leaveFaction, { cls: 'danger', sub: 'Traître pour ses alliés.' }));
   L.push(C('← Retour', actionsMenu));
+  const left = capActs(L, 'faction', /Relations|Quitter|Fonder|Retour/i);
   const nm = lead === 'pc' ? 'toi' : lead && CH[lead] ? CH[lead].name : 'personne (vacant)';
-  show({ extra: lead && lead !== 'pc' && CH[lead] ? portrait(lead, 110) : null, kicker: `Fondée en ${f.founded}`, title: f.name, text: [`Objectif : ${esc(f.goal)}`, `Chef : <b>${esc(nm)}</b> · ton grade : ${esc(gradeName())} ${'★'.repeat(pc.grade)} · mérite ${pc.merit}${nxt ? ' / ' + nxt : ''}.`, `<span class="mut">Puissance ${(W.fac[pc.faction] || { power: 10 }).power}/100 · trésorerie ${fmt((W.fac[pc.faction] || { money: 0 }).money)} ¢ · ${DATA.chars.filter(c => c.faction === pc.faction && W.npc[c.id].alive).length} membres vivants · QG : ${esc(stateName(f.hq))}${ownedStates().length ? ' · tes territoires : ' + ownedStates().map(s => esc(s.name)).join(', ') : ''}.</span>`], choices: L });
+  show({ extra: lead && lead !== 'pc' && CH[lead] ? portrait(lead, 110) : null, kicker: `Fondée en ${f.founded} · ${left}/${ACT_MAX.faction} actions ici`, title: f.name, text: [`Objectif : ${esc(f.goal)}`, `Chef : <b>${esc(nm)}</b> · ton grade : ${esc(gradeName())} ${'★'.repeat(pc.grade)} · mérite ${pc.merit}${nxt ? ' / ' + nxt : ''}.`, `<span class="mut">Puissance ${(W.fac[pc.faction] || { power: 10 }).power}/100 · trésorerie ${fmt((W.fac[pc.faction] || { money: 0 }).money)} ¢ · ${DATA.chars.filter(c => c.faction === pc.faction && W.npc[c.id].alive).length} membres vivants · QG : ${esc(stateName(f.hq))}${ownedStates().length ? ' · tes territoires : ' + ownedStates().map(s => esc(s.name)).join(', ') : ''}.</span>`], choices: L });
 }
 // ───────── Rejoindre une faction ─────────
 function joinMenu() {
