@@ -1197,8 +1197,9 @@ function tipEl() {
 function stripEl() {
   if (!G.world.news.length && typeof monthNews === 'function') { monthNews(); monthNews(); }
   const recent = G.world.news.slice(0, 4).map(x => x.t); const news = recent.length ? recent.join('   ◆   ') : null; const w = h('div', { class: 'strip' });
+  const dur = news ? Math.max(16, Math.round(news.length / 7)) : 16; const now = performance.now(); if (UI.tkKey !== news) { UI.tkKey = news; UI.tkStart = now; } const delay = ((now - (UI.tkStart || now)) / 1000) % dur; // le défilement continue d'une scène à l'autre
   w.append(h('div', { class: 'strip-img' }, envBanner(G.loc, innerWidth < 640 ? 62 : 90), h('span', { class: 'sdate' }, dateStr())));
-  if (news) w.append(h('div', { class: 'snews' }, h('span', { class: 'tk' }, 'ACTU'), h('div', { class: 'snt' }, h('span', { style: `animation-duration:${Math.max(16, Math.round(news.length / 7))}s` }, news))));
+  if (news) w.append(h('div', { class: 'snews' }, h('span', { class: 'tk' }, 'ACTU'), h('div', { class: 'snt' }, h('span', { style: `animation-duration:${dur}s;animation-delay:-${delay.toFixed(2)}s` }, news))));
   return w;
 }
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
