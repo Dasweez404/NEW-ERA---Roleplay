@@ -15,9 +15,9 @@ function hub() {
   dealCard();
 }
 // Niveau gagné : on dépense le point tout de suite, devant toi.
-function spendPoints() {
-  const pc = G.pc; if (pc.pts <= 0) return hub();
-  show({ kicker: 'NIVEAU SUPÉRIEUR', title: `${pc.pts} point${pc.pts > 1 ? 's' : ''} à répartir`, text: ['Choisis où investir. Tu dois dépenser tous tes points pour continuer.'], choices: ATTRS.map(a => C(`${a.name} · ${A(a.id)} → ${A(a.id) + 1}`, () => { pc.attrs[a.id]++; pc.pts--; recalc(); sfx('win'); spendPoints(); }, { sub: a.desc, ic: '＋', req: { ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })) });
+function spendPoints(cont) {
+  const pc = G.pc; if (pc.pts <= 0) return cont ? cont() : hub();
+  show({ noLevel: true, kicker: 'NIVEAU SUPÉRIEUR', title: `${pc.pts} point${pc.pts > 1 ? 's' : ''} à répartir`, text: ['Choisis où investir. Tu dois dépenser tous tes points pour continuer.'], choices: ATTRS.map(a => C(`${a.name} · ${A(a.id)} → ${A(a.id) + 1}`, () => { pc.attrs[a.id]++; pc.pts--; recalc(); sfx('win'); spendPoints(cont); }, { sub: a.desc, ic: '＋', req: { ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })) });
 }
 function dealCard() {
   const pc = G.pc, W = G.world; let pool = [];

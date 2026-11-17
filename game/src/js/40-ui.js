@@ -47,6 +47,7 @@ function fxHTML(L) {
 
 function show(sc) {
   if (G && G.status !== 'play' && !sc.final) return;
+  if (G && G.pc && G.pc.pts > 0 && !sc.noLevel && !sc.final && typeof CB !== 'undefined' && !CB && sc.choices) sc.choices = sc.choices.map(c => (c && !c.lock && !/^←/.test(c.label || '')) ? Object.assign({}, c, { go: () => spendPoints(c.go) }) : c);
   const roll = UI.roll; UI.roll = null;
   if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).filter(t => !(typeof t === 'string' && t.startsWith('🎲'))); }
   UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
