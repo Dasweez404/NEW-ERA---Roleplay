@@ -1782,7 +1782,7 @@ function envBanner(stateId, hpx, forceTime) {
   const t = forceTime || envTime(); const k = stateId + t; const img = (typeof ENV_IMG !== 'undefined') && (ENV_IMG[stateId + '_' + t] || ENV_IMG[stateId]);
   const svg = img ? `<img class="envimg" alt="" src="${img}">` : (ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)));
   const st = S[stateId]; const el = h('div', { class: 'env' + (img ? ' hasimg' : ''), style: `height:${hpx}px`, html: svg });
-  el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${st.continent}`))); return el;
+  el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${ZSHORT(DATA.stateZone[stateId]) || st.continent}`))); return el;
 }
 
 // ───────── Combat tour par tour ─────────
@@ -3138,7 +3138,7 @@ function deedCard() {
 // ───────── Lot 1 : arbre du pouvoir (par l'usage), réputation par ville, monde visible, némésis — introduits un par un ─────────
 const FEAT_WK = { arbre: 0, rep: 3, monde: 6, nem: 10 };
 const feat = k => G && G.wk >= FEAT_WK[k];
-const FEAT_NEWS = { rep: ['Réputation par ville', 'Chaque ville retient ce que tu y fais : prix, contrats et accueil changent. Tu verras son avis sur tes cartes de contrats.'], monde: ['Monde visible', 'Sur la carte de voyage, un anneau coloré montre qui tient chaque ville.'], nem: ['Quelqu’un te suit', 'Un ennemi pourrait revenir te chercher. Ce que tu fais autour de toi décide qui.'] };
+const FEAT_NEWS = { rep: ['Réputation par zone', 'Chaque zone du monde retient ce que tu y fais : prix, contrats et accueil changent dans toutes ses villes. Tu verras son avis sur tes cartes de contrats.'], monde: ['Monde visible', 'Sur la carte de voyage, un anneau coloré montre qui tient chaque ville.'], nem: ['Quelqu’un te suit', 'Un ennemi pourrait revenir te chercher. Ce que tu fais autour de toi décide qui.'] };
 function announceFeats() { // un seul nouvel élément à la fois, une phrase discrète
   const seen = G.pc.flags.feats = G.pc.flags.feats || {};
   for (const k of ['rep', 'monde', 'nem']) { if (!seen[k] && feat(k)) { seen[k] = 1; newsPush(`Nouveau — ${FEAT_NEWS[k][0]} : ${FEAT_NEWS[k][1]}`); toast('Nouveau : ' + FEAT_NEWS[k][0]); return; } }
@@ -3152,15 +3152,15 @@ function pxGain(pid, n = 1) {
 }
 const PX_TXT = ['', 'Niveau 1 : signature de base.', 'Niveau 2 : tes effets gagnent 25 %, la signature coûte 1 énergie.', 'Niveau 3 : effets +50 %, la signature s’utilise deux fois par combat.'];
 // ── Réputation par ville ──
-const cityRep = (s = G.loc) => (G.pc.crep || {})[s] || 0;
+const zoneOf = (s = G.loc) => ZSHORT(DATA.stateZone[s]) || s;
+const cityRep = (s = G.loc) => (G.pc.crep || {})[zoneOf(s)] || 0;
 const cityLabel = v => v >= 25 ? 'Adorée' : v >= 10 ? 'Appréciée' : v <= -25 ? 'Haïe' : v <= -10 ? 'Mal vue' : 'Neutre';
 function cityPerk() { const v = cityRep(); return v >= 25 ? { price: 0.85, offers: 2, txt: 'prix −15 %, 2 contrats de plus' } : v >= 10 ? { price: 0.9, offers: 1, txt: 'prix −10 %, 1 contrat de plus' } : v <= -25 ? { price: 1.25, offers: -1, txt: 'prix +25 %, on te surveille, contrats rares' } : v <= -10 ? { price: 1.1, offers: 0, txt: 'prix +10 %, regards en coin' } : { price: 1, offers: 0, txt: '' }; }
 function addCityRep(d, why) {
-  if (!d || !G || !feat('rep')) { if (G && d) { G.pc.crep = G.pc.crep || {}; G.pc.crep[G.loc] = clamp(cityRep() + d, -50, 50); } return; }
-  const pc = G.pc; pc.crep = pc.crep || {}; const b = cityLabel(cityRep()); pc.crep[G.loc] = clamp(cityRep() + d, -50, 50); const a = cityLabel(cityRep());
-  toast(`${capName(G.loc)} · ${d > 0 ? '+' : ''}${d} ${a !== b ? '→ ' + a : '(' + a + ')'}`);
+  if (!d || !G) return; const pc = G.pc; pc.crep = pc.crep || {}; const z = zoneOf(); const before = cityLabel(cityRep()); pc.crep[z] = clamp(cityRep() + d, -50, 50); const after = cityLabel(cityRep());
+  if (feat('rep')) toast(`Zone ${z} · ${d > 0 ? '+' : ''}${d} ${after !== before ? '→ ' + after : '(' + after + ')'}`);
 }
-const cityLine = () => { if (!feat('rep')) return ''; const v = cityRep(), p = cityPerk(); return `Réputation à ${capName(G.loc)} : <b>${cityLabel(v)}</b> (${v > 0 ? '+' : ''}${v})${p.txt ? ' — ' + p.txt : ''}.`; };
+const cityLine = () => { if (!feat('rep')) return ''; const v = cityRep(), p = cityPerk(); return `Réputation en zone ${esc(zoneOf())} : <b>${cityLabel(v)}</b> (${v > 0 ? '+' : ''}${v})${p.txt ? ' — ' + p.txt : ''}.`; };
 // ── Némésis ──
 function nemesisPick() {
   const pc = G.pc, W = G.world; const reps = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -5).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0));

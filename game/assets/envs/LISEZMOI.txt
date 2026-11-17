@@ -7,56 +7,56 @@ Format conseillé : paysage, 1600 x 500 px (bandeau large). Elles seront réduit
 Puis lance : python3 game/tools/build_envs.py game/assets/envs   puis   python3 game/build.py
 Une ville sans image garde son décor vectoriel.
 
-IDENTIFIANT  -> VILLE (ÉTAT)
-mitropa       -> Berlin (Mitropa)
-benelux       -> Amsterdam (Benelux)
-baltovi       -> Minsk (Baltovi)
-carpodav      -> Kiev (Carpodav)
-scandor       -> Stockholm (Scandor)
-iberico       -> Madrid (Iberico)
-gallica       -> Paris (Gallica)
-alpomare      -> Rome (Alpomare)
-albion        -> Londres (Albion)
-isgarde       -> Reykjavik (Isgarde)
-balka         -> Athènes (Balka)
-australis     -> Sydney (Australis)
-avaiki        -> Nouméa (Avaiki)
-aotea         -> Auckland (Aotea)
-kalimai       -> Port Moresby (Kalimai)
-andina        -> Buenos Aires (Andina)
-amazonia      -> Rio de Janeiro (Amazonia)
-aymaro        -> Lima (Aymaro)
-polaris       -> Toronto (Polaris)
-atlante       -> New York (Atlante)
-tropicana     -> Bogota (Tropicana)
-pacifica      -> San José (Pacifica)
-caribana      -> La Havane (Caribana)
-centro        -> Tegucigalpa (Centro)
-meso          -> Mexico (Meso)
-antille       -> Santo Domingo (Antille)
-ubunye        -> Le Cap (Ubunye)
-maghreb       -> Alger (Maghreb)
-okavango      -> Luanda (Okavango)
-ekatori       -> Kinshasa (Ekatori)
-mandesia      -> Abidjan (Mandésia)
-saha          -> Le Caire (Saha)
-nubie         -> Addis-Abeba (Nubie)
-creocean      -> Tananarive (Créocéan)
-westrian      -> Dakar (Westrian)
-sahel         -> Lagos (Sahel)
-swahilis      -> Nairobi (Swahilis)
-nyasa         -> Lusaka (Nyasa)
-machrek       -> Riyad (Machrek)
-siamar        -> Bangkok (Siamar)
-annam         -> Saïgon (Annam)
-sinotan       -> Pékin (Sinotan)
-koryo         -> Séoul (Koryo)
-bengal        -> New Delhi (Bengal)
-banda         -> Jakarta (Banda)
-khora         -> Téhéran (Khora)
-levant        -> Bagdad (Levant)
-yamato        -> Tokyo (Yamato)
-turkestan     -> Tachkent (Turkestan)
-sunda         -> Manille (Sunda)
-slavo         -> Moscou (Slavo)
-caucase       -> Istanbul (Caucase)
+IDENTIFIANT   VILLE (ÉTAT) — ZONE
+andina        Buenos Aires (Andina) — Altiplano
+aymaro        Lima (Aymaro) — Altiplano
+isgarde       Reykjavik (Isgarde) — Arktica
+scandor       Stockholm (Scandor) — Arktica
+siamar        Bangkok (Siamar) — Aseania
+banda         Jakarta (Banda) — Aseania
+sunda         Manille (Sunda) — Aseania
+annam         Saïgon (Annam) — Aseania
+slavo         Moscou (Slavo) — Eurasia
+turkestan     Tachkent (Turkestan) — Eurasia
+sinotan       Pékin (Sinotan) — Hansu
+koryo         Séoul (Koryo) — Hansu
+yamato        Tokyo (Yamato) — Hansu
+maghreb       Alger (Maghreb) — Harmattan
+westrian      Dakar (Westrian) — Harmattan
+saha          Le Caire (Saha) — Harmattan
+bengal        New Delhi (Bengal) — Indusara
+khora         Téhéran (Khora) — Indusara
+mandesia      Abidjan (Mandésia) — Katiopa
+ekatori       Kinshasa (Ekatori) — Katiopa
+sahel         Lagos (Sahel) — Katiopa
+caribana      La Havane (Caribana) — Maritimo
+meso          Mexico (Meso) — Maritimo
+pacifica      San José (Pacifica) — Maritimo
+antille       Santo Domingo (Antille) — Maritimo
+centro        Tegucigalpa (Centro) — Maritimo
+benelux       Amsterdam (Benelux) — Mitralux
+mitropa       Berlin (Mitropa) — Mitralux
+albion        Londres (Albion) — Mitralux
+aotea         Auckland (Aotea) — Moana
+avaiki        Nouméa (Avaiki) — Moana
+atlante       New York (Atlante) — Nordica
+polaris       Toronto (Polaris) — Nordica
+kalimai       Port Moresby (Kalimai) — Oceania
+australis     Sydney (Australis) — Oceania
+levant        Bagdad (Levant) — Orientis
+caucase       Istanbul (Caucase) — Orientis
+machrek       Riyad (Machrek) — Orientis
+iberico       Madrid (Iberico) — Romano
+gallica       Paris (Gallica) — Romano
+alpomare      Rome (Alpomare) — Romano
+ubunye        Le Cap (Ubunye) — Savanna
+okavango      Luanda (Okavango) — Savanna
+nyasa         Lusaka (Nyasa) — Savanna
+tropicana     Bogota (Tropicana) — Selvaterra
+amazonia      Rio de Janeiro (Amazonia) — Selvaterra
+balka         Athènes (Balka) — Vernovie
+carpodav      Kiev (Carpodav) — Vernovie
+baltovi       Minsk (Baltovi) — Vernovie
+nubie         Addis-Abeba (Nubie) — Zanjaria
+swahilis      Nairobi (Swahilis) — Zanjaria
+creocean      Tananarive (Créocéan) — Zanjaria
