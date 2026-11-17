@@ -288,11 +288,11 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (o.leads && o.leads.get(state)) g.append(el('circle', { cx: x - 17, cy: y - 22, r: 10, fill: '#ff2a3d', stroke: '#fff', 'stroke-width': 3, class: 'leaddot' }));
     if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 16},${y - 24} ${x + 23},${y - 16} ${x + 16},${y - 8} ${x + 9},${y - 16}`, fill: full ? '#b026ff' : 'none', stroke: '#e9ebff', 'stroke-width': 2.5, class: 'stdia' + (full ? ' full' : '') })); }
     if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
+    if (o.leads && o.leads.get(state)) g.append(el('circle', { cx: x, cy: y, r: 6, fill: '#ff2a3d', class: 'leaddot' }));
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
     g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : (go || here) ? 'keytxt' : '' }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
