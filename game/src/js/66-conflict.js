@@ -36,7 +36,7 @@ function frontCard() {
     C('Rester en retrait', () => { W.fac[pc.faction].power = clamp(W.fac[pc.faction].power - 3, 6, 100); show({ kicker: 'FRONT', title: 'Tu détournes les yeux', text: ['Les tiens encaissent seuls. Certains te regardent différemment.'], fx: fx({ rep: { [pc.faction]: -5 }, merit: -2 }), choices: [C('Continuer', hub)] }); }, { cls: 'back' })] });
 }
 function ambushCard(fromTerr) {
-  const pc = G.pc; const cand = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && ((pc.rep[f] || 0) <= -10 || relation(pc.faction, f) <= -2));
+  const pc = G.pc; pc.flags.ambushDone = true; const cand = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && ((pc.rep[f] || 0) <= -10 || relation(pc.faction, f) <= -2));
   const e = fromTerr || (cand.length ? pick(cand) : null); if (!e) return missionCard(); const ef = F[e]; const t = wTier();
   show({ kicker: 'EMBUSCADE', title: `${ef.name} t’attend`, text: [`Des silhouettes se détachent des ombres près de ${esc(capName(G.loc))}. L’emblème de ${esc(ef.name)}. Ils te cherchaient${relation(pc.faction, e) <= -2 ? ' : tu portes les couleurs de leurs ennemis' : ''}.`], choices: [
     C('Se battre', () => startCombat({ title: 'Embuscade : ' + ef.name, foes: foesFor(e, t, rint(2, 3)), lethal: 'capture', intro: 'Pas le temps de parler.', onWin: L => show({ kicker: 'EMBUSCADE', title: 'Ils reculent', text: ['Les survivants disparaissent. Mais leur faction n’oubliera pas.'], fx: [...L, ...fx({ xp: 10 + 5 * t, rep: { [e]: -6 }, merit: 2 })], choices: [C('Continuer', hub)] }), onFlee: () => hub() }), { ic: '⚔', cls: 'risk' }),
@@ -57,6 +57,7 @@ function conflictPool(pool) {
   const pc = G.pc, W = G.world; const en = enemiesOf(pc.faction).length;
   if (pc.faction !== 'civils' && en) pool.push({ w: 16 + 4 * Math.min(4, en), f: frontCard });
   const hostile = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -10).length;
+  if (pc.flags.ambushDone) { pool.push({ w: 10, f: sideCard }); return; }
   pool.push({ w: 6 + 4 * hostile + 4 * Math.min(3, wantedStars()), f: () => ambushCard() });
   pool.push({ w: 10, f: sideCard });
   const owner = W.terr[G.loc]; if (owner && owner !== pc.faction && owner !== 'pc' && F[owner] && relation(pc.faction, owner) <= -2) pool.push({ w: 28, f: () => ambushCard(owner) });

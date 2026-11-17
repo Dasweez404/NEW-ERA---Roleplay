@@ -48,14 +48,14 @@ function dealCard() {
   if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
-  conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool); lot2Pool(pool);
+  conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool); lot2Pool(pool); storyPool(pool);
   if (pc.flags.stage === 'story') pool = pool.filter(e => ![missionCard, townCard, travelCard, vehicleCard].includes(e.f));
   const e = wpick(pool, x => x.w); e.f();
 }
 function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   { const po = offers.find(o => o.promo), key = G.wk + ':' + G.loc; if (po && pc.flags.promoAsked !== key) { pc.flags.promoAsked = key; const a = ARCH[po.arch]; const lead = typeof leaderName === 'function' ? leaderName(pc.faction) : 'Ta faction'; return show({ kicker: '🎖 ÉPREUVE DE GRADE', title: 'Ta faction te met à l’épreuve', text: [`Ton mérite est suffisant. ${esc(lead)} t’attendait : pour monter en grade, il faut d’abord faire tes preuves.`, ctxText(a.intro, po), `<span class="mut">${esc(a.n)} · ${stars(po.tier)} · grade à la clé</span>`], choices: [C('Relever l’épreuve', () => missionApproach(po), { cls: 'cta', ic: '🎖' })] }); } }
   ensureLeads(); { const ld = (G.world.leads || {})[G.loc]; if (ld && ld.exp >= G.wk) L.push(C(`${LEAD_KINDS[ld.kind].ic} ${leadTitle(ld)}`, () => leadAct(ld), { cls: 'risk', sub: '🔴 Opportunité · ' + LEAD_KINDS[ld.kind].d })); }
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
