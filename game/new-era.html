@@ -2428,8 +2428,9 @@ function trainMenu() {
   L.push(C('Formation aux techniques anti-geno (3 semaines, 500 ¢)', () => { pc.money -= 500; advance(3); if (G.status !== 'play') return; pc.flags.antigeno = true; show({ kicker: 'Formation', title: 'Techniques anti-geno', text: ['Buff, Rebound, Shield, Restore, Foresight, Shock, Dash : accessibles à toutes, enseignées à la F.A. — tu les maîtrises désormais (+2 dégâts, +1 défense en combat).'], choices: [C('Continuer', hub)] }); }, { req: { money: 500, notFlag: 'antigeno' } }));
   const cap = 1 + Math.floor(pc.grade / 2);
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
-  L.push(C('Répartir les points d’attribut', () => { UI.tab = 'perso'; render(); }, { req: { ok: () => pc.pts > 0 ? null : 'Aucun point disponible (l’expérience en donne : 1 point tous les 80 XP)' } }));
-  L.push(C('← Retour', cityMenu)); show({ kicker: 'Progression', title: 'S’entraîner', text: [`XP : ${pc.xp} · points disponibles : ${pc.pts}`], choices: L });
+  L.push(C('← Retour', cityMenu));
+  const left = capActs(L, 'train', /rôle/i);
+  show({ kicker: 'Progression', title: 'S’entraîner', text: [`<span class="mut">XP ${pc.xp} · ${left ? 'une séance possible' : 'séance déjà faite'} dans cette ville</span>`], choices: L });
 }
 function roleMenu() {
   const pc = G.pc; const cap = 1 + Math.floor(pc.grade / 2); const L = [];
@@ -3505,7 +3506,7 @@ function relationGraph(selId) {
 }
 
 // ───────── Limites par destination : pierres et faction ne se jouent pas à l'infini ─────────
-const ACT_MAX = { stone: 2, faction: 2 };
+const ACT_MAX = { stone: 2, faction: 2, train: 1 };
 const actsUsed = k => ((G.pc.flags.acts || {})[k]) || 0;
 function capActs(L, k, freeRe) {
   const used = actsUsed(k); const left = ACT_MAX[k] - used;

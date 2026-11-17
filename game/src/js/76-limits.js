@@ -1,5 +1,5 @@
 // ───────── Limites par destination : pierres et faction ne se jouent pas à l'infini ─────────
-const ACT_MAX = { stone: 2, faction: 2 };
+const ACT_MAX = { stone: 2, faction: 2, train: 1 };
 const actsUsed = k => ((G.pc.flags.acts || {})[k]) || 0;
 function capActs(L, k, freeRe) {
   const used = actsUsed(k); const left = ACT_MAX[k] - used;
