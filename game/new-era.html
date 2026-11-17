@@ -836,7 +836,7 @@ const gradeNames = pc => (pc.faction === 'fa' ? GRADES_FA : pc.faction === 'fall
 const gradeName = pc => gradeNames(pc || G.pc)[(pc || G.pc).grade];
 
 function statsForChar(c) {
-  const total = [12, 17, 21, 26, 31, 36][c.stars] || 14;
+  const total = [13, 16, 19, 22, 25, 28][c.stars] || 14;
   const st = STYLES[c.style] || STYLES.brawler;
   const w = {}; ATTRS.forEach(a => w[a.id] = 1 + (a.id === st.prim ? 3 : 0) + (a.id === st.sec ? 1.5 : 0) + (hashStr(c.id + a.id) % 100) / 100 * 1.4);
   const sum = Object.values(w).reduce((x, y) => x + y, 0); const attrs = {}; let used = 0;
@@ -942,7 +942,7 @@ function charToSpec(c) {
   const powers = c.powers.length ? c.powers.slice() : fallbackPowers(c);
   const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).slice(0, Math.max(0, grade - 2)).map(x => x.id);
   return {
-    pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 900, 1600, 3000, 6000][grade], charId: c.id, xp: grade * 60 },
+    pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 800, 1200, 1800, 2600][grade], charId: c.id, xp: grade * 60 },
     recruits: mates,
   };
 }
@@ -958,7 +958,7 @@ function A(id) {
 }
 function recalc() {
   const pc = G.pc; const n = stoneCount();
-  pc.hpMax = 22 + A('corps') * 3 + pc.grade * 4 + (pc.style === 'juggernaut' ? 10 : 0) + (pc.ptype === 'zoologique' ? 4 : 0) + n * 2;
+  pc.hpMax = 22 + A('corps') * 3 + pc.grade * 3 + (pc.style === 'juggernaut' ? 10 : 0) + (pc.ptype === 'zoologique' ? 4 : 0) + n * 2;
   pc.enMax = 8 + A('maitrise') * 3 + (pc.ptype === 'elementaire' ? 6 : 0) + (pc.ptype === 'hybride' ? -2 : 0) + (pc.ptype === 'aucun' ? -8 : 0) + n * 2;
   pc.hp = clamp(pc.hp, 0, pc.hpMax); pc.en = clamp(pc.en, 0, pc.enMax);
 }
