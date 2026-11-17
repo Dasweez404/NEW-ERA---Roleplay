@@ -470,3 +470,14 @@ button.pill{font:inherit;cursor:pointer;color:inherit}button.pill:active{transfo
 @media(prefers-reduced-motion:reduce){.lvn,.lvk::after,.lvhead,.lvcard,.lvgem,.lvp{animation:none!important}}
 /* images de ville */
 .env.hasimg{overflow:hidden}.env .envimg{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.1) contrast(1.05)}
+/* ── Passe d'épuration n°3 ── */
+.popov{position:fixed;inset:0;z-index:90;background:rgba(5,5,10,.72);display:grid;align-items:end;animation:fade .2s both}@keyframes fade{from{opacity:0}to{opacity:1}}
+.popbox{display:grid;gap:8px;padding:16px max(16px,env(safe-area-inset-left,0px)) calc(18px + env(safe-area-inset-bottom,0px));background:#12121f;border-top:2px solid #fcee09;animation:sheetup .28s cubic-bezier(.2,.9,.3,1) both}@keyframes sheetup{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media(min-width:700px){.popov{align-items:start;justify-items:end}.popbox{width:320px;margin:60px 16px 0 0;border:1px solid #34344f}}
+.pbtn{background:#1a1a2e;color:#e9ebff;border:1px solid #2a2a44;padding:14px 16px;text-align:left;font:700 1rem var(--fb);letter-spacing:.02em;text-transform:none;min-height:50px;cursor:pointer;clip-path:none}.pbtn:active{transform:scale(.98)}.pbtn.ghost{background:transparent;color:#9aa0c8;text-align:center}
+.hud .lab.ic{font-size:.95rem;color:#ff3d7f;min-width:14px}.hud .stat.en .lab.ic{color:#27f0ff}
+@media(pointer:coarse){.ch .key{display:none}.ch:not(.tiles .ch){padding-left:14px}}
+.pvchips{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}.pvc{border:1px solid #34344f;padding:3px 10px;font:700 .78rem var(--fm);letter-spacing:.06em;text-transform:uppercase;color:#cfd3e6}
+.fcard{padding:8px 10px;gap:10px}.fcard .fn2{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.fcard .fst{font:400 .7rem var(--fm);color:#fcee09;letter-spacing:.1em}
+.tiles .ch{min-height:92px;padding:10px 8px}.tiles .ch .tic{font-size:1.7rem}.tiles .ch .l{font-size:.78rem}
+.hud{padding-block:8px}.hud-top{align-items:center}

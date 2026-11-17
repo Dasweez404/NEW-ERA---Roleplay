@@ -29,7 +29,7 @@ function cityMenu() {
     T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
   }
   L.push(C(left > 0 ? 'Partir pour une autre ville' : 'Partir pour une autre ville', () => travelMenu(), { ic: '🚆', cls: left > 0 ? '' : 'cta', sub: left > 0 ? 'Terminer ton séjour.' : 'Il est temps de changer de destination.' }));
-  show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof cityLine === 'function' ? cityLine() : ''), 'Chaque activité compte pour une action. Quand tu as fini, tu changes de ville.'].filter(Boolean), choices: L, tiles: true });
+  show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick

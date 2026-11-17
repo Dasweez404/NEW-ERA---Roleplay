@@ -66,13 +66,22 @@ function hudEl() {
   UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   return h('div', { class: cls },
     h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
-      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
+      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Menu', onclick: () => menuPop() }, '☰'))),
     h('div', { class: 'hud-bars' },
-      h('div', { class: 'stat hp' }, h('span', { class: 'lab' }, 'SANTÉ'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
-      h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
+      h('div', { class: 'stat hp' }, h('span', { class: 'lab ic' }, '♥'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
+      h('div', { class: 'stat en' }, h('span', { class: 'lab ic' }, '⚡'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
       h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
       h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
+}
+function menuPop() {
+  const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
+  const ov = h('div', { class: 'popov', onclick: e => { if (e.target === ov) close(); } }, h('div', { class: 'popbox' },
+    b(FX.mute ? '🔇  Son coupé : réactiver' : '🔊  Son activé : couper', () => { toggleMute(); close(); render(true); }),
+    b('💾  Sauvegarder', () => { saveGame(); close(); toast('Partie sauvegardée'); }),
+    b('🏠  Menu principal', () => { close(); saveGame(); titleScreen(); }),
+    h('button', { class: 'pbtn ghost', onclick: close }, 'Fermer')));
+  document.body.append(ov);
 }
 function toast(t) { const el = h('div', { class: 'toast' }, t); document.body.append(el); setTimeout(() => el.remove(), 1800); }
 
@@ -103,6 +112,7 @@ function render(quiet) {
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);
+  if (sc.fx && sc.fx.some(l => /¢|XP|PV/i.test(l.t || '') && l.c !== 'badc')) UI.after.push(() => setTimeout(() => { const c = document.querySelector('.chips .chip.good'); if (c) burstAt(c, '#fcee09', 14); }, 350));
   if (live) { app.append(hudEl()); if (!sc.compact && !sc.banner) app.append(stripEl()); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
@@ -122,7 +132,7 @@ function tipEl() {
 function stripEl() {
   if (!G.world.news.length && typeof monthNews === 'function') { monthNews(); monthNews(); }
   const recent = G.world.news.slice(0, 4).map(x => x.t); const news = recent.length ? recent.join('   ◆   ') : null; const w = h('div', { class: 'strip' });
-  w.append(h('div', { class: 'strip-img' }, envBanner(G.loc, innerWidth < 640 ? 72 : 92), h('span', { class: 'sdate' }, dateStr())));
+  w.append(h('div', { class: 'strip-img' }, envBanner(G.loc, innerWidth < 640 ? 62 : 90), h('span', { class: 'sdate' }, dateStr())));
   if (news) w.append(h('div', { class: 'snews' }, h('span', { class: 'tk' }, 'ACTU'), h('div', { class: 'snt' }, h('span', { style: `animation-duration:${Math.max(16, Math.round(news.length / 7))}s` }, news))));
   return w;
 }
