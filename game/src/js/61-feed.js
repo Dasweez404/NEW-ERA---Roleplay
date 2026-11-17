@@ -15,9 +15,24 @@ function hub() {
   dealCard();
 }
 // Niveau gagné : on dépense le point tout de suite, devant toi.
+const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
 function spendPoints(cont) {
   const pc = G.pc; if (pc.pts <= 0) return cont ? cont() : hub();
-  show({ noLevel: true, kicker: 'NIVEAU SUPÉRIEUR', title: `${pc.pts} point${pc.pts > 1 ? 's' : ''} à répartir`, text: ['Choisis où investir. Tu dois dépenser tous tes points pour continuer.'], choices: ATTRS.map(a => C(`${a.name} · ${A(a.id)} → ${A(a.id) + 1}`, () => { pc.attrs[a.id]++; pc.pts--; recalc(); sfx('win'); spendPoints(cont); }, { sub: a.desc, ic: '＋', req: { ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })) });
+  const total = pc.pts; let done = false;
+  const gems = h('div', { class: 'lvgems' }); const head = h('div', { class: 'lvhead' }, h('div', { class: 'lvk' }, 'NIVEAU SUPÉRIEUR'), h('div', { class: 'lvn' }, h('span', { class: 'lvplus' }, '+'), h('span', { class: 'lvnum' }, String(pc.pts))), h('div', { class: 'lvsub' }, 'points à répartir'), gems);
+  const drawGems = () => { gems.innerHTML = ''; for (let i = 0; i < total; i++) gems.append(h('i', { class: 'lvgem' + (i < pc.pts ? ' on' : '') })); head.querySelector('.lvnum').textContent = String(pc.pts); };
+  const cards = h('div', { class: 'lvcards' }, ATTRS.map((a, idx) => {
+    const [ic, col] = ATTR_LOOK[a.id] || ['◆', '#fcee09']; const pips = h('div', { class: 'lvpips' }); const val = h('b', { class: 'lvval' });
+    const draw = (pop) => { pips.innerHTML = ''; const v = A(a.id); for (let i = 0; i < 12; i++) pips.append(h('i', { class: 'lvp' + (i < v ? ' on' : '') + (pop && i === v - 1 ? ' pop' : '') + (i === v && pc.pts > 0 && v < 12 ? ' nx' : '') })); val.textContent = String(v); };
+    const card = h('button', { class: 'lvcard', style: `--c:${col};--d:${idx * 70}ms`, onclick: () => {
+      if (done || pc.pts <= 0 || pc.attrs[a.id] >= 12) return; pc.attrs[a.id]++; pc.pts--; recalc(); sfx('win'); buzz(18); draw(true); drawGems(); burstAt(card, col, 26); card.classList.remove('hit'); void card.offsetWidth; card.classList.add('hit');
+      cards.querySelectorAll('.lvcard').forEach(c => c.classList.toggle('dim', pc.pts <= 0));
+      if (pc.pts <= 0) { done = true; head.classList.add('fin'); head.querySelector('.lvsub').textContent = 'Parfait. Ton personnage progresse.'; flash('#fcee09'); sfx('crit'); setTimeout(() => { cont ? cont() : hub(); }, 1100); }
+    } }, h('span', { class: 'lvic' }, ic), h('span', { class: 'lvmid' }, h('span', { class: 'lvname' }, a.name), h('span', { class: 'lvdesc' }, a.desc), pips), val, h('span', { class: 'lvplusb' }, '＋'));
+    draw(false); return card;
+  }));
+  drawGems(); sfx('crit'); burst(innerWidth / 2, 160, '#fcee09', 36);
+  show({ noLevel: true, compact: true, bare: false, kicker: '', title: '', text: [], extra: h('div', { class: 'lvl' }, head, cards), choices: [] });
 }
 function dealCard() {
   const pc = G.pc, W = G.world; let pool = [];

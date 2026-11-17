@@ -149,7 +149,8 @@ function buildEnv(stateId, time) {
 
 function envTime() { return G ? ['night', 'dusk', 'day', 'dusk'][Math.floor(G.wk / 3) % 4] : 'night'; }
 function envBanner(stateId, hpx, forceTime) {
-  const t = forceTime || envTime(); const k = stateId + t; const svg = ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t));
-  const st = S[stateId]; const el = h('div', { class: 'env', style: `height:${hpx}px`, html: svg });
+  const t = forceTime || envTime(); const k = stateId + t; const img = (typeof ENV_IMG !== 'undefined') && (ENV_IMG[stateId + '_' + t] || ENV_IMG[stateId]);
+  const svg = img ? `<img class="envimg" alt="" src="${img}">` : (ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)));
+  const st = S[stateId]; const el = h('div', { class: 'env' + (img ? ' hasimg' : ''), style: `height:${hpx}px`, html: svg });
   el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${st.continent}`))); return el;
 }

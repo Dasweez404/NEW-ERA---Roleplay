@@ -444,3 +444,29 @@ button.pill{font:inherit;cursor:pointer;color:inherit}button.pill:active{transfo
 .snt{flex:1;overflow:hidden;white-space:nowrap;font-size:.74rem;color:#e9ebff}.snt span{display:inline-block;padding-left:100%;animation:marq 24s linear infinite}
 @keyframes marq{to{transform:translateX(-100%)}}
 @media(prefers-reduced-motion:reduce){.snt span{animation:none;padding-left:0}}
+/* ── Écran de niveau : juteux ── */
+.lvl{display:grid;gap:14px}
+.lvhead{text-align:center;padding:6px 0 2px;animation:lvin .5s cubic-bezier(.2,1.4,.4,1) both}
+.lvk{font:800 .78rem var(--fm);letter-spacing:.32em;color:#fcee09;position:relative;display:inline-block;overflow:hidden}.lvk::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.75) 50%,transparent 70%);transform:translateX(-120%);animation:shine 2.2s .4s infinite}
+@keyframes shine{to{transform:translateX(120%)}}
+.lvn{font:900 clamp(3.6rem,18vw,6rem)/1 var(--fd);color:#fff;display:flex;justify-content:center;align-items:baseline;gap:4px;animation:lvpulse 1.6s ease-in-out infinite}.lvplus{color:#fcee09}
+@keyframes lvpulse{50%{transform:scale(1.07);text-shadow:0 0 28px rgba(252,238,9,.55)}}
+.lvsub{color:#9aa0c8;font:600 .9rem var(--fm);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.lvgems{display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap}.lvgem{width:16px;height:16px;background:#1d1d33;border:1px solid #34344f;transform:rotate(45deg);transition:all .3s}.lvgem.on{background:#fcee09;border-color:#fcee09;animation:gempop .6s both}
+@keyframes gempop{from{transform:rotate(45deg) scale(0)}60%{transform:rotate(225deg) scale(1.4)}to{transform:rotate(45deg) scale(1)}}
+.lvhead.fin .lvn{color:#5be3a0;animation:none}.lvhead.fin .lvplus{color:#5be3a0}
+.lvcards{display:grid;gap:10px}
+.lvcard{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;text-align:left;background:#12121f;border:1px solid #2a2a44;border-left:4px solid var(--c);padding:10px 12px;color:var(--fg,#e9ebff);cursor:pointer;position:relative;overflow:hidden;animation:lvcard .45s var(--d) cubic-bezier(.2,1.2,.4,1) both;transition:transform .15s,border-color .2s,opacity .3s,background .2s}
+.lvcard:hover{transform:translateX(3px);background:#171728}.lvcard:active{transform:scale(.98)}
+.lvcard.hit{animation:lvhit .5s ease}@keyframes lvhit{30%{transform:scale(1.04);background:#232344}}
+.lvcard.dim{opacity:.4;pointer-events:none}
+@keyframes lvcard{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}@keyframes lvin{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+.lvic{font-size:1.9rem;line-height:1;text-align:center;filter:drop-shadow(0 0 8px var(--c))}
+.lvmid{display:grid;gap:3px;min-width:0}.lvname{font:800 1rem var(--fb);letter-spacing:.02em}.lvdesc{font-size:.72rem;color:#8a8fb5;line-height:1.2}
+.lvpips{display:flex;gap:3px;margin-top:3px}.lvp{flex:1;height:8px;background:#1d1d33;max-width:18px}.lvp.on{background:var(--c)}.lvp.pop{animation:pipup .55s cubic-bezier(.2,1.6,.4,1)}.lvp.nx{outline:1px dashed var(--c);animation:nxb 1.2s ease-in-out infinite}
+@keyframes pipup{0%{transform:scaleY(.2)}60%{transform:scaleY(2.2)}100%{transform:none}}@keyframes nxb{50%{opacity:.35}}
+.lvval{font:900 1.5rem var(--fd);color:var(--c);min-width:34px;text-align:right}
+.lvplusb{position:absolute;right:10px;top:6px;font-size:.9rem;color:var(--c);opacity:.0;transition:opacity .2s}.lvcard:hover .lvplusb{opacity:1}
+@media(prefers-reduced-motion:reduce){.lvn,.lvk::after,.lvhead,.lvcard,.lvgem,.lvp{animation:none!important}}
+/* images de ville */
+.env.hasimg{overflow:hidden}.env .envimg{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.1) contrast(1.05)}
