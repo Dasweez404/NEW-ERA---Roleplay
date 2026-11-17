@@ -33,7 +33,7 @@ function storyCard() {
   const f = G.pc.flags; const seen = f.storySeen = f.storySeen || []; const t = wTier(); const place = esc(capName(G.loc));
   let ids = STORIES.map((_, i) => i).filter(i => !seen.includes(i) && !uniqSkip('stories', i)); if (!ids.length) { f.storySeen = []; ids = STORIES.map((_, i) => i); }
   const i = pick(ids); seen.push(i); if (seen.length > STORIES.length - 4) seen.shift(); const s = STORIES[i];
-  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 13 + 2 * t;
+  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 12 + 2 * t;
     return C(lab, () => {
       const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
       show({ kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });

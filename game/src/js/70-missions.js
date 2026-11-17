@@ -148,7 +148,7 @@ function resolveApproach(o, k, dc) {
 function lethalOf(fid) { return { fa: 'capture', fallen: 'capture', arena: 'capture', check: 'robbed', noir: 'robbed', slummer: 'robbed', galleon: 'robbed', manacorp: 'capture', gamma: 'capture', saibogu: 'capture', omega: 'capture', necropunks: 'death', ragnaroks: 'death', optimum: 'death', committed: 'robbed' }[fid] || 'robbed'; }
 function missionFail(o, lines, f = {}) {
   const pc = G.pc; const L = [];
-  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(4, 8 + o.tier * 3) });
+  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(3, 6 + o.tier * 2) });
   if (pc.hp <= 0) { pc.hp = 1; }
   pc.missions++; G.score.fails = (G.score.fails || 0) + 1;
   // loyauté des alliés

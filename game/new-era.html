@@ -1049,7 +1049,7 @@ function check(attrId, dc, tags = [], extra = 0) {
   return res;
 }
 function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dc - m)) / 20, 0.05, 0.95); }
-const dcOf = (tier, mod = 0) => 12 + 3 * tier + mod + ((typeof G !== 'undefined' && G && G.pc) ? (G.pc.grade >= 3 ? 1 : 0) + (G.pc.grade >= 5 ? 1 : 0) : 0);
+const dcOf = (tier, mod = 0) => 11 + 3 * tier + mod + ((typeof G !== 'undefined' && G && G.pc && G.pc.grade >= 4) ? 1 : 0);
 function checkLine(r) { return `🎲 d20 ${r.r} + ${r.mod} = ${r.total} contre ${r.dc} — ${r.crit ? 'RÉUSSITE CRITIQUE' : r.fumble ? 'ÉCHEC CRITIQUE' : r.ok ? 'réussite' : 'échec'}`; }
 
 // ───────── Réputation / prime ─────────
@@ -2092,7 +2092,7 @@ function hurtPc(sev) {
   if (CB.dodge > 0 && sev >= 0.5) { CB.dodge--; pop('pc', 'ESQUIVE', 'ok'); clog('Tu esquives la riposte !', 'good'); return; }
   let total = 0;
   hostile.forEach(f => {
-    const dmg = Math.max(1, Math.round(f.dmg * 0.95 * sev * (G.pc.hp < G.pc.hpMax * 0.4 ? 1.2 : 1) * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
+    const dmg = Math.max(1, Math.round(f.dmg * 0.88 * sev * (G.pc.hp < G.pc.hpMax * 0.4 ? 1.2 : 1) * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
     const allies = pc.party.filter(a => a.inj <= 0);
     if (allies.length && chance(0.2)) { const a = pick(allies); a.hp -= dmg; clog(`${fname(f)} blesse ${CH[a.id].name} (${dmg}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     total += Math.max(1, dmg - PK('def') - Math.floor(pcArm() / 2) - (hasRole('gardien') ? 1 : 0));
@@ -3140,7 +3140,7 @@ function resolveApproach(o, k, dc) {
 function lethalOf(fid) { return { fa: 'capture', fallen: 'capture', arena: 'capture', check: 'robbed', noir: 'robbed', slummer: 'robbed', galleon: 'robbed', manacorp: 'capture', gamma: 'capture', saibogu: 'capture', omega: 'capture', necropunks: 'death', ragnaroks: 'death', optimum: 'death', committed: 'robbed' }[fid] || 'robbed'; }
 function missionFail(o, lines, f = {}) {
   const pc = G.pc; const L = [];
-  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(4, 8 + o.tier * 3) });
+  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(3, 6 + o.tier * 2) });
   if (pc.hp <= 0) { pc.hp = 1; }
   pc.missions++; G.score.fails = (G.score.fails || 0) + 1;
   // loyauté des alliés
@@ -3310,7 +3310,7 @@ function deedCard() {
   const pc = G.pc; const okd = DEEDS.filter((x, i) => !uniqSkip('deeds', i)); const d = pick(okd.length ? okd : DEEDS); const place = capName(G.loc); const t = wTier();
   const done = () => hub();
   const goodOpt = () => {
-    const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 13 + 2 * t;
+    const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 12 + 2 * t;
     if (tags === 0 || tags === 1) { // combat contre soldats ou voyous
       return C(lab, () => startCombat({ title: d.k, foes: tags === 0 ? foesFor('fa', Math.min(3, t), 2) : [mkFoe('voyou', t), mkFoe('voyou', t)], intro: 'Ils se tournent vers toi.', lethal: tags === 0 ? 'capture' : 'robbed', canFlee: true, onWin: L => { addKarma(2); const L2 = fx({ rep: tags === 0 ? { civils: 9, fa: -8 } : { civils: 8 }, xp: 20 + 6 * t, heat: tags === 0 ? 5 : 1 }); show({ kicker: d.k.toUpperCase(), title: 'Bien joué', text: [okT], fx: [...L, ...L2], choices: [C('Continuer', () => (chance(exposureChance(expo)) ? backfire(done) : done()))] }); }, onFlee: () => show({ title: 'Repli', text: ['Tu t’éloignes, la mort dans l’âme.'], fx: fx({ rep: { civils: -2 } }), choices: [C('Continuer', done)] }) }), { ic: '🤝', odds: null, sub: 'Combat · bonne action' });
     }
@@ -3425,7 +3425,7 @@ function campCard() {
   const pc = G.pc, f = pc.flags; let c = f.camp; const done = f.campDone = f.campDone || [];
   if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k) && !uniqSkip('camps', k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
   const def = CAMPS[c.id]; const ch = def.ch[c.ch]; f.campWk = G.wk; const place = esc(capName(G.loc));
-  const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 13 + 2 * wTier(); return C(lab, () => {
+  const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 12 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
     const last = c.ch >= def.ch.length; const gain = fx({ xp: 12 + 4 * wTier(), hp: r.ok ? 0 : -rint(2, 7), heat: r.ok ? 0 : 2 });
     if (!last) return show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
@@ -4512,7 +4512,7 @@ function storyCard() {
   const f = G.pc.flags; const seen = f.storySeen = f.storySeen || []; const t = wTier(); const place = esc(capName(G.loc));
   let ids = STORIES.map((_, i) => i).filter(i => !seen.includes(i) && !uniqSkip('stories', i)); if (!ids.length) { f.storySeen = []; ids = STORIES.map((_, i) => i); }
   const i = pick(ids); seen.push(i); if (seen.length > STORIES.length - 4) seen.shift(); const s = STORIES[i];
-  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 13 + 2 * t;
+  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 12 + 2 * t;
     return C(lab, () => {
       const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
       show({ kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });

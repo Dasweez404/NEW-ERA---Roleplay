@@ -173,7 +173,7 @@ function hurtPc(sev) {
   if (CB.dodge > 0 && sev >= 0.5) { CB.dodge--; pop('pc', 'ESQUIVE', 'ok'); clog('Tu esquives la riposte !', 'good'); return; }
   let total = 0;
   hostile.forEach(f => {
-    const dmg = Math.max(1, Math.round(f.dmg * 0.95 * sev * (G.pc.hp < G.pc.hpMax * 0.4 ? 1.2 : 1) * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
+    const dmg = Math.max(1, Math.round(f.dmg * 0.88 * sev * (G.pc.hp < G.pc.hpMax * 0.4 ? 1.2 : 1) * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
     const allies = pc.party.filter(a => a.inj <= 0);
     if (allies.length && chance(0.2)) { const a = pick(allies); a.hp -= dmg; clog(`${fname(f)} blesse ${CH[a.id].name} (${dmg}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     total += Math.max(1, dmg - PK('def') - Math.floor(pcArm() / 2) - (hasRole('gardien') ? 1 : 0));
