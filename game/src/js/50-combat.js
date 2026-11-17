@@ -22,13 +22,15 @@ function mkFoe(tid, tier, name, extra = {}) {
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
-  const out = []; const pool = FOE_BY_FAC[fid];
+  const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
+  const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
   for (let i = 0; i < n; i++) {
-    if (pool) out.push(mkFoe(pick(pool), tier));
-    else { const mem = DATA.chars.filter(c => c.faction === fid && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))); const c = mem.length ? pick(mem) : null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
+    if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, tier)); }
+    else { const c = mem[i] || null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
   }
   return out;
 }
+function dedupeFoes(foes) { const seen = {}; foes.forEach(f => { seen[f.name] = (seen[f.name] || 0) + 1; }); const idx = {}; foes.forEach(f => { if (seen[f.name] > 1) { idx[f.name] = (idx[f.name] || 0) + 1; f.name += ' ' + String.fromCharCode(64 + idx[f.name]); } }); }
 let CB = null;
 const POWER_FX = {
   combat: { n: 'Frappe de pouvoir', cost: 3, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 2, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 2, d: 'Absorbe des dégâts' },
@@ -52,6 +54,7 @@ const firstFoe = () => aliveFoes()[0];
 function roundsFor(cfg, foes) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || Math.round(f.atk / 2))); return t >= 5 || (foes.length >= 3 && t >= 3) ? 5 : (t >= 3 || foes.length >= 3) ? 4 : 3; }
 function startCombat(cfg) {
   if (cfg.foes.length > 3) cfg.foes = cfg.foes.slice(0, 3);
+  dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 5, mom: 0, stance: null, usedSit: [], sit: null, round: 1, W: 0, Lz: 0, hist: [], log: [], tier: Math.max(...cfg.foes.map(f => Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), weakDone: false, hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, halve: 0, pops: [], twist: null, sig: {} };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
   CB.thr = threat(); CB.N = cfg.rounds || (CB.thr.gap <= -1 ? 3 : 5);
@@ -93,7 +96,7 @@ function moves() { return sitMoves(); }
 function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + CB.nextBonus + twistMod(m.cat) + elanBonus() + stanceBonus(m)]; }
 // ── Résolution d’un round ──
 function play(m) {
-  if (!CB || CB.over) return; CB.preview = false; CB.stance = CB.stance || 'equilibre'; CB.sit = null; CB.log = []; CB.pops = [];
+  if (!CB || CB.over) return; CB.preview = false; CB.spec = false; CB.stance = CB.stance || 'equilibre'; CB.sit = null; CB.log = []; CB.pops = [];
   const pc = G.pc; if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   let res = 'draw', sev = 1; const nb = CB.nextBonus; CB.nextBonus = 0;
   if (m.kind === 'awaken') { awaken(); res = 'win'; }
@@ -182,14 +185,13 @@ function conclude() {
 // ── Affichage ──
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
-  const rows = h('div', { class: 'foes' }, CB.foes.map((f, i) => {
+  const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
     const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : 100)}%` }); const pct = Math.max(0, f.hp) / f.hpMax * 100; bars.push([bi, pct]); CB.prev[i] = pct;
-    return h('div', { class: 'frow' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 26) || '', h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi), h('span', { class: 'fv' }, f.stun > 0 ? '⚡ sonné' : ''));
+    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 22) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f) + (f.stun > 0 ? ' ⚡' : '')), h('div', { class: 'bar hp mini' }, bi)));
   }));
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
-  const me = h('div', { class: 'frow me', 'data-k': 'pc' }, h('span', { class: 'fn' }, 'Toi'), h('div', { class: 'bar hp mini' }, h('i', { style: `width:${pc.hp / pc.hpMax * 100}%` })), h('span', { class: 'fv' }, `${pc.hp}/${pc.hpMax} · ⚡${pc.en}`));
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
-  const rlog = h('div', { class: 'rlog' }, CB.log.slice(-3).map(l => h('div', { class: l.c }, l.t)));
+  const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
   const tw = CB.twist ? h('div', { class: 'small badc' }, '⚠ ' + CB.twist.t) : null; const sit = currentSit(); const sitEl = h('div', { class: 'sit' }, h('b', {}, sit.n), ' — ', sit.t);
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
@@ -202,11 +204,14 @@ function renderCombat() {
       if (dmgF) { sfx('hit'); buzz(20); } else if (miss) sfx('miss'); if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
     }, delay);
   };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, pips, momEl(), rows, me, st ? h('div', { class: 'small acc' }, st) : null, sitEl, rlog, tw), choices: combatChoices() });
+  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips, momEl()), rows, st ? h('div', { class: 'small acc' }, st) : null, sitEl, rlog, tw), choices: combatChoices() });
 }
 function combatChoices() {
-  const pc = G.pc; const L = [];
-  moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
+  const pc = G.pc; const L = []; const all = moves(); const SPEC = ['tech', 'sig', 'item', 'heal', 'awaken'];
+  const add = (m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
+  const main = all.filter(m => !SPEC.includes(m.kind)), spec = all.filter(m => SPEC.includes(m.kind));
+  main.forEach(add);
+  if (spec.length) { if (CB.spec) spec.forEach(add); else { const ready = spec.some(m => !m.lock && !(m.cost && pc.en < m.cost)); L.push(C(`✦ Capacités${ready ? ' prêtes' : ''} (${spec.length})`, () => { CB.spec = true; renderCombat(); }, { cls: ready ? 'safe' : 'back', sub: spec.map(m => m.label.replace(/^(Signature|Finisseur) : /, '')).join(' · ') })); } }
   if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.cfg.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
   else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
   return L;

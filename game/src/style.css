@@ -481,3 +481,11 @@ button.pill{font:inherit;cursor:pointer;color:inherit}button.pill:active{transfo
 .fcard{padding:8px 10px;gap:10px}.fcard .fn2{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.fcard .fst{font:400 .7rem var(--fm);color:#fcee09;letter-spacing:.1em}
 .tiles .ch{min-height:92px;padding:10px 8px}.tiles .ch .tic{font-size:1.7rem}.tiles .ch .l{font-size:.78rem}
 .hud{padding-block:8px}.hud-top{align-items:center}
+/* ── Combat resserré ── */
+.chead{display:grid;gap:6px;margin-bottom:6px}.chead .rpips{margin:0}.rp{padding:3px 0;font-size:.8rem}
+.mom{margin:0}.mom .ml{display:none}.mom .mc{height:7px}.mom .ms{display:none}.mom .mv{font-size:.85rem;min-width:24px}
+.foechips{display:flex;gap:6px;margin-bottom:6px}.fchip{flex:1;min-width:0;display:flex;gap:6px;align-items:center;background:#12121f;border:1px solid #2a2a44;border-left:3px solid #ff3d7f;padding:5px 8px}.fchip.dead{opacity:.35}
+.fchip .fcn{flex:1;min-width:0;display:grid;gap:3px}.fchip .fn{font:700 .8rem var(--fb);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sit{margin:4px 0;padding:6px 9px;font-size:.92rem}
+.rlog{margin:4px 0}
+details>summary{cursor:pointer;color:#9aa0c8;margin-top:6px}.pwbox{margin:8px 0;padding:8px 10px;background:#12121f;border-left:3px solid #fcee09;display:grid;gap:3px}

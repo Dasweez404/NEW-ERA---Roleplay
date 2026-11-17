@@ -492,6 +492,14 @@ button.pill{font:inherit;cursor:pointer;color:inherit}button.pill:active{transfo
 .fcard{padding:8px 10px;gap:10px}.fcard .fn2{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.fcard .fst{font:400 .7rem var(--fm);color:#fcee09;letter-spacing:.1em}
 .tiles .ch{min-height:92px;padding:10px 8px}.tiles .ch .tic{font-size:1.7rem}.tiles .ch .l{font-size:.78rem}
 .hud{padding-block:8px}.hud-top{align-items:center}
+/* ── Combat resserré ── */
+.chead{display:grid;gap:6px;margin-bottom:6px}.chead .rpips{margin:0}.rp{padding:3px 0;font-size:.8rem}
+.mom{margin:0}.mom .ml{display:none}.mom .mc{height:7px}.mom .ms{display:none}.mom .mv{font-size:.85rem;min-width:24px}
+.foechips{display:flex;gap:6px;margin-bottom:6px}.fchip{flex:1;min-width:0;display:flex;gap:6px;align-items:center;background:#12121f;border:1px solid #2a2a44;border-left:3px solid #ff3d7f;padding:5px 8px}.fchip.dead{opacity:.35}
+.fchip .fcn{flex:1;min-width:0;display:grid;gap:3px}.fchip .fn{font:700 .8rem var(--fb);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sit{margin:4px 0;padding:6px 9px;font-size:.92rem}
+.rlog{margin:4px 0}
+details>summary{cursor:pointer;color:#9aa0c8;margin-top:6px}.pwbox{margin:8px 0;padding:8px 10px;background:#12121f;border-left:3px solid #fcee09;display:grid;gap:3px}
 </style>
 </head>
 <body>
@@ -1002,7 +1010,7 @@ function addXp(n) { const pc = G.pc; const o = Math.floor(pc.xp / 80); pc.xp += 
 function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
   if (o.money) { pc.money = Math.max(0, pc.money + o.money); line(`${o.money > 0 ? '+' : ''}${fmt(o.money)} ¢`, o.money > 0 ? 'good' : 'badc'); }
-  if (o.xp) { const p0 = pc.pts; addXp(o.xp); line(`+${o.xp} XP`, 'good'); if (pc.pts > p0) line(`+${pc.pts - p0} point d’attribut à répartir (menu « Personnage »)`, 'acc'); }
+  if (o.xp) { const p0 = pc.pts; addXp(o.xp); line(`+${o.xp} XP`, 'good'); if (pc.pts > p0) line(`Niveau supérieur : +${pc.pts - p0} point${pc.pts - p0 > 1 ? 's' : ''}`, 'acc'); }
   if (o.hp) { const before = pc.hp; pc.hp = clamp(pc.hp + o.hp, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
   if (o.en) { const b = pc.en; pc.en = clamp(pc.en + o.en, 0, pc.enMax); line(`${o.en > 0 ? '+' : ''}${pc.en - b} énergie`, o.en > 0 ? 'good' : 'badc'); }
   if (o.heat) addHeat(o.heat, L);
@@ -1115,9 +1123,11 @@ function C(label, go, o = {}) {
 function fxHTML(L) {
   if (!L || !L.length) return null; let xp = 0; const rest = [];
   L.forEach(l => { const m = /^\+(\d+)\s*XP/i.exec(l.t || ''); if (m) xp += +m[1]; else rest.push(l); });
-  const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest); const MAX = 4; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
+  const prio = l => (/¢|XP|Niveau sup/i.test(l.t || '') || l.c === 'badc') ? 0 : /PV|MÉRITE|mérite|PRIME|objet/i.test(l.t || '') ? 1 : 2;
+  const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest).map((l, i) => [l, i]).sort((x, y) => prio(x[0]) - prio(y[0]) || x[1] - y[1]).map(x => x[0]);
+  const MAX = 3; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
   const box = h('div', { class: 'chips' }, items.slice(0, MAX).map(chip));
-  if (items.length > MAX) { const more = items.slice(MAX); box.append(h('button', { class: 'chip morechip', onclick: e => { e.currentTarget.remove(); more.forEach((l, i) => box.append(chip(l, i))); } }, `+${more.length} autre${more.length > 1 ? 's' : ''}`)); }
+  if (items.length > MAX) { const more = items.slice(MAX); box.append(h('button', { class: 'chip morechip', onclick: e => { e.currentTarget.remove(); more.forEach((l, i) => box.append(chip(l, i))); } }, `+${more.length}`)); }
   return box;
 }
 
@@ -1236,22 +1246,15 @@ function fillSheet() {
 }
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
-  const pc = G.pc; const box = h('div');
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Faction'), F[pc.faction].name, h('b', {}, 'Style'), `${STYLES[pc.style].name} — ${STYLES[pc.style].desc}`,
-    h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'Rôles'), pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'aucun (à choisir au fil du temps)',
-    h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché (pas d’identité civile complète)'));
-  box.append(h('h3', {}, 'Pouvoir : ' + TYPENAME[pc.ptype]));
-  if (!pcPowers().length) box.append(h('div', { class: 'mut' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => { box.append(powerLine(p)); const k = perkOf(p); if (k) { const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0; box.append(h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), ' ', h('span', { class: 'mut' }, `(${k.kind}) ${k.desc}`), h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]} usages` : ' · maximum'} — ${PX_TXT[lv]}`))); } });
-  if (pc.ptype !== 'aucun') box.append(h('div', { class: 'small mut', style: 'margin-top:4px' }, 'Faiblesse : ' + WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
-  box.append(h('h3', {}, 'Attributs' + (pc.pts ? ` — ${pc.pts} point(s) à répartir` : '')));
-  ATTRS.forEach(a => {
-    const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' }));
-    box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v), pc.pts > 0 && pc.attrs[a.id] < 12 ? h('button', { class: 'tab', onclick: () => { pc.attrs[a.id]++; pc.pts--; recalc(); render(true); } }, '+') : null));
-  });
-  box.append(h('h3', {}, 'Progression'));
-  const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Grade'), `${gradeName()} (${pc.grade}/5)`, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt} pour le grade suivant` : `${pc.merit}`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Prime'), wantedStars() ? starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] : 'aucune', h('b', {}, 'Éveil'), pc.awakened ? `déjà éveillé ${pc.awakened} fois` : 'jamais éveillé'));
+  const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
+  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`));
+  if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
+  pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
+    box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
+  if (pc.ptype !== 'aucun') box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
+  ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
+  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', {}, 'Prime'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()]] : [])));
+  box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais', h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché')));
   box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
   return box;
@@ -1832,13 +1835,15 @@ function mkFoe(tid, tier, name, extra = {}) {
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
-  const out = []; const pool = FOE_BY_FAC[fid];
+  const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
+  const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
   for (let i = 0; i < n; i++) {
-    if (pool) out.push(mkFoe(pick(pool), tier));
-    else { const mem = DATA.chars.filter(c => c.faction === fid && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))); const c = mem.length ? pick(mem) : null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
+    if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, tier)); }
+    else { const c = mem[i] || null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
   }
   return out;
 }
+function dedupeFoes(foes) { const seen = {}; foes.forEach(f => { seen[f.name] = (seen[f.name] || 0) + 1; }); const idx = {}; foes.forEach(f => { if (seen[f.name] > 1) { idx[f.name] = (idx[f.name] || 0) + 1; f.name += ' ' + String.fromCharCode(64 + idx[f.name]); } }); }
 let CB = null;
 const POWER_FX = {
   combat: { n: 'Frappe de pouvoir', cost: 3, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 2, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 2, d: 'Absorbe des dégâts' },
@@ -1862,6 +1867,7 @@ const firstFoe = () => aliveFoes()[0];
 function roundsFor(cfg, foes) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || Math.round(f.atk / 2))); return t >= 5 || (foes.length >= 3 && t >= 3) ? 5 : (t >= 3 || foes.length >= 3) ? 4 : 3; }
 function startCombat(cfg) {
   if (cfg.foes.length > 3) cfg.foes = cfg.foes.slice(0, 3);
+  dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 5, mom: 0, stance: null, usedSit: [], sit: null, round: 1, W: 0, Lz: 0, hist: [], log: [], tier: Math.max(...cfg.foes.map(f => Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), weakDone: false, hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, halve: 0, pops: [], twist: null, sig: {} };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
   CB.thr = threat(); CB.N = cfg.rounds || (CB.thr.gap <= -1 ? 3 : 5);
@@ -1903,7 +1909,7 @@ function moves() { return sitMoves(); }
 function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + CB.nextBonus + twistMod(m.cat) + elanBonus() + stanceBonus(m)]; }
 // ── Résolution d’un round ──
 function play(m) {
-  if (!CB || CB.over) return; CB.preview = false; CB.stance = CB.stance || 'equilibre'; CB.sit = null; CB.log = []; CB.pops = [];
+  if (!CB || CB.over) return; CB.preview = false; CB.spec = false; CB.stance = CB.stance || 'equilibre'; CB.sit = null; CB.log = []; CB.pops = [];
   const pc = G.pc; if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   let res = 'draw', sev = 1; const nb = CB.nextBonus; CB.nextBonus = 0;
   if (m.kind === 'awaken') { awaken(); res = 'win'; }
@@ -1992,14 +1998,13 @@ function conclude() {
 // ── Affichage ──
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
-  const rows = h('div', { class: 'foes' }, CB.foes.map((f, i) => {
+  const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
     const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : 100)}%` }); const pct = Math.max(0, f.hp) / f.hpMax * 100; bars.push([bi, pct]); CB.prev[i] = pct;
-    return h('div', { class: 'frow' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 26) || '', h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi), h('span', { class: 'fv' }, f.stun > 0 ? '⚡ sonné' : ''));
+    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 22) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f) + (f.stun > 0 ? ' ⚡' : '')), h('div', { class: 'bar hp mini' }, bi)));
   }));
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
-  const me = h('div', { class: 'frow me', 'data-k': 'pc' }, h('span', { class: 'fn' }, 'Toi'), h('div', { class: 'bar hp mini' }, h('i', { style: `width:${pc.hp / pc.hpMax * 100}%` })), h('span', { class: 'fv' }, `${pc.hp}/${pc.hpMax} · ⚡${pc.en}`));
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
-  const rlog = h('div', { class: 'rlog' }, CB.log.slice(-3).map(l => h('div', { class: l.c }, l.t)));
+  const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
   const tw = CB.twist ? h('div', { class: 'small badc' }, '⚠ ' + CB.twist.t) : null; const sit = currentSit(); const sitEl = h('div', { class: 'sit' }, h('b', {}, sit.n), ' — ', sit.t);
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
@@ -2012,11 +2017,14 @@ function renderCombat() {
       if (dmgF) { sfx('hit'); buzz(20); } else if (miss) sfx('miss'); if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
     }, delay);
   };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, pips, momEl(), rows, me, st ? h('div', { class: 'small acc' }, st) : null, sitEl, rlog, tw), choices: combatChoices() });
+  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips, momEl()), rows, st ? h('div', { class: 'small acc' }, st) : null, sitEl, rlog, tw), choices: combatChoices() });
 }
 function combatChoices() {
-  const pc = G.pc; const L = [];
-  moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
+  const pc = G.pc; const L = []; const all = moves(); const SPEC = ['tech', 'sig', 'item', 'heal', 'awaken'];
+  const add = (m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
+  const main = all.filter(m => !SPEC.includes(m.kind)), spec = all.filter(m => SPEC.includes(m.kind));
+  main.forEach(add);
+  if (spec.length) { if (CB.spec) spec.forEach(add); else { const ready = spec.some(m => !m.lock && !(m.cost && pc.en < m.cost)); L.push(C(`✦ Capacités${ready ? ' prêtes' : ''} (${spec.length})`, () => { CB.spec = true; renderCombat(); }, { cls: ready ? 'safe' : 'back', sub: spec.map(m => m.label.replace(/^(Signature|Finisseur) : /, '')).join(' · ') })); } }
   if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.cfg.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
   else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
   return L;

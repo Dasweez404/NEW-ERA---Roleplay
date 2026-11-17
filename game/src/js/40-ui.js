@@ -39,9 +39,11 @@ function C(label, go, o = {}) {
 function fxHTML(L) {
   if (!L || !L.length) return null; let xp = 0; const rest = [];
   L.forEach(l => { const m = /^\+(\d+)\s*XP/i.exec(l.t || ''); if (m) xp += +m[1]; else rest.push(l); });
-  const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest); const MAX = 4; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
+  const prio = l => (/¢|XP|Niveau sup/i.test(l.t || '') || l.c === 'badc') ? 0 : /PV|MÉRITE|mérite|PRIME|objet/i.test(l.t || '') ? 1 : 2;
+  const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest).map((l, i) => [l, i]).sort((x, y) => prio(x[0]) - prio(y[0]) || x[1] - y[1]).map(x => x[0]);
+  const MAX = 3; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
   const box = h('div', { class: 'chips' }, items.slice(0, MAX).map(chip));
-  if (items.length > MAX) { const more = items.slice(MAX); box.append(h('button', { class: 'chip morechip', onclick: e => { e.currentTarget.remove(); more.forEach((l, i) => box.append(chip(l, i))); } }, `+${more.length} autre${more.length > 1 ? 's' : ''}`)); }
+  if (items.length > MAX) { const more = items.slice(MAX); box.append(h('button', { class: 'chip morechip', onclick: e => { e.currentTarget.remove(); more.forEach((l, i) => box.append(chip(l, i))); } }, `+${more.length}`)); }
   return box;
 }
 
@@ -160,22 +162,15 @@ function fillSheet() {
 }
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
-  const pc = G.pc; const box = h('div');
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Faction'), F[pc.faction].name, h('b', {}, 'Style'), `${STYLES[pc.style].name} — ${STYLES[pc.style].desc}`,
-    h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'Rôles'), pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'aucun (à choisir au fil du temps)',
-    h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché (pas d’identité civile complète)'));
-  box.append(h('h3', {}, 'Pouvoir : ' + TYPENAME[pc.ptype]));
-  if (!pcPowers().length) box.append(h('div', { class: 'mut' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => { box.append(powerLine(p)); const k = perkOf(p); if (k) { const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0; box.append(h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), ' ', h('span', { class: 'mut' }, `(${k.kind}) ${k.desc}`), h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]} usages` : ' · maximum'} — ${PX_TXT[lv]}`))); } });
-  if (pc.ptype !== 'aucun') box.append(h('div', { class: 'small mut', style: 'margin-top:4px' }, 'Faiblesse : ' + WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
-  box.append(h('h3', {}, 'Attributs' + (pc.pts ? ` — ${pc.pts} point(s) à répartir` : '')));
-  ATTRS.forEach(a => {
-    const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' }));
-    box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v), pc.pts > 0 && pc.attrs[a.id] < 12 ? h('button', { class: 'tab', onclick: () => { pc.attrs[a.id]++; pc.pts--; recalc(); render(true); } }, '+') : null));
-  });
-  box.append(h('h3', {}, 'Progression'));
-  const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Grade'), `${gradeName()} (${pc.grade}/5)`, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt} pour le grade suivant` : `${pc.merit}`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Prime'), wantedStars() ? starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] : 'aucune', h('b', {}, 'Éveil'), pc.awakened ? `déjà éveillé ${pc.awakened} fois` : 'jamais éveillé'));
+  const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
+  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`));
+  if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
+  pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
+    box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
+  if (pc.ptype !== 'aucun') box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
+  ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
+  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', {}, 'Prime'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()]] : [])));
+  box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais', h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché')));
   box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
   return box;

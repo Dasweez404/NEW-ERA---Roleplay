@@ -71,7 +71,7 @@ function addXp(n) { const pc = G.pc; const o = Math.floor(pc.xp / 80); pc.xp += 
 function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
   if (o.money) { pc.money = Math.max(0, pc.money + o.money); line(`${o.money > 0 ? '+' : ''}${fmt(o.money)} ¢`, o.money > 0 ? 'good' : 'badc'); }
-  if (o.xp) { const p0 = pc.pts; addXp(o.xp); line(`+${o.xp} XP`, 'good'); if (pc.pts > p0) line(`+${pc.pts - p0} point d’attribut à répartir (menu « Personnage »)`, 'acc'); }
+  if (o.xp) { const p0 = pc.pts; addXp(o.xp); line(`+${o.xp} XP`, 'good'); if (pc.pts > p0) line(`Niveau supérieur : +${pc.pts - p0} point${pc.pts - p0 > 1 ? 's' : ''}`, 'acc'); }
   if (o.hp) { const before = pc.hp; pc.hp = clamp(pc.hp + o.hp, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
   if (o.en) { const b = pc.en; pc.en = clamp(pc.en + o.en, 0, pc.enMax); line(`${o.en > 0 ? '+' : ''}${pc.en - b} énergie`, o.en > 0 ? 'good' : 'badc'); }
   if (o.heat) addHeat(o.heat, L);
