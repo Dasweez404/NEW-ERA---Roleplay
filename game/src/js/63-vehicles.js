@@ -16,7 +16,7 @@ SHOP_LEGAL.push('trott', 'velo', 'board', 'skis', 'voiture', 'vaisseau'); SHOP_B
 const SHOP_BLACK_FIX = SHOP_BLACK.filter((x, i, a) => a.indexOf(x) === i); SHOP_BLACK.length = 0; SHOP_BLACK.push(...SHOP_BLACK_FIX);
 const myVehicles = () => Object.keys(G.pc.inv).filter(id => ITEMS[id] && ITEMS[id].t === 'vehicule');
 function vehicleOk(vid, from, to) {
-  const v = ITEMS[vid].v; if (from === to) return null; const r = otRoute(from, to); if (!r) return null; if (r.hops > v.max) return null;
+  const v = ITEMS[vid].v; if (from === to || isLockdown(to)) return null; const r = otRoute(from, to); if (!r) return null; if (r.hops > v.max) return null;
   const a = S[from], b = S[to];
   if (v.scope === 'continent' && a.continent !== b.continent) return null;
   if (v.scope === 'land' && (a.continent !== b.continent || ISLANDS.has(from) || ISLANDS.has(to))) return null;

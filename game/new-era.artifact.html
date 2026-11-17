@@ -553,6 +553,8 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .tlogo span:last-child::after{display:none}
 
 .env .envimg.pxart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 100%;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated;filter:none;animation:pxin .5s ease both}@keyframes pxin{from{opacity:0}}.env.px{background:#07140f;border-color:#1f6b3a}
+
+.maplegend .lg.r{color:#ff2a3d}
 </style>
 <div id="app"></div>
 <script>
@@ -1429,6 +1431,7 @@ function mapEl(o = {}) {
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (o.leads && o.leads.get(state)) g.append(el('circle', { cx: x, cy: y, r: 6, fill: '#ff2a3d', class: 'leaddot' }));
+    if (o.closed && o.closed.get(state)) { const lk = o.closed.get(state).kind === 'lockdown'; if (lk) g.append(el('circle', { cx: x, cy: y, r: 19, fill: 'rgba(255,42,61,.18)', stroke: '#ff2a3d', 'stroke-width': 4, 'stroke-dasharray': '7 5' })); g.append(el('line', { x1: x - 18, y1: y - 18, x2: x + 18, y2: y + 18, stroke: '#ff2a3d', 'stroke-width': 5, 'stroke-linecap': 'round' })); g.append(el('line', { x1: x - 18, y1: y + 18, x2: x + 18, y2: y - 18, stroke: '#ff2a3d', 'stroke-width': 5, 'stroke-linecap': 'round' })); }
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
     g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : (go || here) ? 'keytxt' : '' }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
@@ -1480,7 +1483,7 @@ function mapBox(o = {}) {
   svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
-    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, o.leads && o.leads.size ? h('span', { class: 'lg r2' }, '● opportunité') : null, h('span', { class: 'lg c' }, '● toi')) : null,
+    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, o.closed && o.closed.size ? h('span', { class: 'lg r' }, '✖ fermé') : null, o.leads && o.leads.size ? h('span', { class: 'lg r2' }, '● opportunité') : null, h('span', { class: 'lg c' }, '● toi')) : null,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
@@ -2352,10 +2355,11 @@ const EVENT_FN = {};
 
 // ───────── Voyager ─────────
 function travelMenu(pre) {
-  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates(); const freeSet = new Set(neighbors(here));
+  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates(); const freeSet = new Set(neighbors(here).filter(n => !closureOf(n)));
   const info = h('div', { class: 'travelinfo' }, h('div', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
   const ownerName = to => { const o = G.world.terr[to]; return o === 'pc' ? 'ta faction' : F[o] ? F[o].name : (o || '—'); };
   const select = to => {
+    const cl = closureOf(to); if (cl) { sel = to; sfx('click'); info.innerHTML = ''; info.append(h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, capName(to)), h('span', { class: 'tvm badc' }, cl.kind === 'lockdown' ? 'Ville confinée' : 'Station fermée')), h('div', { class: 'leadwhy' }, closureLine(cl)), h('div', { class: 'mut small' }, (cl.kind === 'lockdown' ? 'Aucun train ni véhicule ne peut y entrer' : 'Plus aucune rame ne s’y arrête ; un véhicule peut encore t’y conduire') + ` — jusqu’à la semaine ${cl.until}.`)); return; }
     let r = otRoute(here, to); if (!r) return; if (freeSet.has(to)) r = Object.assign({}, r, { cost: 0 }); const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
     sel = to; sfx('click'); box.setRoute(r); const poor = G.pc.money < r.cost;
@@ -2365,7 +2369,7 @@ function travelMenu(pre) {
       h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, '🏴 ' + ownerName(to)), h('span', { class: 'pvc' }, `contrôle ${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' ✔ faux papiers' : ''}`), r.legs.length > 1 ? h('span', { class: 'pvc' }, `${r.legs.length - 1} corresp.`) : null, reco.has(to) ? h('span', { class: 'pvc rec' }, '★ ' + reco.get(to)[0]) : null, leadMap().has(to) ? h('span', { class: 'pvc lead' }, '🔴 ' + LEAD_KINDS[leadMap().get(to).kind].d) : null),
       h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap() });
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap() });
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
@@ -2389,7 +2393,7 @@ function detectChance() {
 function transferStop(r) { // changer de ligne : faible chance d'être arrêté et de devoir faire escale
   if (!r || !r.legs || r.legs.length < 2) return null; const pc = G.pc; const p = 0.07 + wantedStars() * 0.02;
   for (let i = 0; i < r.legs.length - 1; i++) if (chance(p)) {
-    const st = r.legs[i].to; const state = OT_ST[st][3]; let k = 0; for (let j = 0; j <= i; j++) k += r.legs[j].stops;
+    const st = r.legs[i].to; const state = OT_ST[st][3]; if (closureOf(state)) continue; let k = 0; for (let j = 0; j <= i; j++) k += r.legs[j].stops;
     const r2 = { steps: r.steps.slice(0, k), legs: r.legs.slice(0, i + 1), hops: k, cost: 0, path: r.path.slice(0, k + 1) };
     const pool = [...enemiesOf(pc.faction), ...Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen', 'fa'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -5)];
     const kind = pool.length && chance(0.5) ? 'faction' : 'fa';
@@ -2417,7 +2421,7 @@ function travelGo(to, r, weeks) {
   });
 }
 function travelHover() {
-  show({ kicker: 'Scout-hover', title: 'Cap sur…', text: ['Hors du réseau : pas de contrôle de gare, mais les dérèglements de l’ogénite ne préviennent pas. Coût : 120 ¢ de carburant (capsules OGEN), 1 à 3 semaines.'], choices: [...CONT.flatMap(ct => DATA.states.filter(s => s.continent === ct && s.id !== G.loc).map(s => C(`${s.capital} — ${s.name}`, () => hoverGo(s.id), { sub: ct, req: { money: 120 } }))), C('← Retour', travelMenu)] });
+  show({ kicker: 'Scout-hover', title: 'Cap sur…', text: ['Hors du réseau : pas de contrôle de gare, mais les dérèglements de l’ogénite ne préviennent pas. Coût : 120 ¢ de carburant (capsules OGEN), 1 à 3 semaines.'], choices: [...CONT.flatMap(ct => DATA.states.filter(s => s.continent === ct && s.id !== G.loc && !isLockdown(s.id)).map(s => C(`${s.capital} — ${s.name}`, () => hoverGo(s.id), { sub: ct, req: { money: 120 } }))), C('← Retour', travelMenu)] });
 }
 function hoverGo(to) {
   G.pc.money -= 120; const from = G.loc; G.loc = to; advance(rint(1, 3)); if (G.status !== 'play') return; logEntry(`Vol en scout-hover vers ${capName(to)}.`);
@@ -2713,7 +2717,7 @@ SHOP_LEGAL.push('trott', 'velo', 'board', 'skis', 'voiture', 'vaisseau'); SHOP_B
 const SHOP_BLACK_FIX = SHOP_BLACK.filter((x, i, a) => a.indexOf(x) === i); SHOP_BLACK.length = 0; SHOP_BLACK.push(...SHOP_BLACK_FIX);
 const myVehicles = () => Object.keys(G.pc.inv).filter(id => ITEMS[id] && ITEMS[id].t === 'vehicule');
 function vehicleOk(vid, from, to) {
-  const v = ITEMS[vid].v; if (from === to) return null; const r = otRoute(from, to); if (!r) return null; if (r.hops > v.max) return null;
+  const v = ITEMS[vid].v; if (from === to || isLockdown(to)) return null; const r = otRoute(from, to); if (!r) return null; if (r.hops > v.max) return null;
   const a = S[from], b = S[to];
   if (v.scope === 'continent' && a.continent !== b.continent) return null;
   if (v.scope === 'land' && (a.continent !== b.continent || ISLANDS.has(from) || ISLANDS.has(to))) return null;
@@ -3699,7 +3703,7 @@ function monthTick() {
   // événements canon
   if (G.settings.canon) runCanon(key); else if (G.settings.mode === 'libre') libreMonth();
   // simulation PNJ et factions
-  simNpcs(); simFactions(); warMonth();
+  simNpcs(); simFactions(); warMonth(); closureMonth();
   if (chance(0.5)) monthNews();
   // menace sur les pierres
   const n = stoneCount();
@@ -4328,6 +4332,28 @@ function leadAct(l) {
   if (l.kind === 'butin') { const dc = 12 + 2 * tier; return show({ kicker: 'OPPORTUNITÉ', title: 'Une cache sans gardien', text: ['Des caisses sous une bâche, une porte mal fermée. Personne en vue.'], choices: [C('S’y glisser', () => { const r = check('agilite', dc, ['stealth']); if (r.ok) lootPick({ pay: 200 * tier, tier }, 'crit'); else show({ kicker: 'OPPORTUNITÉ', title: 'Un piège', text: ['Une alarme, un chien, des coups.', checkLine(r)], fx: fx({ hp: -rint(6, 14), heat: 3 }), choices: [C('Continuer', hub)] }); }, { odds: ['agilite', dc, ['stealth']], ic: '🥷' }), C('Forcer la serrure à la brute', () => { const r = check('corps', dc - 1, ['combat']); if (r.ok) lootPick({ pay: 150 * tier, tier }, 'ok'); else show({ kicker: 'OPPORTUNITÉ', title: 'Le bruit attire du monde', text: ['Des gardes arrivent, trop tard pour t’arrêter mais pas pour te blesser.', checkLine(r)], fx: fx({ hp: -rint(8, 16), heat: 4 }), choices: [C('Continuer', hub)] }); }, { odds: ['corps', dc - 1, ['combat']], ic: '🔨' }), C('Passer', hub, { cls: 'back' })] }); }
   if (l.kind === 'indic') return show({ kicker: 'OPPORTUNITÉ', title: 'Un indic', text: ['Un homme nerveux t’attire dans une ruelle : « Je sais des choses sur les pierres antiques. »'], choices: [C('Payer 150 ¢', () => { pc.money -= 150; const w = G.wk; G.wk = Math.max(G.wk, 6); const t = stoneClueGain(); G.wk = w; show({ kicker: 'OPPORTUNITÉ', title: 'Une piste', text: [t ? cap(t) : 'Il n’a rien de neuf à te vendre. Il s’excuse.'], fx: fx({ xp: 15 }), choices: [C('Continuer', hub)] }); }, { req: { money: 150 }, ic: '💰' }), C('Le faire parler', () => { const r = check('charisme', 14, ['social']); const w = G.wk; G.wk = Math.max(G.wk, 6); const t = r.ok ? stoneClueGain() : null; G.wk = w; show({ kicker: 'OPPORTUNITÉ', title: r.ok ? 'Il craque' : 'Il se rétracte', text: [r.ok ? (t ? cap(t) : 'Il ne sait rien de neuf.') : 'Il s’enfuit dans la nuit.', checkLine(r)], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['charisme', 14, ['social']], ic: '🗣' }), C('Passer', hub, { cls: 'back' })] });
   hub();
+}
+
+// ───────── Stations fermées et villes confinées ─────────
+// Station fermée : plus d'Orbitrail vers cet État (les véhicules passent encore).
+// Ville confinée : ni Orbitrail, ni aucun véhicule. Les fermetures sont temporaires.
+const CLOSE_STATION = ['Grève des conducteurs', 'Travaux de maintenance sur les voies', 'Alerte à la bombe : quai évacué', 'Inspection de sécurité de la Force d’Autorité', 'Voie endommagée par une pluie de météorites', 'Panne géante du réseau énergétique', 'Gare réservée aux délégations d’un sommet', 'Un train déraillé bloque la voie'];
+const CLOSE_LOCK = ['Quarantaine : une souche génotique incontrôlée', 'Couvre-feu militaire de la Force d’Autorité', 'Ville bouclée par un siège de faction', 'Tempête de météorites : toute circulation interdite', 'Cérémonie du Nouveau Régime : zone verrouillée', 'Mutinerie de la garnison : la ville est fermée'];
+function closureOf(state) {
+  const W = G && G.world; if (!W || !W.closed) return null; const c = W.closed[state]; if (!c) return null;
+  if (c.until <= G.wk) { delete W.closed[state]; return null; } return c;
+}
+function closedMap() { const m = new Map(); if (!G || !G.world || !G.world.closed) return m; Object.keys(G.world.closed).forEach(s => { const c = closureOf(s); if (c) m.set(s, c); }); return m; }
+const isLockdown = s => { const c = closureOf(s); return !!(c && c.kind === 'lockdown'); };
+const closureLine = c => (c.kind === 'lockdown' ? '🚫 Ville confinée' : '⛔ Station fermée') + ' — ' + c.why;
+function closureMonth() {
+  const W = G.world; W.closed = W.closed || {};
+  Object.keys(W.closed).forEach(s => { const c = W.closed[s]; if (c.until <= G.wk) { delete W.closed[s]; newsPush(`${capName(s)} : ${c.kind === 'lockdown' ? 'le confinement est levé' : 'la station rouvre'}.`); } });
+  const act = Object.keys(W.closed).length; if (act >= 3 || !chance(0.4)) return;
+  const cand = DATA.states.map(s => s.id).filter(s => s !== G.loc && !W.closed[s]); if (!cand.length) return;
+  const s = pick(cand); const lock = chance(0.35);
+  W.closed[s] = { kind: lock ? 'lockdown' : 'station', until: G.wk + (lock ? rint(4, 12) : rint(3, 10)), why: pick(lock ? CLOSE_LOCK : CLOSE_STATION) };
+  newsPush(`${capName(s)} : ${lock ? 'ville confinée' : 'station fermée'} (${W.closed[s].why.toLowerCase()}).`);
 }
 
 // ───────── Écran titre, création de personnage, fin de partie ─────────

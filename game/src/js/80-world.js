@@ -23,7 +23,7 @@ function monthTick() {
   // événements canon
   if (G.settings.canon) runCanon(key); else if (G.settings.mode === 'libre') libreMonth();
   // simulation PNJ et factions
-  simNpcs(); simFactions(); warMonth();
+  simNpcs(); simFactions(); warMonth(); closureMonth();
   if (chance(0.5)) monthNews();
   // menace sur les pierres
   const n = stoneCount();

@@ -293,6 +293,7 @@ function mapEl(o = {}) {
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
     if (o.leads && o.leads.get(state)) g.append(el('circle', { cx: x, cy: y, r: 6, fill: '#ff2a3d', class: 'leaddot' }));
+    if (o.closed && o.closed.get(state)) { const lk = o.closed.get(state).kind === 'lockdown'; if (lk) g.append(el('circle', { cx: x, cy: y, r: 19, fill: 'rgba(255,42,61,.18)', stroke: '#ff2a3d', 'stroke-width': 4, 'stroke-dasharray': '7 5' })); g.append(el('line', { x1: x - 18, y1: y - 18, x2: x + 18, y2: y + 18, stroke: '#ff2a3d', 'stroke-width': 5, 'stroke-linecap': 'round' })); g.append(el('line', { x1: x - 18, y1: y + 18, x2: x + 18, y2: y - 18, stroke: '#ff2a3d', 'stroke-width': 5, 'stroke-linecap': 'round' })); }
     if (here) g.append(el('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#ff2a6d', 'stroke-width': 4 }));
     g.append(el('text', { x: x + dx, y: y + dy, class: rc ? 'recotxt' : (go || here) ? 'keytxt' : '' }, name));
     if (go) { g.addEventListener('click', () => o.onPick(state)); g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' })); }
@@ -344,7 +345,7 @@ function mapBox(o = {}) {
   svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
-    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, o.leads && o.leads.size ? h('span', { class: 'lg r2' }, '● opportunité') : null, h('span', { class: 'lg c' }, '● toi')) : null,
+    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, o.closed && o.closed.size ? h('span', { class: 'lg r' }, '✖ fermé') : null, o.leads && o.leads.size ? h('span', { class: 'lg r2' }, '● opportunité') : null, h('span', { class: 'lg c' }, '● toi')) : null,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
