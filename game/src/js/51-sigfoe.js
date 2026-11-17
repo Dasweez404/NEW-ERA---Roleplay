@@ -28,6 +28,7 @@ function sigDo(m) {
 function foeIcon(f, px) { return (f.cid && typeof hasSpr === 'function' && hasSpr(f.cid)) ? h('span', { class: 'foeico' }, sprFit(f.cid, px)) : null; }
 function foeSpecialChips(f) { return (f.sp || []).map(s => ANTI[s] ? h('span', { class: 'tag', title: ANTI[s].d }, ANTI[s].n) : null).filter(Boolean); }
 function renderPreview() {
+  coach('combat');
   const cfg = CB.cfg; const T = CB.thr; const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);
     return h('div', { class: 'fcard' }, foeIcon(f, 64) || '', h('div', { class: 'fi2' }, h('div', { class: 'fn2' }, h('b', {}, fname(f)), h('span', { class: 'fst' }, '★'.repeat(Math.min(5, t)) + '☆'.repeat(Math.max(0, 5 - t)))), tags.length || f.m ? h('div', {}, f.m ? h('span', { class: 'tag' }, 'machine') : null, tags) : null)); });
   const chips = h('div', { class: 'pvchips' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label), h('span', { class: 'pvc' }, STANCE_NAME[autoStance()]), h('span', { class: 'pvc' }, `${CB.N} rounds`));

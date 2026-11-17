@@ -532,6 +532,20 @@ details>summary{cursor:pointer;color:#9aa0c8;margin-top:6px}.pwbox{margin:8px 0;
 .mapcorner{position:absolute;right:8px;bottom:8px;z-index:5;background:#12121fe6;border:1px solid #34344f;color:#e9ebff;font:700 .72rem var(--fm);letter-spacing:.06em;padding:7px 10px;min-height:0;clip-path:none;text-transform:none;cursor:pointer}.mapcorner:hover{border-color:#fcee09}
 .travelinfo{margin-top:8px;display:grid;gap:6px;padding:10px;background:#12121f;border-left:3px solid #fcee09}.tvrow{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.tvd{font:800 1.02rem var(--fb)}.tvm{font:700 .9rem var(--fm)}.tvchips{display:flex;gap:6px;flex-wrap:wrap}.pvc.rec{border-color:#fcee09;color:#fcee09}
 .stone2{min-width:0;overflow:visible}.stone2 .em{font-size:clamp(1rem,5vw,1.5rem)}
+.mom2{display:flex;gap:6px;flex-wrap:wrap}.pvc.streak{border-color:#ff8a1f;color:#ff8a1f;animation:chipin .35s both}
+.chip.bilan{background:#12121f;border-color:#fcee09;color:#fcee09;letter-spacing:.08em}
+.morelink{background:none;border:0;color:#fcee09;font:600 .8rem var(--fm);letter-spacing:.06em;padding:0 4px;min-height:0;clip-path:none;text-transform:none;cursor:pointer}
+/* ── Prise en main ── */
+.coach{display:flex;gap:10px;align-items:center;background:#1a1a10;border:1px dashed #fcee09;padding:8px 10px;margin:0 0 10px;animation:chipin .4s both}.coach .ci{font-size:1.4rem}.coach .ct{display:grid;gap:1px;flex:1;min-width:0}.coach .ct b{font:800 .92rem var(--fb)}.coach .ct span{font-size:.82rem;color:#cfd3e6;line-height:1.25}.coach button{background:#fcee09;color:#000;border:0;padding:8px 12px;font:800 .8rem var(--fm);min-height:36px;clip-path:none}
+/* ── Ambiance de couleur par ville (teinte par zone) ── */
+body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::before,body::after{display:none!important}
+.card,.hud,.strip{border-color:color-mix(in srgb,var(--amb,#2a2a44) 38%,#2a2a44)!important}
+.hud{border-top:2px solid var(--amb,#27f0ff)!important}
+.ch:not(.back):not(.cta):not(.danger){border-left-color:var(--amb,#27f0ff)}
+.kicker,.card .kicker{color:var(--amb,#fcee09)}
+.dock{border-top-color:var(--amb,#27f0ff)}.dk.on,.dk.on .n{color:var(--amb,#fcee09)}
+.tabs .tab.on,.shopcats .tab.on{background:var(--amb,#fcee09);color:#000}
+.sit{border-left-color:var(--amb,#27f0ff)}.rp.cur{border-color:var(--amb,#fcee09);color:var(--amb,#fcee09)}
 </style>
 <div id="app"></div>
 <script>
@@ -1154,7 +1168,7 @@ function C(label, go, o = {}) {
 function fxHTML(L) {
   if (!L || !L.length) return null; let xp = 0; const rest = [];
   L.forEach(l => { const m = /^\+(\d+)\s*XP/i.exec(l.t || ''); if (m) xp += +m[1]; else rest.push(l); });
-  const prio = l => (/¢|XP|Niveau sup/i.test(l.t || '') || l.c === 'badc') ? 0 : /PV|MÉRITE|mérite|PRIME|objet/i.test(l.t || '') ? 1 : 2;
+  const prio = l => l.c === 'bilan' ? -1 : (/¢|XP|Niveau sup/i.test(l.t || '') || l.c === 'badc') ? 0 : /PV|MÉRITE|mérite|PRIME|objet/i.test(l.t || '') ? 1 : 2;
   const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest).map((l, i) => [l, i]).sort((x, y) => prio(x[0]) - prio(y[0]) || x[1] - y[1]).map(x => x[0]);
   const MAX = 3; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
   const box = h('div', { class: 'chips' }, items.slice(0, MAX).map(chip));
@@ -1164,12 +1178,20 @@ function fxHTML(L) {
 
 function show(sc) {
   if (G && G.status !== 'play' && !sc.final) return;
+  if (UI.scene && UI.scene.coachId) tutoMark(UI.scene.coachId);
+  if (UI.nextCoach) { sc.coachId = UI.nextCoach; UI.nextCoach = null; }
   if (G && G.pc && G.pc.pts > 0 && !sc.noLevel && !sc.final && typeof CB !== 'undefined' && !CB && sc.choices) sc.choices = sc.choices.map(c => (c && !c.lock && !/^←/.test(c.label || '')) ? Object.assign({}, c, { go: () => spendPoints(c.go) }) : c);
   const roll = UI.roll; UI.roll = null;
   if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).filter(t => !(typeof t === 'string' && t.startsWith('🎲'))); }
   UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
 }
-function paragraphs(t) { return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => typeof x === 'string' ? h('p', { class: 'rv', style: `--i:${i}`, html: x }) : x); }
+function paragraphs(t) {
+  return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => {
+    if (typeof x !== 'string') return x;
+    if (x.length > 190 && !/[<>]/.test(x)) { const head = x.slice(0, 190); const cut = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '), head.lastIndexOf('… ')); if (cut > 60) { const p = h('p', { class: 'rv', style: `--i:${i}` }, x.slice(0, cut + 1)); const rest = h('span', { class: 'rest', hidden: true }, ' ' + x.slice(cut + 2)); const more = h('button', { class: 'morelink', onclick: e => { e.currentTarget.remove(); rest.hidden = false; } }, ' … suite'); p.append(more, rest); return p; } }
+    return h('p', { class: 'rv', style: `--i:${i}`, html: x });
+  });
+}
 
 function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; const sp = pcSprite(); if (sp && hasSpr(sp)) return h('div', { class: 'avatar sp', style: `--hue:${hue}` }, sprFit(sp, 80)); return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
 function hudEl() {
@@ -1221,11 +1243,12 @@ function render(quiet) {
   const app = $('#app'); app.innerHTML = ''; app.className = (quiet ? 'quiet ' : '') + ((UI.scene && UI.scene.compact) ? 'lite' : ''); UI.after = [];
   const sc = UI.scene; if (!sc) return;
   if (sc.bare) { app.append(h('div', {}, sc.extra)); runAfter(); return; }
-  const live = G && G.status === 'play';
+  const live = G && G.status === 'play'; if (live) ambiance(); else { document.documentElement.style.removeProperty('--amb'); document.documentElement.style.removeProperty('--ambbg'); }
   const rollEl = sc.roll ? diceEl(sc.roll, quiet || sc.rolled) : null; if (sc.roll) sc.rolled = true;
   const d = sc.roll && !quiet ? 1.05 : 0;
   const back = (sc.choices || []).filter(Boolean).find(c => /^←/.test(c.label)); UI.back = back ? back.go : null;
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
+    sc.coachId ? coachEl(sc.coachId) : null,
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);
@@ -1902,21 +1925,20 @@ function startCombat(cfg) {
   dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 5, mom: 0, stance: null, usedSit: [], sit: null, round: 1, W: 0, Lz: 0, hist: [], log: [], tier: Math.max(...cfg.foes.map(f => Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), weakDone: false, hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, halve: 0, pops: [], twist: null, sig: {} };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
-  CB.thr = threat(); CB.N = cfg.rounds || (CB.thr.gap <= -1 ? 3 : 5);
-  clog(cfg.intro || 'Le combat commence !');
-  nextTwist(); CB.preview = !cfg.noPreview; if (CB.preview) renderPreview(); else begin('equilibre');
+  CB.thr = threat(); CB.N = cfg.rounds || ((CB.thr.gap >= 2 || CB.tier >= 5) ? 5 : 3);
+  clog(cfg.intro || 'Le combat commence !'); CB.twist = null;
+  if (cfg.noPreview) { CB.preview = false; return begin('equilibre'); }
+  if (CB.thr.gap <= -2) return sweepAway();
+  if (CB.thr.gap >= 1) { CB.preview = true; return renderPreview(); }
+  CB.preview = false; begin(autoStance());
 }
 function engage() { if (!CB) return; CB.preview = false; begin(autoStance()); }
 function begin(stance) {
-  if (!CB) return; CB.preview = false; CB.stance = stance; CB.planned = true;
+  if (!CB) return; CB.preview = false; CB.stance = stance; CB.planned = true; coach('combat');
   if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); }
   renderCombat();
 }
-function nextTwist() {
-  CB.twist = null; const f = pick(aliveFoes()); if (!f || !f.sp.length || chance(0.45)) return; const sp = pick(f.sp); const n = fname(f);
-  CB.twist = { sp, f, ...({ shield: { cat: 'atk', mod: -2, t: `${n} se couvre d’un bouclier : frapper de front est plus dur.` }, rebound: { cat: 'atk', mod: -2, t: `${n} dévie les projectiles.` }, dash: { cat: 'feint', mod: -3, t: `${n} est insaisissable : les feintes sont plus dures.` }, foresight: { cat: 'feint', mod: -2, t: `${n} anticipe tes gestes.` }, shock: { cat: 'tac', mod: -2, t: `${n} prépare une onde de choc : garder son sang-froid est plus dur.` }, buff: { cat: 'dmg', mod: 0, t: `${n} se galvanise : une défaite ce round coûtera plus cher.` }, restore: { cat: null, mod: 0, t: '' } }[sp] || { cat: null, mod: 0, t: '' }) };
-  if (!CB.twist.t) CB.twist = null;
-}
+function nextTwist() { CB.twist = null; }
 const twistMod = cat => (CB.twist && CB.twist.cat === cat) ? CB.twist.mod : 0;
 const avgDef = () => { const a = aliveFoes(); return a.length ? a.reduce((t, f) => t + f.def, 0) / a.length : 0; };
 const roundDc = () => 14 + Math.round(avgDef() * 0.7);
@@ -2015,17 +2037,18 @@ function flee() {
   clog('Impossible de fuir : on te rattrape.', 'log-dmg'); CB.Lz++; CB.hist.push('l'); hurtPc(1); CB.round++; if (G.pc.hp <= 0) return loseCombat(false); if (CB.round > CB.N) return conclude(); nextTwist(); renderCombat();
 }
 // ── Bilan ──
+function sweepAway() {
+  const T = CB.thr; G.pc.hp = Math.max(1, G.pc.hp - Math.round(G.pc.hpMax * 0.03)); CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.over = true; CB.bilan = '💨 Ils ne font pas le poids'; finishCombat('win');
+}
 function conclude() {
   const { W, Lz, N } = CB; const cfg = CB.cfg; const pc = G.pc; CB.over = true; const hist = CB.hist.map(x => x === 'w' ? '✔' : x === 'l' ? '✖' : '–').join(' ');
-  const fate = cfg.lethal === 'death' ? 'tué' : cfg.lethal === 'capture' ? 'capturé' : 'mis hors de combat';
-  let kind, title, text;
-  if (Lz >= N) return loseCombat(false);
-  if (W >= N) { kind = 'total'; title = 'Victoire totale'; text = `Tu gagnes tous les rounds. Ton adversaire est ${fate}.`; }
-  else if (W > Lz) { kind = 'partial'; title = 'Tu as le dessus'; text = 'Tu gagnes la majorité des rounds. L’adversaire, blessé, bat en retraite.'; CB.partial = true; }
-  else { kind = 'retreat'; title = W === Lz ? 'Impasse' : 'Tu es blessé'; text = W === Lz ? 'Personne ne prend l’avantage : chacun se replie.' : 'Tu perds la majorité des rounds. Blessé, tu bats en retraite.'; const loss = Math.round(pc.hpMax * 0.25); pc.hp = Math.max(1, pc.hp - loss); text += ` <b>−${loss} PV</b>.`; }
-  const go = () => { if (kind === 'retreat') { if (cfg.canFlee === false) return loseCombat(false); return finishCombat('flee'); } finishCombat('win'); };
-  CB.go = go;
-  show({ compact: true, kicker: 'BILAN', title, text: [`Rounds : <b>${hist}</b> (${W} gagné${W > 1 ? 's' : ''}, ${Lz} perdu${Lz > 1 ? 's' : ''} sur ${N})`, text], choices: [C(kind === 'retreat' ? 'Battre en retraite' : 'Continuer', go, { cls: 'cta' })] });
+  const fate = cfg.lethal === 'death' ? 'tué' : cfg.lethal === 'capture' ? 'capturé' : 'hors de combat';
+  if (Lz >= N) { toast(`${hist} · Défaite`); return loseCombat(false); }
+  if (W >= N) { CB.bilan = `${hist} · adversaire ${fate}`; return finishCombat('win'); }
+  if (W > Lz) { CB.partial = true; CB.bilan = `${hist} · il s’enfuit, blessé`; return finishCombat('win'); }
+  let txt = W === Lz ? 'impasse, chacun se replie' : 'tu es blessé, tu te replies'; if (W < Lz) { const loss = Math.round(pc.hpMax * 0.2); pc.hp = Math.max(1, pc.hp - loss); txt += ` (−${loss} PV)`; }
+  toast(`${hist} · ${txt}`);
+  if (cfg.canFlee === false) return loseCombat(false); finishCombat('flee');
 }
 // ── Affichage ──
 function renderCombat() {
@@ -2037,7 +2060,7 @@ function renderCombat() {
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  const tw = CB.twist ? h('div', { class: 'small badc' }, '⚠ ' + CB.twist.t) : null; const sit = currentSit(); const sitEl = h('div', { class: 'sit' }, h('b', {}, sit.n), ' — ', sit.t);
+  const tw = null; const sit = currentSit(); const sitEl = h('div', { class: 'sit' }, sit.t);
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
     const delay = UI.scene && UI.scene.roll ? 560 : 0;
@@ -2052,11 +2075,8 @@ function renderCombat() {
   show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips, momEl()), rows, st ? h('div', { class: 'small acc' }, st) : null, sitEl, rlog, tw), choices: combatChoices() });
 }
 function combatChoices() {
-  const pc = G.pc; const L = []; const all = moves(); const SPEC = ['tech', 'sig', 'item', 'heal', 'awaken'];
-  const add = (m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
-  const main = all.filter(m => !SPEC.includes(m.kind)), spec = all.filter(m => SPEC.includes(m.kind));
-  main.forEach(add);
-  if (spec.length) { if (CB.spec) spec.forEach(add); else { const ready = spec.some(m => !m.lock && !(m.cost && pc.en < m.cost)); L.push(C(`✦ Capacités${ready ? ' prêtes' : ''} (${spec.length})`, () => { CB.spec = true; renderCombat(); }, { cls: ready ? 'safe' : 'back', sub: spec.map(m => m.label.replace(/^(Signature|Finisseur) : /, '')).join(' · ') })); } }
+  const pc = G.pc; const L = [];
+  moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
   if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.cfg.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
   else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
   return L;
@@ -2064,11 +2084,12 @@ function combatChoices() {
 function finishCombat(kind) {
   const cfg = CB.cfg; const pc = G.pc; const awoke = CB.wasAwake; const free = stoneCount() >= 8; const rage = CB.rage;
   if (CB.rage && !free) { pc.en = 0; }
-  const rounds = CB.N; const partial = !!CB.partial; const thr = CB.thr || { mul: 1 }; const tier = CB.tier; const foes = CB.foes; const bm = CB.bonusMoney || 0, bx = CB.bonusXp, bl = CB.bonusLoot, bq = CB.quiet; CB = null;
+  const bil = CB.bilan; const rounds = CB.N; const partial = !!CB.partial; const thr = CB.thr || { mul: 1 }; const tier = CB.tier; const foes = CB.foes; const bm = CB.bonusMoney || 0, bx = CB.bonusXp, bl = CB.bonusLoot, bq = CB.quiet; CB = null;
   if (kind === 'flee') { G.score.fled = (G.score.fled || 0) + 1; return cfg.onFlee ? cfg.onFlee() : hub(); }
   G.score.wins = (G.score.wins || 0) + 1;
   const xp = Math.round(foes.reduce((t, f) => t + f.hpMax / 3, 0) * thr.mul * (partial ? 0.5 : 1));
   const L = fx(Object.assign({ xp: xp * (bx ? 2 : 1) }, cfg.loot || {}, bm ? { money: ((cfg.loot || {}).money || 0) + bm } : {}, bl ? { item: { capsule: 1 } } : {}));
+  if (bil) L.unshift({ t: bil, c: 'bilan' });
   if (awoke && !free) { L.push({ t: 'L’Éveil t’a laissé exsangue : énergie vidée.', c: 'warnc' }); pc.en = 0; }
   cfg.onWin ? cfg.onWin(L, { rounds, awoke, rage, partial, total: !partial }) : show({ title: 'Victoire', text: ['Le calme revient.'], fx: L, choices: [C('Continuer', hub)] });
 }
@@ -2131,6 +2152,7 @@ function sigDo(m) {
 function foeIcon(f, px) { return (f.cid && typeof hasSpr === 'function' && hasSpr(f.cid)) ? h('span', { class: 'foeico' }, sprFit(f.cid, px)) : null; }
 function foeSpecialChips(f) { return (f.sp || []).map(s => ANTI[s] ? h('span', { class: 'tag', title: ANTI[s].d }, ANTI[s].n) : null).filter(Boolean); }
 function renderPreview() {
+  coach('combat');
   const cfg = CB.cfg; const T = CB.thr; const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);
     return h('div', { class: 'fcard' }, foeIcon(f, 64) || '', h('div', { class: 'fi2' }, h('div', { class: 'fn2' }, h('b', {}, fname(f)), h('span', { class: 'fst' }, '★'.repeat(Math.min(5, t)) + '☆'.repeat(Math.max(0, 5 - t)))), tags.length || f.m ? h('div', {}, f.m ? h('span', { class: 'tag' }, 'machine') : null, tags) : null)); });
   const chips = h('div', { class: 'pvchips' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label), h('span', { class: 'pvc' }, STANCE_NAME[autoStance()]), h('span', { class: 'pvc' }, `${CB.N} rounds`));
@@ -2141,19 +2163,10 @@ function renderPreview() {
 }
 
 // ───────── Combat : situations narratives, élan et posture ─────────
-const elanBonus = () => clamp(Math.trunc((CB.mom || 0) / 2), -2, 3);
+const elanBonus = () => clamp(CB.mom || 0, 0, 2);
 const stanceBonus = m => CB.stance === 'rusee' ? (m.attr === 'corps' ? -1 : 2) : (CB.stance === 'offensive' && m.attr === 'corps') ? 1 : 0;
-function momUpdate(res, m) {
-  const r = CB.lastR || {}; let d = 0;
-  if (res === 'win') { d = 2 + (r.crit ? 1 : 0) + (CB.stance === 'offensive' ? 1 : 0) + (m && m.kind === 'gamble' ? 1 : 0) + (m && m.kind === 'rally' ? 1 : 0); }
-  else if (res === 'loss') { d = -(CB.stance === 'prudente' ? 1 : 2) - (r.fumble ? 1 : 0); }
-  CB.mom = clamp((CB.mom || 0) + d, -6, 6); CB.lastR = null;
-  if (d) clog(`Élan ${d > 0 ? '+' : ''}${d} → ${CB.mom > 0 ? '+' : ''}${CB.mom}`, d > 0 ? 'good' : 'log-miss');
-}
-function momEl() {
-  const m = CB.mom || 0; const cells = []; for (let i = -6; i <= 6; i++) cells.push(h('i', { class: 'mc' + (i === 0 ? ' z' : '') + (i === m ? ' on' : '') + (i > 0 && i <= m ? ' p' : '') + (i < 0 && i >= m ? ' n' : '') }));
-  return h('div', { class: 'mom' }, h('span', { class: 'ml' }, 'Élan'), h('div', { class: 'mb' }, cells), h('span', { class: 'mv' }, `${m > 0 ? '+' : ''}${m}`), h('span', { class: 'ms small mut' }, m >= 3 ? 'Finisseur prêt' : ''));
-}
+function momUpdate(res, m) { const r = CB.lastR || {}; if (res === 'win') CB.mom = Math.min(6, (CB.mom || 0) + 1 + (r.crit ? 1 : 0)); else if (res === 'loss') CB.mom = 0; CB.lastR = null; }
+function momEl() { const m = CB.mom || 0; const T = CB.thr; return h('div', { class: 'mom2' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label), m >= 1 ? h('span', { class: 'pvc streak' }, `🔥 série ×${m}${m >= 2 ? ' · pouvoir prêt' : ''}`) : null); }
 const OPT = (label, attr, tags, kind, cat, ic, sub, extra) => Object.assign({ id: label, ic, label, sub: sub || '', attr, tags, kind, cat: cat || 'atk' }, extra || {});
 const noPower = () => !pcPowers().length;
 const SITS = {
@@ -2176,14 +2189,26 @@ function currentSit() {
   if (!CB.sit || CB.sit.round !== CB.round) { const id = pickSit(); CB.sit = { id, round: CB.round }; }
   const d = SITS[CB.sit.id]; const f = firstFoe(); return { id: CB.sit.id, n: d.n, t: d.t(f ? fname(f) : 'l’ennemi'), o: d.o };
 }
-function sitMoves() {
-  const pc = G.pc; const sit = currentSit(); const L = sit.o().map(m => m); const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
-  const fin = techMove(); fin.label = `Finisseur : ${STYLES[pc.style].tech.name}`; fin.sub += ' · élan +3 requis'; if (!(CB.mom >= 3 || CB.round === CB.N)) fin.lock = fin.lock || 'Élan insuffisant (+3 requis)'; fin.bonus = 3; fin.cat = 'atk'; L.push(fin);
-  const sg = sigMove(); if (sg) L.push(sg);
-  if (pc.hp < pc.hpMax * 0.55 && heal && !CB.noItems) L.push({ id: 'item', ic: '💊', label: `Se soigner (${ITEMS[heal].n})`, sub: ITEMS[heal].desc + ' · round nul', kind: 'item', item: heal });
-  else if (pc.hp < pc.hpMax * 0.6 && Object.keys(powerTags()).includes('heal') && pc.en >= POWER_FX.heal.cost) L.push({ id: 'heal', ic: '💚', label: `${powName('heal')} : te régénérer`, sub: `${POWER_FX.heal.cost} énergie · soigne ~25 % · round nul`, kind: 'heal', cost: POWER_FX.heal.cost });
-  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) L.push({ id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: (pc.ptype === 'zoologique' ? 'Bête féroce incontrôlable' : pc.ptype === 'elementaire' ? 'Demi-dieu' : pc.ptype === 'hybride' ? 'Éveil partiel' : 'Capacités au maximum') + ' · round gagné d’office', kind: 'awaken', cls: 'danger' });
-  return L;
+function sitMoves() { return [attackMove(), protectMove(), powerMove()]; }
+function attackMove() {
+  const w = weaponOf(); const machine = aliveFoes().some(f => f.m) && hasCap('hack');
+  if (machine) return { id: 'hack', ic: '💻', label: 'Pirater', sub: 'Neutralise la machine', attr: 'intellect', tags: ['hack'], cat: 'tac', bonus: 2, kind: 'hack' };
+  return { id: 'strike', ic: '⚔', label: 'Attaquer', sub: w ? w.n : 'À mains nues', attr: primAttr(), tags: ['combat'], cat: 'atk', bonus: (w ? Math.floor(w.dmg / 3) : 0) + (hasRole('combattant') ? 1 : 0), kind: 'hit' };
+}
+function protectMove() {
+  const pc = G.pc; const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
+  if (pc.hp < pc.hpMax * 0.45 && heal && !CB.noItems) return { id: 'item', ic: '💊', label: 'Se soigner', sub: ITEMS[heal].n + ' · round nul', kind: 'item', item: heal };
+  const body = primAttr() === 'corps';
+  return body ? { id: 'guard', ic: '🛡', label: 'Se protéger', sub: 'Dégâts −60 % si tu perds', attr: 'corps', tags: ['defense'], cat: 'tac', kind: 'guard' } : { id: 'feint', ic: '💨', label: 'Esquiver', sub: 'Dégâts −50 % si tu perds', attr: 'agilite', tags: ['mobility', 'stealth'], cat: 'feint', kind: 'feint' };
+}
+function powerMove() {
+  const pc = G.pc; const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
+  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return { id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Round gagné d’office · risqué', kind: 'awaken', cls: 'danger' };
+  const fin = techMove(); fin.label = `Pouvoir : ${STYLES[pc.style].tech.name}`; fin.bonus = 3; fin.cat = 'atk'; fin.sub = `${cap(STYLES[pc.style].tech.text)} · ${STYLES[pc.style].tech.cost} énergie`;
+  const ready = (CB.mom || 0) >= 2 || CB.round === CB.N; if (ok(fin) && ready) return fin;
+  const sg = sigMove(); if (ok(sg)) { sg.label = sg.label.replace('Signature : ', 'Pouvoir : '); sg.sub = 'Round gagné d’office · ' + sg.cost + ' énergie'; return sg; }
+  const off = offense(); if (off.id === 'power' && ok(off)) { off.label = 'Pouvoir : ' + powName('combat'); off.sub = '+3 au jet · ' + off.cost + ' énergie'; return off; }
+  fin.lock = fin.lock || (ready ? 'Énergie insuffisante' : 'Gagne un round pour charger'); fin.sub = 'Pas encore prêt'; return fin;
 }
 // ── Préparation : choisir sa posture avant de commencer ──
 function renderPlan() {
@@ -2232,7 +2257,7 @@ function cityMenu() {
     T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
   }
   L.push(C(left > 0 ? 'Partir pour une autre ville' : 'Partir pour une autre ville', () => travelMenu(), { ic: '🚆', cls: left > 0 ? '' : 'cta', sub: left > 0 ? 'Terminer ton séjour.' : 'Il est temps de changer de destination.' }));
-  show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
+  coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -2259,7 +2284,7 @@ function travelMenu(pre) {
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
-  show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: back });
+  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: back });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -2303,7 +2328,7 @@ function travelGo(to, r, weeks) {
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();
-    contractCard(`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '. ' : ''}Avant de reprendre l’intrigue, quelques contrats se présentent.`);
+    contractCard(used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : 'Le train glisse sans histoire.');
   });
 }
 function travelHover() {
@@ -2446,7 +2471,7 @@ function hub() {
   else { advance(1); if (G.status !== 'play') return; if (fl.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); if (pc.pts > 0) return spendPoints(); }
   if ((fl.storyLeft == null ? 3 : fl.storyLeft) <= 0) return enterCity();
   fl.storyLeft = (fl.storyLeft == null ? 3 : fl.storyLeft) - 1;
-  dealCard();
+  coach('trame'); dealCard();
 }
 // Niveau gagné : on dépense le point tout de suite, devant toi.
 const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
@@ -2494,7 +2519,7 @@ function contractCard(arrive) {
   [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
   if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
   L.push(C('Poursuivre l’intrigue', hub, { cls: 'cta', ic: '▶', sub: 'Laisser les contrats : la suite des événements arrive.' }));
-  show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.', cityLine()].filter(Boolean), choices: L });
+  coach('contrats'); show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des contrats à prendre ici.', cityLine()].filter(Boolean), choices: L });
 }
 function stoneCard(s) {
   const hold = G.world.stoneHolder[s.id];
@@ -2551,7 +2576,7 @@ function setupLibre() {
 }
 EVENT_FN.premise = function () {
   const p = G.world.premise; if (!p) return hub();
-  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text, 'Ce scénario est tiré au hasard : tu l’écris à ta façon. Cherche les pierres antiques, fais grandir ta faction, ou prends ta retraite quand tu veux.'], choices: [C('Commencer', hub)] });
+  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text], choices: [C('Commencer', hub)] });
 };
 function libreMonth() {
   const W = G.world; const pc = G.pc;
@@ -2966,7 +2991,7 @@ function missionBoard() {
 }
 function missionBrief(o) {
   const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `Récompense : <b>${o.pay} ¢</b>, ${o.xp} XP${o.merit ? ', +' + o.merit + ' mérite' : ''}. Durée : ${o.weeks} semaine(s).${o.promo ? ' <b>Si tu réussis, tu montes en grade.</b>' : ''}`, `<span class="mut">Employeur : ${esc(leaderName(o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp))}.</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
+  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
 }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
@@ -3493,6 +3518,25 @@ function stoneBadge(s) {
   return el;
 }
 const stoneGrid = () => h('div', { class: 'stones2' }, DATA.stones.map(stoneBadge));
+
+// ───────── Prise en main guidée (une seule fois) et ambiance de couleur par ville ─────────
+const TUTO = {
+  contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Poursuivre l’intrigue ».'],
+  trame: ['Voici un événement de la trame.', 'Choisis une option : un dé décide. Le pourcentage indique tes chances.'],
+  combat: ['Un combat dure 3 rounds.', 'À chaque round : Attaquer, te protéger ou utiliser ton Pouvoir. Gagne plus de rounds que l’ennemi.'],
+  ville: ['Tu es en ville.', 'Tu as quelques actions (repos, marché, recruter, s’entraîner). Quand c’est fini, tu dois partir.'],
+  voyage: ['Choisis ta destination.', 'Touche une ville sur la carte, puis touche-la encore pour partir. Le 💎 marque un indice sur une pierre.']
+};
+function tutoSeen(id) { try { return !!JSON.parse(localStorage.getItem('ne_tuto') || '{}')[id]; } catch (e) { return false; } }
+function tutoMark(id) { try { const o = JSON.parse(localStorage.getItem('ne_tuto') || '{}'); o[id] = 1; localStorage.setItem('ne_tuto', JSON.stringify(o)); } catch (e) { } }
+function coach(id) { if (TUTO[id] && !tutoSeen(id)) UI.nextCoach = id; }
+function coachEl(id) { const [t, d] = TUTO[id]; return h('div', { class: 'coach' }, h('span', { class: 'ci' }, '💡'), h('div', { class: 'ct' }, h('b', {}, t), h('span', {}, d)), h('button', { onclick: e => { tutoMark(id); e.currentTarget.closest('.coach').remove(); } }, 'OK')); }
+// couleur d'ambiance : une teinte par zone, légèrement décalée par ville
+function ambiance() {
+  if (!G || !G.loc || !DATA.zones) return;
+  const z = DATA.stateZone[G.loc]; const zi = Math.max(0, DATA.zones.indexOf(z)); const hue = Math.round((zi * 360 / DATA.zones.length + 200 + (hashStr(G.loc) % 17)) % 360);
+  const r = document.documentElement.style; r.setProperty('--amb', `hsl(${hue} 88% 60%)`); r.setProperty('--ambbg', `hsl(${hue} 55% 7%)`);
+}
 
 // ───────── Monde vivant : tic mensuel, événements canon, simulation PNJ/factions, événements aléatoires ─────────
 const CANON_NAMES = ['Ora', 'Dafa', 'Multi', 'Guano', 'Vracia', 'Jinsei', 'Shinda', 'Alíngua', 'Myrsky', 'Rozko', 'Bot', 'Blackout', 'Rènào', 'Kuini Wai', 'Inkho', 'Viscous', 'Scatter', 'Kiné', 'Crâne', 'Levit', 'Moon Fang', 'Rènào'];

@@ -13,7 +13,7 @@ function hub() {
   else { advance(1); if (G.status !== 'play') return; if (fl.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); if (pc.pts > 0) return spendPoints(); }
   if ((fl.storyLeft == null ? 3 : fl.storyLeft) <= 0) return enterCity();
   fl.storyLeft = (fl.storyLeft == null ? 3 : fl.storyLeft) - 1;
-  dealCard();
+  coach('trame'); dealCard();
 }
 // Niveau gagné : on dépense le point tout de suite, devant toi.
 const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
@@ -61,7 +61,7 @@ function contractCard(arrive) {
   [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
   if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
   L.push(C('Poursuivre l’intrigue', hub, { cls: 'cta', ic: '▶', sub: 'Laisser les contrats : la suite des événements arrive.' }));
-  show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.', cityLine()].filter(Boolean), choices: L });
+  coach('contrats'); show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des contrats à prendre ici.', cityLine()].filter(Boolean), choices: L });
 }
 function stoneCard(s) {
   const hold = G.world.stoneHolder[s.id];

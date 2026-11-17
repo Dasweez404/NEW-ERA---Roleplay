@@ -1,17 +1,8 @@
 // ───────── Combat : situations narratives, élan et posture ─────────
-const elanBonus = () => clamp(Math.trunc((CB.mom || 0) / 2), -2, 3);
+const elanBonus = () => clamp(CB.mom || 0, 0, 2);
 const stanceBonus = m => CB.stance === 'rusee' ? (m.attr === 'corps' ? -1 : 2) : (CB.stance === 'offensive' && m.attr === 'corps') ? 1 : 0;
-function momUpdate(res, m) {
-  const r = CB.lastR || {}; let d = 0;
-  if (res === 'win') { d = 2 + (r.crit ? 1 : 0) + (CB.stance === 'offensive' ? 1 : 0) + (m && m.kind === 'gamble' ? 1 : 0) + (m && m.kind === 'rally' ? 1 : 0); }
-  else if (res === 'loss') { d = -(CB.stance === 'prudente' ? 1 : 2) - (r.fumble ? 1 : 0); }
-  CB.mom = clamp((CB.mom || 0) + d, -6, 6); CB.lastR = null;
-  if (d) clog(`Élan ${d > 0 ? '+' : ''}${d} → ${CB.mom > 0 ? '+' : ''}${CB.mom}`, d > 0 ? 'good' : 'log-miss');
-}
-function momEl() {
-  const m = CB.mom || 0; const cells = []; for (let i = -6; i <= 6; i++) cells.push(h('i', { class: 'mc' + (i === 0 ? ' z' : '') + (i === m ? ' on' : '') + (i > 0 && i <= m ? ' p' : '') + (i < 0 && i >= m ? ' n' : '') }));
-  return h('div', { class: 'mom' }, h('span', { class: 'ml' }, 'Élan'), h('div', { class: 'mb' }, cells), h('span', { class: 'mv' }, `${m > 0 ? '+' : ''}${m}`), h('span', { class: 'ms small mut' }, m >= 3 ? 'Finisseur prêt' : ''));
-}
+function momUpdate(res, m) { const r = CB.lastR || {}; if (res === 'win') CB.mom = Math.min(6, (CB.mom || 0) + 1 + (r.crit ? 1 : 0)); else if (res === 'loss') CB.mom = 0; CB.lastR = null; }
+function momEl() { const m = CB.mom || 0; const T = CB.thr; return h('div', { class: 'mom2' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label), m >= 1 ? h('span', { class: 'pvc streak' }, `🔥 série ×${m}${m >= 2 ? ' · pouvoir prêt' : ''}`) : null); }
 const OPT = (label, attr, tags, kind, cat, ic, sub, extra) => Object.assign({ id: label, ic, label, sub: sub || '', attr, tags, kind, cat: cat || 'atk' }, extra || {});
 const noPower = () => !pcPowers().length;
 const SITS = {
@@ -34,14 +25,26 @@ function currentSit() {
   if (!CB.sit || CB.sit.round !== CB.round) { const id = pickSit(); CB.sit = { id, round: CB.round }; }
   const d = SITS[CB.sit.id]; const f = firstFoe(); return { id: CB.sit.id, n: d.n, t: d.t(f ? fname(f) : 'l’ennemi'), o: d.o };
 }
-function sitMoves() {
-  const pc = G.pc; const sit = currentSit(); const L = sit.o().map(m => m); const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
-  const fin = techMove(); fin.label = `Finisseur : ${STYLES[pc.style].tech.name}`; fin.sub += ' · élan +3 requis'; if (!(CB.mom >= 3 || CB.round === CB.N)) fin.lock = fin.lock || 'Élan insuffisant (+3 requis)'; fin.bonus = 3; fin.cat = 'atk'; L.push(fin);
-  const sg = sigMove(); if (sg) L.push(sg);
-  if (pc.hp < pc.hpMax * 0.55 && heal && !CB.noItems) L.push({ id: 'item', ic: '💊', label: `Se soigner (${ITEMS[heal].n})`, sub: ITEMS[heal].desc + ' · round nul', kind: 'item', item: heal });
-  else if (pc.hp < pc.hpMax * 0.6 && Object.keys(powerTags()).includes('heal') && pc.en >= POWER_FX.heal.cost) L.push({ id: 'heal', ic: '💚', label: `${powName('heal')} : te régénérer`, sub: `${POWER_FX.heal.cost} énergie · soigne ~25 % · round nul`, kind: 'heal', cost: POWER_FX.heal.cost });
-  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) L.push({ id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: (pc.ptype === 'zoologique' ? 'Bête féroce incontrôlable' : pc.ptype === 'elementaire' ? 'Demi-dieu' : pc.ptype === 'hybride' ? 'Éveil partiel' : 'Capacités au maximum') + ' · round gagné d’office', kind: 'awaken', cls: 'danger' });
-  return L;
+function sitMoves() { return [attackMove(), protectMove(), powerMove()]; }
+function attackMove() {
+  const w = weaponOf(); const machine = aliveFoes().some(f => f.m) && hasCap('hack');
+  if (machine) return { id: 'hack', ic: '💻', label: 'Pirater', sub: 'Neutralise la machine', attr: 'intellect', tags: ['hack'], cat: 'tac', bonus: 2, kind: 'hack' };
+  return { id: 'strike', ic: '⚔', label: 'Attaquer', sub: w ? w.n : 'À mains nues', attr: primAttr(), tags: ['combat'], cat: 'atk', bonus: (w ? Math.floor(w.dmg / 3) : 0) + (hasRole('combattant') ? 1 : 0), kind: 'hit' };
+}
+function protectMove() {
+  const pc = G.pc; const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
+  if (pc.hp < pc.hpMax * 0.45 && heal && !CB.noItems) return { id: 'item', ic: '💊', label: 'Se soigner', sub: ITEMS[heal].n + ' · round nul', kind: 'item', item: heal };
+  const body = primAttr() === 'corps';
+  return body ? { id: 'guard', ic: '🛡', label: 'Se protéger', sub: 'Dégâts −60 % si tu perds', attr: 'corps', tags: ['defense'], cat: 'tac', kind: 'guard' } : { id: 'feint', ic: '💨', label: 'Esquiver', sub: 'Dégâts −50 % si tu perds', attr: 'agilite', tags: ['mobility', 'stealth'], cat: 'feint', kind: 'feint' };
+}
+function powerMove() {
+  const pc = G.pc; const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
+  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return { id: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Round gagné d’office · risqué', kind: 'awaken', cls: 'danger' };
+  const fin = techMove(); fin.label = `Pouvoir : ${STYLES[pc.style].tech.name}`; fin.bonus = 3; fin.cat = 'atk'; fin.sub = `${cap(STYLES[pc.style].tech.text)} · ${STYLES[pc.style].tech.cost} énergie`;
+  const ready = (CB.mom || 0) >= 2 || CB.round === CB.N; if (ok(fin) && ready) return fin;
+  const sg = sigMove(); if (ok(sg)) { sg.label = sg.label.replace('Signature : ', 'Pouvoir : '); sg.sub = 'Round gagné d’office · ' + sg.cost + ' énergie'; return sg; }
+  const off = offense(); if (off.id === 'power' && ok(off)) { off.label = 'Pouvoir : ' + powName('combat'); off.sub = '+3 au jet · ' + off.cost + ' énergie'; return off; }
+  fin.lock = fin.lock || (ready ? 'Énergie insuffisante' : 'Gagne un round pour charger'); fin.sub = 'Pas encore prêt'; return fin;
 }
 // ── Préparation : choisir sa posture avant de commencer ──
 function renderPlan() {

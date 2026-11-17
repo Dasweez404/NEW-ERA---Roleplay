@@ -24,7 +24,7 @@ function setupLibre() {
 }
 EVENT_FN.premise = function () {
   const p = G.world.premise; if (!p) return hub();
-  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text, 'Ce scénario est tiré au hasard : tu l’écris à ta façon. Cherche les pierres antiques, fais grandir ta faction, ou prends ta retraite quand tu veux.'], choices: [C('Commencer', hub)] });
+  show({ kicker: 'SCÉNARIO · MODE LIBRE', title: p.t, text: [p.text], choices: [C('Commencer', hub)] });
 };
 function libreMonth() {
   const W = G.world; const pc = G.pc;

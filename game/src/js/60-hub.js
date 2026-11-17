@@ -29,7 +29,7 @@ function cityMenu() {
     T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
   }
   L.push(C(left > 0 ? 'Partir pour une autre ville' : 'Partir pour une autre ville', () => travelMenu(), { ic: '🚆', cls: left > 0 ? '' : 'cta', sub: left > 0 ? 'Terminer ton séjour.' : 'Il est temps de changer de destination.' }));
-  show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
+  coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -56,7 +56,7 @@ function travelMenu(pre) {
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
-  show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: back });
+  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: back });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -100,7 +100,7 @@ function travelGo(to, r, weeks) {
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();
-    contractCard(`Le train glisse sans histoire jusqu’à ${esc(capName(to))}. ${used.length ? 'Tu as utilisé : ' + used.join(', ') + '. ' : ''}Avant de reprendre l’intrigue, quelques contrats se présentent.`);
+    contractCard(used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : 'Le train glisse sans histoire.');
   });
 }
 function travelHover() {

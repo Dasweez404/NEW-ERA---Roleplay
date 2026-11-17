@@ -531,3 +531,17 @@ details>summary{cursor:pointer;color:#9aa0c8;margin-top:6px}.pwbox{margin:8px 0;
 .mapcorner{position:absolute;right:8px;bottom:8px;z-index:5;background:#12121fe6;border:1px solid #34344f;color:#e9ebff;font:700 .72rem var(--fm);letter-spacing:.06em;padding:7px 10px;min-height:0;clip-path:none;text-transform:none;cursor:pointer}.mapcorner:hover{border-color:#fcee09}
 .travelinfo{margin-top:8px;display:grid;gap:6px;padding:10px;background:#12121f;border-left:3px solid #fcee09}.tvrow{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.tvd{font:800 1.02rem var(--fb)}.tvm{font:700 .9rem var(--fm)}.tvchips{display:flex;gap:6px;flex-wrap:wrap}.pvc.rec{border-color:#fcee09;color:#fcee09}
 .stone2{min-width:0;overflow:visible}.stone2 .em{font-size:clamp(1rem,5vw,1.5rem)}
+.mom2{display:flex;gap:6px;flex-wrap:wrap}.pvc.streak{border-color:#ff8a1f;color:#ff8a1f;animation:chipin .35s both}
+.chip.bilan{background:#12121f;border-color:#fcee09;color:#fcee09;letter-spacing:.08em}
+.morelink{background:none;border:0;color:#fcee09;font:600 .8rem var(--fm);letter-spacing:.06em;padding:0 4px;min-height:0;clip-path:none;text-transform:none;cursor:pointer}
+/* ── Prise en main ── */
+.coach{display:flex;gap:10px;align-items:center;background:#1a1a10;border:1px dashed #fcee09;padding:8px 10px;margin:0 0 10px;animation:chipin .4s both}.coach .ci{font-size:1.4rem}.coach .ct{display:grid;gap:1px;flex:1;min-width:0}.coach .ct b{font:800 .92rem var(--fb)}.coach .ct span{font-size:.82rem;color:#cfd3e6;line-height:1.25}.coach button{background:#fcee09;color:#000;border:0;padding:8px 12px;font:800 .8rem var(--fm);min-height:36px;clip-path:none}
+/* ── Ambiance de couleur par ville (teinte par zone) ── */
+body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::before,body::after{display:none!important}
+.card,.hud,.strip{border-color:color-mix(in srgb,var(--amb,#2a2a44) 38%,#2a2a44)!important}
+.hud{border-top:2px solid var(--amb,#27f0ff)!important}
+.ch:not(.back):not(.cta):not(.danger){border-left-color:var(--amb,#27f0ff)}
+.kicker,.card .kicker{color:var(--amb,#fcee09)}
+.dock{border-top-color:var(--amb,#27f0ff)}.dk.on,.dk.on .n{color:var(--amb,#fcee09)}
+.tabs .tab.on,.shopcats .tab.on{background:var(--amb,#fcee09);color:#000}
+.sit{border-left-color:var(--amb,#27f0ff)}.rp.cur{border-color:var(--amb,#fcee09);color:var(--amb,#fcee09)}

@@ -105,7 +105,7 @@ function missionBoard() {
 }
 function missionBrief(o) {
   const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `Récompense : <b>${o.pay} ¢</b>, ${o.xp} XP${o.merit ? ', +' + o.merit + ' mérite' : ''}. Durée : ${o.weeks} semaine(s).${o.promo ? ' <b>Si tu réussis, tu montes en grade.</b>' : ''}`, `<span class="mut">Employeur : ${esc(leaderName(o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp))}.</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
+  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o)), C('Refuser', () => contractCard())] });
 }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);

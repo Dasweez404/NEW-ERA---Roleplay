@@ -39,7 +39,7 @@ function C(label, go, o = {}) {
 function fxHTML(L) {
   if (!L || !L.length) return null; let xp = 0; const rest = [];
   L.forEach(l => { const m = /^\+(\d+)\s*XP/i.exec(l.t || ''); if (m) xp += +m[1]; else rest.push(l); });
-  const prio = l => (/¢|XP|Niveau sup/i.test(l.t || '') || l.c === 'badc') ? 0 : /PV|MÉRITE|mérite|PRIME|objet/i.test(l.t || '') ? 1 : 2;
+  const prio = l => l.c === 'bilan' ? -1 : (/¢|XP|Niveau sup/i.test(l.t || '') || l.c === 'badc') ? 0 : /PV|MÉRITE|mérite|PRIME|objet/i.test(l.t || '') ? 1 : 2;
   const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest).map((l, i) => [l, i]).sort((x, y) => prio(x[0]) - prio(y[0]) || x[1] - y[1]).map(x => x[0]);
   const MAX = 3; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
   const box = h('div', { class: 'chips' }, items.slice(0, MAX).map(chip));
@@ -49,12 +49,20 @@ function fxHTML(L) {
 
 function show(sc) {
   if (G && G.status !== 'play' && !sc.final) return;
+  if (UI.scene && UI.scene.coachId) tutoMark(UI.scene.coachId);
+  if (UI.nextCoach) { sc.coachId = UI.nextCoach; UI.nextCoach = null; }
   if (G && G.pc && G.pc.pts > 0 && !sc.noLevel && !sc.final && typeof CB !== 'undefined' && !CB && sc.choices) sc.choices = sc.choices.map(c => (c && !c.lock && !/^←/.test(c.label || '')) ? Object.assign({}, c, { go: () => spendPoints(c.go) }) : c);
   const roll = UI.roll; UI.roll = null;
   if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).filter(t => !(typeof t === 'string' && t.startsWith('🎲'))); }
   UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
 }
-function paragraphs(t) { return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => typeof x === 'string' ? h('p', { class: 'rv', style: `--i:${i}`, html: x }) : x); }
+function paragraphs(t) {
+  return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => {
+    if (typeof x !== 'string') return x;
+    if (x.length > 190 && !/[<>]/.test(x)) { const head = x.slice(0, 190); const cut = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '), head.lastIndexOf('… ')); if (cut > 60) { const p = h('p', { class: 'rv', style: `--i:${i}` }, x.slice(0, cut + 1)); const rest = h('span', { class: 'rest', hidden: true }, ' ' + x.slice(cut + 2)); const more = h('button', { class: 'morelink', onclick: e => { e.currentTarget.remove(); rest.hidden = false; } }, ' … suite'); p.append(more, rest); return p; } }
+    return h('p', { class: 'rv', style: `--i:${i}`, html: x });
+  });
+}
 
 function avatar() { const pc = G.pc; const f = F[pc.faction]; const hue = hashStr(pc.faction) % 360; const sp = pcSprite(); if (sp && hasSpr(sp)) return h('div', { class: 'avatar sp', style: `--hue:${hue}` }, sprFit(sp, 80)); return h('div', { class: 'avatar', style: `--hue:${hue}` }, (pc.name || '?').charAt(0).toUpperCase()); }
 function hudEl() {
@@ -106,11 +114,12 @@ function render(quiet) {
   const app = $('#app'); app.innerHTML = ''; app.className = (quiet ? 'quiet ' : '') + ((UI.scene && UI.scene.compact) ? 'lite' : ''); UI.after = [];
   const sc = UI.scene; if (!sc) return;
   if (sc.bare) { app.append(h('div', {}, sc.extra)); runAfter(); return; }
-  const live = G && G.status === 'play';
+  const live = G && G.status === 'play'; if (live) ambiance(); else { document.documentElement.style.removeProperty('--amb'); document.documentElement.style.removeProperty('--ambbg'); }
   const rollEl = sc.roll ? diceEl(sc.roll, quiet || sc.rolled) : null; if (sc.roll) sc.rolled = true;
   const d = sc.roll && !quiet ? 1.05 : 0;
   const back = (sc.choices || []).filter(Boolean).find(c => /^←/.test(c.label)); UI.back = back ? back.go : null;
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
+    sc.coachId ? coachEl(sc.coachId) : null,
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);
