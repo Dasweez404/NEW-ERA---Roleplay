@@ -153,7 +153,7 @@ function stripEl() {
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
 // ───────── Panneau latéral (bureau) / tiroir + dock (mobile) ─────────
-const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions'], ['pierres', '💎', 'Pierres']];
+const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions']];
 const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
