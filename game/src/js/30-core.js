@@ -30,6 +30,7 @@ function skill(attrId, tags = []) {
   const pb = perkChk(tags); if (pb) { parts.push(['particularité', pb]); mod += pb; }
   if (PK('night') && typeof envTime === 'function' && envTime() === 'night') { parts.push(['nuit', PK('night')]); mod += PK('night'); }
   if (pc.stim > 0) { parts.push(['stimulant', 3]); mod += 3; }
+  if (pc.enMax > 0 && pc.en <= 0 && pc.ptype !== 'aucun') { parts.push(['épuisé', -1]); mod -= 1; }
   { const hr = pc.hp / pc.hpMax; const wp = hr < 0.2 ? 3 : hr < 0.4 ? 2 : hr < 0.6 ? 1 : 0; if (wp) { parts.push(['blessé', -wp]); mod -= wp; } }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
   return { mod, parts };
@@ -94,7 +95,7 @@ function gainStone(id) {
   L.push({ t: `✨ Pierre antique de ${s.name} obtenue (${stoneCount()}/16) ! +1 ${AT[STONE_ATTR[id]].short}`, c: 'acc' });
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
-  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 4);
+  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 2);
   const n = stoneCount(); if (n === 4) L.push({ t: '🌟 Résonance : 4 pierres — +1 à tous les attributs.', c: 'acc' });
   if (n === 8) L.push({ t: '🌟 Aura : 8 pierres — tes pouvoirs s’éveillent plus facilement et sans risque.', c: 'acc' });
   if (n === 12) L.push({ t: '⚠️ Convergence : 12 pierres — le Panthéon et Néo te traquent désormais.', c: 'warnc' });
@@ -110,7 +111,7 @@ function advance(weeks) {
   for (let i = 0; i < weeks; i++) {
     G.wk++;
     const pc = G.pc;
-    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + 2);
+    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + 1);
     pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
     if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;

@@ -27,14 +27,14 @@ const AT = {}; ATTRS.forEach(a => AT[a.id] = a);
 
 // 8 styles de combat (PDF p.33)
 const STYLES = {
-  brawler: { name: 'Brawler', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise du combat et des armes.', prim: 'corps', sec: 'agilite', tag: 'combat', tech: { name: 'Enchaînement', cost: 2, text: 'deux coups rapprochés' } },
-  performer: { name: 'Performer', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise des super-pouvoirs.', prim: 'maitrise', sec: 'charisme', tag: 'combat', tech: { name: 'Surcharge', cost: 3, text: 'pouvoir à pleine puissance' } },
-  juggernaut: { name: 'Juggernaut', grp: 'Défensif', desc: 'Protection de soi : encaisser et durer.', prim: 'corps', sec: 'maitrise', tag: 'defense', tech: { name: 'Carapace', cost: 2, text: 'se protège et riposte' } },
-  protector: { name: 'Protector', grp: 'Défensif', desc: 'Protection des autres : tenir la ligne pour son équipe.', prim: 'corps', sec: 'charisme', tag: 'defense', tech: { name: 'Rempart', cost: 2, text: 'protège tout le groupe' } },
-  flanker: { name: 'Flanker', grp: 'Technique', desc: 'Habileté au déplacement : prendre à revers, disparaître.', prim: 'agilite', sec: 'corps', tag: 'mobility', tech: { name: 'Prise à revers', cost: 2, text: 'frappe en angle mort' } },
-  ranger: { name: 'Ranger', grp: 'Technique', desc: 'Spécialisé dans la précision : un tir, une cible.', prim: 'agilite', sec: 'intellect', tag: 'scout', tech: { name: 'Tir précis', cost: 2, text: 'tir qui ne rate pas' } },
-  assist: { name: 'Assist', grp: 'Soutien', desc: 'Soutien des alliés et déstabilisation des adversaires.', prim: 'charisme', sec: 'intellect', tag: 'social', tech: { name: 'Déstabiliser', cost: 2, text: 'affaiblit l’ennemi, galvanise les alliés' } },
-  engineer: { name: 'Engineer', grp: 'Soutien', desc: 'Création d’équipement pour les autres.', prim: 'intellect', sec: 'maitrise', tag: 'tech', tech: { name: 'Gadget improvisé', cost: 2, text: 'déploie un drone de combat' } },
+  brawler: { name: 'Brawler', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise du combat et des armes.', prim: 'corps', sec: 'agilite', tag: 'combat', tech: { name: 'Enchaînement', cost: 3, text: 'deux coups rapprochés' } },
+  performer: { name: 'Performer', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise des super-pouvoirs.', prim: 'maitrise', sec: 'charisme', tag: 'combat', tech: { name: 'Surcharge', cost: 4, text: 'pouvoir à pleine puissance' } },
+  juggernaut: { name: 'Juggernaut', grp: 'Défensif', desc: 'Protection de soi : encaisser et durer.', prim: 'corps', sec: 'maitrise', tag: 'defense', tech: { name: 'Carapace', cost: 3, text: 'se protège et riposte' } },
+  protector: { name: 'Protector', grp: 'Défensif', desc: 'Protection des autres : tenir la ligne pour son équipe.', prim: 'corps', sec: 'charisme', tag: 'defense', tech: { name: 'Rempart', cost: 3, text: 'protège tout le groupe' } },
+  flanker: { name: 'Flanker', grp: 'Technique', desc: 'Habileté au déplacement : prendre à revers, disparaître.', prim: 'agilite', sec: 'corps', tag: 'mobility', tech: { name: 'Prise à revers', cost: 3, text: 'frappe en angle mort' } },
+  ranger: { name: 'Ranger', grp: 'Technique', desc: 'Spécialisé dans la précision : un tir, une cible.', prim: 'agilite', sec: 'intellect', tag: 'scout', tech: { name: 'Tir précis', cost: 3, text: 'tir qui ne rate pas' } },
+  assist: { name: 'Assist', grp: 'Soutien', desc: 'Soutien des alliés et déstabilisation des adversaires.', prim: 'charisme', sec: 'intellect', tag: 'social', tech: { name: 'Déstabiliser', cost: 3, text: 'affaiblit l’ennemi, galvanise les alliés' } },
+  engineer: { name: 'Engineer', grp: 'Soutien', desc: 'Création d’équipement pour les autres.', prim: 'intellect', sec: 'maitrise', tag: 'tech', tech: { name: 'Gadget improvisé', cost: 3, text: 'déploie un drone de combat' } },
 };
 
 // Rôles (liste de l'utilisateur ; « costumier » était en double → une seule entrée)

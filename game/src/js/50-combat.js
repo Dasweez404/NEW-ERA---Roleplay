@@ -62,9 +62,9 @@ function dedupeFoes(foes) {
 }
 let CB = null;
 const POWER_FX = {
-  combat: { n: 'Frappe de pouvoir', cost: 3, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 2, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 2, d: 'Absorbe des dégâts' },
-  heal: { n: 'Régénération', cost: 3, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 2, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 2, d: 'Prochaine frappe critique' },
-  hack: { n: 'Piratage', cost: 2, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 1, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 1, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 2, d: 'Déploie un drone qui frappe chaque tour' },
+  combat: { n: 'Frappe de pouvoir', cost: 4, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 3, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 3, d: 'Absorbe des dégâts' },
+  heal: { n: 'Régénération', cost: 4, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 3, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 3, d: 'Prochaine frappe critique' },
+  hack: { n: 'Piratage', cost: 3, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 2, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 2, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 3, d: 'Déploie un drone qui frappe chaque tour' },
 };
 const ANTI = {
   buff: { n: 'Buff', d: 'Force infatigable (+4 dégâts, 3 tours)' }, rebound: { n: 'Rebound', d: 'Dévie les projectiles : bouclier 8 et riposte' }, shield: { n: 'Shield', d: 'Corps protégé d’un bouclier de verre (8)' },
@@ -136,7 +136,7 @@ function play(m) {
     if (r.ok) {
       res = 'win'; const win = { hit: [`Ton coup passe la garde de ${fname(f)}.`, `${fname(f)} recule sous l’impact.`, `Un enchaînement net : ${fname(f)} encaisse.`], feint: [`Tu dupes ${fname(f)} et ripostes.`, 'Une feinte parfaite.'], intim: ['Ton regard les glace : ils reculent.'], bind: ['Les ennemis sont entravés.'], hack: [`${fname(aliveFoes().find(x => x.m) || f)} est neutralisé.`], guard: ['Tu tiens bon, l’ennemi s’épuise.'], tech: ['Ta technique fait mouche.'], awaken: ['⚡ Ton pouvoir s’éveille !'] }[m.kind] || ['Tu gagnes ce round.'];
       clog(pick(win) + (crit ? ' (CRITIQUE)' : ''), 'log-hit'); pop('f0', 'ROUND GAGNÉ', crit ? 'crit' : 'dmg');
-      if (m.kind === 'intim') CB.halve = 2; if (m.kind === 'bind') { CB.nextBonus += 2; aliveFoes().forEach(x => { x.stun = 1; }); } if (m.kind === 'guard') pc.en = Math.min(pc.enMax, pc.en + 2);
+      if (m.kind === 'intim') CB.halve = 2; if (m.kind === 'bind') { CB.nextBonus += 2; aliveFoes().forEach(x => { x.stun = 1; }); } if (m.kind === 'guard') pc.en = Math.min(pc.enMax, pc.en + 1);
       if (m.kind === 'hack') { const mc = aliveFoes().find(x => x.m); if (mc) mc.dmg = 1; }
       if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken();
       if (crit) CB.nextBonus += 1;

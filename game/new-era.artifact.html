@@ -628,14 +628,14 @@ const AT = {}; ATTRS.forEach(a => AT[a.id] = a);
 
 // 8 styles de combat (PDF p.33)
 const STYLES = {
-  brawler: { name: 'Brawler', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise du combat et des armes.', prim: 'corps', sec: 'agilite', tag: 'combat', tech: { name: 'Enchaînement', cost: 2, text: 'deux coups rapprochés' } },
-  performer: { name: 'Performer', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise des super-pouvoirs.', prim: 'maitrise', sec: 'charisme', tag: 'combat', tech: { name: 'Surcharge', cost: 3, text: 'pouvoir à pleine puissance' } },
-  juggernaut: { name: 'Juggernaut', grp: 'Défensif', desc: 'Protection de soi : encaisser et durer.', prim: 'corps', sec: 'maitrise', tag: 'defense', tech: { name: 'Carapace', cost: 2, text: 'se protège et riposte' } },
-  protector: { name: 'Protector', grp: 'Défensif', desc: 'Protection des autres : tenir la ligne pour son équipe.', prim: 'corps', sec: 'charisme', tag: 'defense', tech: { name: 'Rempart', cost: 2, text: 'protège tout le groupe' } },
-  flanker: { name: 'Flanker', grp: 'Technique', desc: 'Habileté au déplacement : prendre à revers, disparaître.', prim: 'agilite', sec: 'corps', tag: 'mobility', tech: { name: 'Prise à revers', cost: 2, text: 'frappe en angle mort' } },
-  ranger: { name: 'Ranger', grp: 'Technique', desc: 'Spécialisé dans la précision : un tir, une cible.', prim: 'agilite', sec: 'intellect', tag: 'scout', tech: { name: 'Tir précis', cost: 2, text: 'tir qui ne rate pas' } },
-  assist: { name: 'Assist', grp: 'Soutien', desc: 'Soutien des alliés et déstabilisation des adversaires.', prim: 'charisme', sec: 'intellect', tag: 'social', tech: { name: 'Déstabiliser', cost: 2, text: 'affaiblit l’ennemi, galvanise les alliés' } },
-  engineer: { name: 'Engineer', grp: 'Soutien', desc: 'Création d’équipement pour les autres.', prim: 'intellect', sec: 'maitrise', tag: 'tech', tech: { name: 'Gadget improvisé', cost: 2, text: 'déploie un drone de combat' } },
+  brawler: { name: 'Brawler', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise du combat et des armes.', prim: 'corps', sec: 'agilite', tag: 'combat', tech: { name: 'Enchaînement', cost: 3, text: 'deux coups rapprochés' } },
+  performer: { name: 'Performer', grp: 'Offensif', desc: 'Spécialisé dans la maîtrise des super-pouvoirs.', prim: 'maitrise', sec: 'charisme', tag: 'combat', tech: { name: 'Surcharge', cost: 4, text: 'pouvoir à pleine puissance' } },
+  juggernaut: { name: 'Juggernaut', grp: 'Défensif', desc: 'Protection de soi : encaisser et durer.', prim: 'corps', sec: 'maitrise', tag: 'defense', tech: { name: 'Carapace', cost: 3, text: 'se protège et riposte' } },
+  protector: { name: 'Protector', grp: 'Défensif', desc: 'Protection des autres : tenir la ligne pour son équipe.', prim: 'corps', sec: 'charisme', tag: 'defense', tech: { name: 'Rempart', cost: 3, text: 'protège tout le groupe' } },
+  flanker: { name: 'Flanker', grp: 'Technique', desc: 'Habileté au déplacement : prendre à revers, disparaître.', prim: 'agilite', sec: 'corps', tag: 'mobility', tech: { name: 'Prise à revers', cost: 3, text: 'frappe en angle mort' } },
+  ranger: { name: 'Ranger', grp: 'Technique', desc: 'Spécialisé dans la précision : un tir, une cible.', prim: 'agilite', sec: 'intellect', tag: 'scout', tech: { name: 'Tir précis', cost: 3, text: 'tir qui ne rate pas' } },
+  assist: { name: 'Assist', grp: 'Soutien', desc: 'Soutien des alliés et déstabilisation des adversaires.', prim: 'charisme', sec: 'intellect', tag: 'social', tech: { name: 'Déstabiliser', cost: 3, text: 'affaiblit l’ennemi, galvanise les alliés' } },
+  engineer: { name: 'Engineer', grp: 'Soutien', desc: 'Création d’équipement pour les autres.', prim: 'intellect', sec: 'maitrise', tag: 'tech', tech: { name: 'Gadget improvisé', cost: 3, text: 'déploie un drone de combat' } },
 };
 
 // Rôles (liste de l'utilisateur ; « costumier » était en double → une seule entrée)
@@ -955,7 +955,7 @@ function A(id) {
 function recalc() {
   const pc = G.pc; const n = stoneCount();
   pc.hpMax = 22 + A('corps') * 3 + pc.grade * 3 + (pc.style === 'juggernaut' ? 10 : 0) + (pc.ptype === 'zoologique' ? 4 : 0) + n * 2;
-  pc.enMax = 8 + A('maitrise') * 3 + (pc.ptype === 'elementaire' ? 6 : 0) + (pc.ptype === 'hybride' ? -2 : 0) + (pc.ptype === 'aucun' ? -8 : 0) + n * 2;
+  pc.enMax = Math.max(0, 5 + Math.round(A('maitrise') * 1.5) + (pc.ptype === 'elementaire' ? 4 : 0) + (pc.ptype === 'hybride' ? -2 : 0) + (pc.ptype === 'aucun' ? -8 : 0) + n);
   pc.hp = clamp(pc.hp, 0, pc.hpMax); pc.en = clamp(pc.en, 0, pc.enMax);
 }
 function minHeat() {
@@ -1023,6 +1023,7 @@ function skill(attrId, tags = []) {
   const pb = perkChk(tags); if (pb) { parts.push(['particularité', pb]); mod += pb; }
   if (PK('night') && typeof envTime === 'function' && envTime() === 'night') { parts.push(['nuit', PK('night')]); mod += PK('night'); }
   if (pc.stim > 0) { parts.push(['stimulant', 3]); mod += 3; }
+  if (pc.enMax > 0 && pc.en <= 0 && pc.ptype !== 'aucun') { parts.push(['épuisé', -1]); mod -= 1; }
   { const hr = pc.hp / pc.hpMax; const wp = hr < 0.2 ? 3 : hr < 0.4 ? 2 : hr < 0.6 ? 1 : 0; if (wp) { parts.push(['blessé', -wp]); mod -= wp; } }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
   return { mod, parts };
@@ -1087,7 +1088,7 @@ function gainStone(id) {
   L.push({ t: `✨ Pierre antique de ${s.name} obtenue (${stoneCount()}/16) ! +1 ${AT[STONE_ATTR[id]].short}`, c: 'acc' });
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
-  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 4);
+  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 2);
   const n = stoneCount(); if (n === 4) L.push({ t: '🌟 Résonance : 4 pierres — +1 à tous les attributs.', c: 'acc' });
   if (n === 8) L.push({ t: '🌟 Aura : 8 pierres — tes pouvoirs s’éveillent plus facilement et sans risque.', c: 'acc' });
   if (n === 12) L.push({ t: '⚠️ Convergence : 12 pierres — le Panthéon et Néo te traquent désormais.', c: 'warnc' });
@@ -1103,7 +1104,7 @@ function advance(weeks) {
   for (let i = 0; i < weeks; i++) {
     G.wk++;
     const pc = G.pc;
-    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + 2);
+    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + 1);
     pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
     if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;
@@ -1968,9 +1969,9 @@ function dedupeFoes(foes) {
 }
 let CB = null;
 const POWER_FX = {
-  combat: { n: 'Frappe de pouvoir', cost: 3, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 2, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 2, d: 'Absorbe des dégâts' },
-  heal: { n: 'Régénération', cost: 3, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 2, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 2, d: 'Prochaine frappe critique' },
-  hack: { n: 'Piratage', cost: 2, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 1, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 1, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 2, d: 'Déploie un drone qui frappe chaque tour' },
+  combat: { n: 'Frappe de pouvoir', cost: 4, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 3, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 3, d: 'Absorbe des dégâts' },
+  heal: { n: 'Régénération', cost: 4, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 3, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 3, d: 'Prochaine frappe critique' },
+  hack: { n: 'Piratage', cost: 3, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 2, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 2, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 3, d: 'Déploie un drone qui frappe chaque tour' },
 };
 const ANTI = {
   buff: { n: 'Buff', d: 'Force infatigable (+4 dégâts, 3 tours)' }, rebound: { n: 'Rebound', d: 'Dévie les projectiles : bouclier 8 et riposte' }, shield: { n: 'Shield', d: 'Corps protégé d’un bouclier de verre (8)' },
@@ -2042,7 +2043,7 @@ function play(m) {
     if (r.ok) {
       res = 'win'; const win = { hit: [`Ton coup passe la garde de ${fname(f)}.`, `${fname(f)} recule sous l’impact.`, `Un enchaînement net : ${fname(f)} encaisse.`], feint: [`Tu dupes ${fname(f)} et ripostes.`, 'Une feinte parfaite.'], intim: ['Ton regard les glace : ils reculent.'], bind: ['Les ennemis sont entravés.'], hack: [`${fname(aliveFoes().find(x => x.m) || f)} est neutralisé.`], guard: ['Tu tiens bon, l’ennemi s’épuise.'], tech: ['Ta technique fait mouche.'], awaken: ['⚡ Ton pouvoir s’éveille !'] }[m.kind] || ['Tu gagnes ce round.'];
       clog(pick(win) + (crit ? ' (CRITIQUE)' : ''), 'log-hit'); pop('f0', 'ROUND GAGNÉ', crit ? 'crit' : 'dmg');
-      if (m.kind === 'intim') CB.halve = 2; if (m.kind === 'bind') { CB.nextBonus += 2; aliveFoes().forEach(x => { x.stun = 1; }); } if (m.kind === 'guard') pc.en = Math.min(pc.enMax, pc.en + 2);
+      if (m.kind === 'intim') CB.halve = 2; if (m.kind === 'bind') { CB.nextBonus += 2; aliveFoes().forEach(x => { x.stun = 1; }); } if (m.kind === 'guard') pc.en = Math.min(pc.enMax, pc.en + 1);
       if (m.kind === 'hack') { const mc = aliveFoes().find(x => x.m); if (mc) mc.dmg = 1; }
       if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken();
       if (crit) CB.nextBonus += 1;
@@ -2432,14 +2433,14 @@ function hoverGo(to) {
 function restMenu() {
   const pc = G.pc; const L = [];
   L.push(C('Dormir quelques jours (1 semaine)', () => doRest(1), { sub: 'Récupère ~25 % PV et énergie. Gratuit.' }));
-  L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère ~55 % PV et toute l’énergie. Soigne les alliés.', req: { money: 80 } }));
+  L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère ~55 % PV et ~60 % de l’énergie. Soigne les alliés.', req: { money: 80 } }));
   L.push(C('Se mettre au vert pendant 1 mois', () => lieLow(), { sub: 'La prime baisse ; tu récupères tout, mais +70 % PV, ton argent fond (60 ¢).', req: { money: 60 } }));
   L.push(C('Chercher un contact des Siha Mujahaz (soins clandestins)', () => { addRep('siha', 2, { spill: false }); doRest(1, 0, true); }, { sub: 'Soins gratuits mais discrets, si la Siha t’apprécie.', req: { rep: { siha: 10 } } }));
   L.push(C('← Retour', cityMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
 }
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
-  const full = weeks >= 2 || free; const dh = Math.round(pc.hpMax * (free ? 0.5 : weeks >= 2 ? 0.55 : 0.25)), de = full ? pc.enMax : Math.round(pc.enMax * 0.25);
+  const full = weeks >= 2 || free; const dh = Math.round(pc.hpMax * (free ? 0.5 : weeks >= 2 ? 0.55 : 0.25)), de = Math.round(pc.enMax * (free ? 0.4 : full ? 0.6 : 0.25));
   pc.hp = Math.min(pc.hpMax, pc.hp + dh + PK('rest') * 3); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
   const ev = chance(0.18) && randomHubEvent(); if (ev) return ev();
   show({ kicker: 'Repos', title: 'Tu te sens mieux', text: ['Les jours passent. Les bleus s’effacent.'], choices: [C('Continuer', hub)] });
@@ -2626,7 +2627,7 @@ function clueCard() {
   show({ kicker: 'RUMEUR', title: 'Un indice sur les pierres', text: ['Un vieux conteur, une archive piratée, une fresque effacée… quelque chose parle des seize pierres muta.'], choices: [C('Creuser la piste', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; const l = r.ok ? stoneClueGain() : null; show({ kicker: 'PIERRES ANTIQUES', title: r.ok ? 'Une piste !' : 'Fausse piste', text: [r.ok ? (l ? esc(cap(l)) : 'Tu sais déjà tout ce qu’il y a à savoir.') : 'Rien de concluant, cette fois.'], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' }), C('Laisser tomber', hub, { cls: 'back' })] });
 }
 function restCard() {
-  show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent. Un faux pas de plus et ça tourne mal.'], choices: [C('Dormir une semaine', () => doRest(1), { ic: '🛏', cls: 'safe' }), C('Se faire soigner (80 ¢)', () => doRest(2, 80), { ic: '💊', req: { money: 80 } }), C('Continuer quand même', () => dealCard(), { cls: 'risk' })] });
+  show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent et ton énergie est à plat. Pas question de dormir en pleine affaire : tu pourras te reposer en ville, une fois la trame terminée.'], choices: [C('Serrer les dents', () => dealCard(), { cls: 'risk', ic: '😤' })] });
 }
 function townCard() {
   show({ kicker: capName(G.loc).toUpperCase(), title: 'Un moment de répit', text: ['Entre deux coups durs, la ville offre ses boutiques, ses visages et ses salles d’entraînement.'], choices: [C('Faire le tour des marchés', () => shopMenu(false), { ic: '🛒' }), C('Chercher des recrues', recruitMenu, { ic: '🤝' }), C('S’entraîner', trainMenu, { ic: '🎓' }), C('Passer son chemin', hub, { cls: 'back' })] });

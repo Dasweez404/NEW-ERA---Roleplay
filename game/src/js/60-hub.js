@@ -117,14 +117,14 @@ function hoverGo(to) {
 function restMenu() {
   const pc = G.pc; const L = [];
   L.push(C('Dormir quelques jours (1 semaine)', () => doRest(1), { sub: 'Récupère ~25 % PV et énergie. Gratuit.' }));
-  L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère ~55 % PV et toute l’énergie. Soigne les alliés.', req: { money: 80 } }));
+  L.push(C('Se faire soigner correctement (2 semaines, 80 ¢)', () => doRest(2, 80), { sub: 'Récupère ~55 % PV et ~60 % de l’énergie. Soigne les alliés.', req: { money: 80 } }));
   L.push(C('Se mettre au vert pendant 1 mois', () => lieLow(), { sub: 'La prime baisse ; tu récupères tout, mais +70 % PV, ton argent fond (60 ¢).', req: { money: 60 } }));
   L.push(C('Chercher un contact des Siha Mujahaz (soins clandestins)', () => { addRep('siha', 2, { spill: false }); doRest(1, 0, true); }, { sub: 'Soins gratuits mais discrets, si la Siha t’apprécie.', req: { rep: { siha: 10 } } }));
   L.push(C('← Retour', cityMenu)); show({ kicker: 'Repos', title: 'Se reposer', text: ['Un lit, un toit, quelques jours sans courir. Mais le monde, lui, ne s’arrête pas.'], choices: L });
 }
 function doRest(weeks, cost = 0, free) {
   const pc = G.pc; pc.money -= cost; advance(weeks); if (G.status !== 'play') return;
-  const full = weeks >= 2 || free; const dh = Math.round(pc.hpMax * (free ? 0.5 : weeks >= 2 ? 0.55 : 0.25)), de = full ? pc.enMax : Math.round(pc.enMax * 0.25);
+  const full = weeks >= 2 || free; const dh = Math.round(pc.hpMax * (free ? 0.5 : weeks >= 2 ? 0.55 : 0.25)), de = Math.round(pc.enMax * (free ? 0.4 : full ? 0.6 : 0.25));
   pc.hp = Math.min(pc.hpMax, pc.hp + dh + PK('rest') * 3); pc.en = Math.min(pc.enMax, pc.en + de); if (full) pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; });
   const ev = chance(0.18) && randomHubEvent(); if (ev) return ev();
   show({ kicker: 'Repos', title: 'Tu te sens mieux', text: ['Les jours passent. Les bleus s’effacent.'], choices: [C('Continuer', hub)] });
