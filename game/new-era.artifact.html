@@ -2645,7 +2645,7 @@ function joinCard() {
 
 // ───────── Mode libre : scénario général aléatoire (sans la timeline d'Ora) ─────────
 const PREMISES = [
-  { id: 'course', t: 'La course aux pierres', x: ({ r }) => `Une rumeur court : les seize pierres muta existent. <b>${esc(F[r].name)}</b> s’est lancé dans la chasse et accumule déjà des alliés. Si personne ne l’arrête, il finira par dominer le monde.` },
+  { id: 'course', t: 'La course aux pierres', x: ({ r }) => `Une rumeur court : les seize pierres muta existent. <b>${esc(F[r].name)}</b> s’est déjà lancé dans la chasse, et le sillage de ses alliés grossit. Tout dépendra de qui les tiendra en main : la Force d’Autorité aura-t-elle raison des géno-porteurs, ou resteront-ils debout ?` },
   { id: 'fragile', t: 'Le Régime vacille', x: ({ r }) => `Le Nouveau Régime fissure : scandales, mutineries, oligarques qui se déchirent. Dans la panique, <b>${esc(F[r].name)}</b> cherche les pierres antiques pour s’emparer du vide.` },
   { id: 'neo', t: 'Néo regarde', x: ({ r }) => `Néo, conseiller du Régime, veut les pierres avant tout le monde. Il laisse <b>${esc(F[r].name)}</b> fouiller à sa place… en attendant de lui reprendre ses trouvailles.` },
   { id: 'noir', t: 'La guerre du Marché Noir', x: ({ r }) => `Le Marché Noir se déchire. <b>${esc(F[r].name)}</b> profite du chaos pour rafler les pierres antiques et les armes de ses rivaux.` },
