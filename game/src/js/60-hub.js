@@ -13,30 +13,23 @@ function hubText() {
 }
 function npcsHere() { return DATA.chars.filter(c => { const n = G.world.npc[c.id]; return n.alive && n.st === 'free' && n.loc === G.loc && c.faction !== 'civils'; }); }
 
-function actionsMenu() {
-  if (G.status !== 'play') return;
-  const pc = G.pc; recalc();
-  if (pc.flags.cap) return capturedMenu();
-  const f = F[pc.faction];
-  const L = [];
-  L.push(C('Voyager (Orbitrail)', travelMenu, { ic: '🚆', sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
-  L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
-  L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
-  L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
-  L.unshift(C('Contrats ici', () => contractCard(), { ic: '🎯', sub: 'Missions de ta faction, du Marché Noir, de notables locaux.' }));
-  L.unshift(C('Continuer l’aventure', hub, { ic: '▶', cls: 'safe', sub: 'Missions, rencontres, événements : tout arrive ici, carte après carte.' }));
-  show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText().slice(0, 1), choices: L, tiles: true, banner: true });
-}
+// Le menu éclair n'existe plus : « actionsMenu » ramène à la scène en cours (ou à la ville).
+function parkOpen(fn) { if (CB) return toast('Pas pendant un combat'); if (!UI.parked) UI.parked = UI.scene; closeSheet(); fn(); }
+function resumeScene() { const s = UI.parked; UI.parked = null; if (s) { UI.scene = s; render(true); return; } if (G.pc.flags.stage === 'ville') return cityMenu(); hub(); }
+function actionsMenu() { resumeScene(); }
+function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 3 + (b ? 1 : 0); cityMenu(); }
 function cityMenu() {
-  const pc = G.pc; const L = [];
-  baseTile(L); atelierTile(L);
-  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', () => shopMenu(false), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
-  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
-  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
-  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Terminer la partie avec un bonus de score (×1,25).', cls: 'danger' }));
-  L.push(C('← Retour', actionsMenu, { cls: 'back' }));
-  show({ kicker: 'EN VILLE', title: capName(G.loc), text: [], choices: L, tiles: true });
+  const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 3; const left = f.cityActs; const L = [];
+  if (left > 0) {
+    const T = []; baseTile(T); atelierTile(T);
+    T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
+    T.push(C('Marché', () => shopMenu(false), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
+    T.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
+    T.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
+    T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
+  }
+  L.push(C(left > 0 ? 'Partir pour une autre ville' : 'Partir pour une autre ville', () => travelMenu(), { ic: '🚆', cls: left > 0 ? '' : 'cta', sub: left > 0 ? 'Terminer ton séjour.' : 'Il est temps de changer de destination.' }));
+  show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof cityLine === 'function' ? cityLine() : ''), 'Chaque activité compte pour une action. Quand tu as fini, tu changes de ville.'].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -57,7 +50,7 @@ function travelMenu(pre) {
   };
   box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde') });
   if (pre) setTimeout(() => select(pre), 30);
-  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu, { cls: 'back' })] });
+  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), ...((UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [])] });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -80,7 +73,7 @@ function travelGo(to, r, weeks) {
   if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
   const ctl = chance(detectChance());
   transit(r, from, to, () => {
-    G.loc = to; advance(weeks); if (G.status !== 'play') return;
+    G.loc = to; pc.flags.stage = 'contrats'; pc.flags.cityActs = null; advance(weeks); if (G.status !== 'play') return;
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();

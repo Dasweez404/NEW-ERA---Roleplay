@@ -46,11 +46,11 @@ function vehicleGo(vid, to, wk, fuel, r) {
   const fake = { steps: [{ from: stationOf(from), to: stationOf(to), line: 0 }], custom: [[a[0], a[1]], mid, [b[0], b[1]]], vehicle: v.ic };
   const ctl = !v.legal && chance(clamp(detectChance() + 0.12, 0.1, 0.8));
   transit(fake, from, to, () => {
-    G.loc = to; advance(wk); if (G.status !== 'play') return; logEntry(`Voyage en ${ITEMS[vid].n} : ${capName(from)} → ${capName(to)}.`);
+    G.loc = to; G.pc.flags.stage = 'contrats'; G.pc.flags.cityActs = null; advance(wk); if (G.status !== 'play') return; logEntry(`Voyage en ${ITEMS[vid].n} : ${capName(from)} → ${capName(to)}.`);
     const L = !v.legal ? fx({ heat: 2 }) : [];
     if (ctl) return controleFA(r);
     if (chance(0.32)) return (v.scope === 'any' || v.scope === 'cold' || chance(0.5)) ? (v.armed && chance(0.6) ? show({ kicker: 'Route', title: 'Pillards en vue', text: ['Des maraudeurs t’attendent… puis aperçoivent tes canons et décampent.'], fx: fx({ xp: 12 }), choices: [C('Continuer', hub)] }) : climateEvent()) : banditEvent();
-    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Voir les contrats d’ici', () => contractCard(), { ic: '🎯' }), C('Poursuivre l’intrigue', hub, { cls: 'back' })] });
+    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Continuer', () => contractCard(), { cls: 'cta' })] });
   });
 }
 function vehicleCard() {

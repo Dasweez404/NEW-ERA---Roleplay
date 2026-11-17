@@ -424,6 +424,8 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .relinfo{margin-top:8px;padding:10px;background:#12121f;border-left:3px solid #fcee09;display:grid;gap:3px}.relinfo .rn{font:800 1.05rem var(--fd)}
 .maplegend .lg.g{color:#5be3a0}.maplegend .lg.r{color:#ff3d7f}
 .relsvg.far .rnode.out .rlabel{display:none}.rnode .rlabel{font-size:calc(13px*var(--gs,1.7))}.rnode .rglyph{font-size:inherit}
+button.pill{font:inherit;cursor:pointer;color:inherit}button.pill:active{transform:scale(.96)}
+.dock{grid-template-columns:repeat(5,1fr)}
 </style>
 </head>
 <body>
@@ -1072,12 +1074,12 @@ function hudEl() {
   UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   return h('div', { class: cls },
     h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
-      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn act', title: 'Actions', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, '⚡'), h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
+      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
     h('div', { class: 'hud-bars' },
       h('div', { class: 'stat hp' }, h('span', { class: 'lab' }, 'SANTÉ'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
       h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
-      h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('span', { class: 'pill gem' }, '💎 ' + stoneCount() + '/16'),
+      h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
       h('span', { class: 'pill' }, '📍 ' + capName(G.loc)), h('span', { class: 'pill' }, '🗓 ' + dateStr())));
 }
 function toast(t) { const el = h('div', { class: 'toast' }, t); document.body.append(el); setTimeout(() => el.remove(), 1800); }
@@ -1131,13 +1133,13 @@ const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '�
 const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
-  box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { UI.tab = k; sfx('click'); render(true); } }, ic + ' ' + n))));
+  box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (k === 'factions') return parkOpen(factionMenu); if (k === 'pierres') return parkOpen(stoneMenu); UI.tab = k; render(true); } }, ic + ' ' + n))));
   box.append(TABFN()[UI.tab]()); return box;
 }
 function dockEl() {
-  return h('nav', { class: 'dock' }, h('button', { class: 'dk agir', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, h('span', { class: 'i' }, '⚡'), h('span', { class: 'n' }, 'Agir')), TABS.map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
+  return h('nav', { class: 'dock' }, TABS.map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (k === 'factions') return parkOpen(factionMenu); if (k === 'pierres') return parkOpen(stoneMenu); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
 }
-function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i - 1] && TABS[i - 1][0] === tab)); }
+function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i] && TABS[i][0] === tab)); }
 function closeSheet() { UI.sheetOpen = false; const s = $('#sheet'); if (s) s.classList.remove('open'); document.querySelectorAll('.dk').forEach(b => b.classList.remove('on')); }
 function fillSheet() {
   let s = $('#sheet'); if (!s) { s = h('div', { id: 'sheet' }); document.body.append(s); }
@@ -1163,6 +1165,7 @@ function tabPerso() {
   box.append(h('h3', {}, 'Progression'));
   const nxt = MERIT_STEPS[pc.grade + 1];
   box.append(h('div', { class: 'kv' }, h('b', {}, 'Grade'), `${gradeName()} (${pc.grade}/5)`, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt} pour le grade suivant` : `${pc.merit}`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Prime'), wantedStars() ? starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] : 'aucune', h('b', {}, 'Éveil'), pc.awakened ? `déjà éveillé ${pc.awakened} fois` : 'jamais éveillé'));
+  box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
   return box;
 }
@@ -2077,30 +2080,23 @@ function hubText() {
 }
 function npcsHere() { return DATA.chars.filter(c => { const n = G.world.npc[c.id]; return n.alive && n.st === 'free' && n.loc === G.loc && c.faction !== 'civils'; }); }
 
-function actionsMenu() {
-  if (G.status !== 'play') return;
-  const pc = G.pc; recalc();
-  if (pc.flags.cap) return capturedMenu();
-  const f = F[pc.faction];
-  const L = [];
-  L.push(C('Voyager (Orbitrail)', travelMenu, { ic: '🚆', sub: 'Se déplacer d’État en État. Chaque trajet est suivi par les autorités.' }));
-  L.push(C('Pierres antiques', stoneMenu, { ic: '💎', sub: `${stoneCount()}/16 · indices, temples, détenteurs` }));
-  L.push(C('Faction : ' + f.name, factionMenu, { ic: '🏴', sub: pc.faction === 'civils' ? 'Tu n’as pas de faction : tu peux en rejoindre une.' : `${gradeName()} · réputation ${repLevel(pc.rep[pc.faction] || 0)}` }));
-  L.push(C('En ville', cityMenu, { ic: '🏙', sub: 'Repos, marché, recrues, entraînement, retraite.' }));
-  L.unshift(C('Contrats ici', () => contractCard(), { ic: '🎯', sub: 'Missions de ta faction, du Marché Noir, de notables locaux.' }));
-  L.unshift(C('Continuer l’aventure', hub, { ic: '▶', cls: 'safe', sub: 'Missions, rencontres, événements : tout arrive ici, carte après carte.' }));
-  show({ kicker: 'ACTIONS · ' + dateStr(), title: `${capName(G.loc)} · ${stateName(G.loc)}`, text: hubText().slice(0, 1), choices: L, tiles: true, banner: true });
-}
+// Le menu éclair n'existe plus : « actionsMenu » ramène à la scène en cours (ou à la ville).
+function parkOpen(fn) { if (CB) return toast('Pas pendant un combat'); if (!UI.parked) UI.parked = UI.scene; closeSheet(); fn(); }
+function resumeScene() { const s = UI.parked; UI.parked = null; if (s) { UI.scene = s; render(true); return; } if (G.pc.flags.stage === 'ville') return cityMenu(); hub(); }
+function actionsMenu() { resumeScene(); }
+function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 3 + (b ? 1 : 0); cityMenu(); }
 function cityMenu() {
-  const pc = G.pc; const L = [];
-  baseTile(L); atelierTile(L);
-  L.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
-  L.push(C('Marché', () => shopMenu(false), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
-  L.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
-  L.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
-  L.push(C('Retraite', retireConfirm, { ic: '🌴', sub: 'Terminer la partie avec un bonus de score (×1,25).', cls: 'danger' }));
-  L.push(C('← Retour', actionsMenu, { cls: 'back' }));
-  show({ kicker: 'EN VILLE', title: capName(G.loc), text: [], choices: L, tiles: true });
+  const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 3; const left = f.cityActs; const L = [];
+  if (left > 0) {
+    const T = []; baseTile(T); atelierTile(T);
+    T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
+    T.push(C('Marché', () => shopMenu(false), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
+    T.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
+    T.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
+    T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
+  }
+  L.push(C(left > 0 ? 'Partir pour une autre ville' : 'Partir pour une autre ville', () => travelMenu(), { ic: '🚆', cls: left > 0 ? '' : 'cta', sub: left > 0 ? 'Terminer ton séjour.' : 'Il est temps de changer de destination.' }));
+  show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: left > 0 ? `${left} action${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''}` : 'Tu as fait le tour', text: [(typeof cityLine === 'function' ? cityLine() : ''), 'Chaque activité compte pour une action. Quand tu as fini, tu changes de ville.'].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
   // événements en attente (ex. conseil de faction, menace sur pierre) posés par monthTick
@@ -2121,7 +2117,7 @@ function travelMenu(pre) {
   };
   box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde') });
   if (pre) setTimeout(() => select(pre), 30);
-  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), C('← Retour', actionsMenu, { cls: 'back' })] });
+  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), ...((UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [])] });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -2144,7 +2140,7 @@ function travelGo(to, r, weeks) {
   if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
   const ctl = chance(detectChance());
   transit(r, from, to, () => {
-    G.loc = to; advance(weeks); if (G.status !== 'play') return;
+    G.loc = to; pc.flags.stage = 'contrats'; pc.flags.cityActs = null; advance(weeks); if (G.status !== 'play') return;
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();
@@ -2261,15 +2257,26 @@ function retireConfirm() {
 // ───────── Le fil de l'histoire : une carte, deux ou trois choix, un dé, la suite (style Destiny Eleven) ─────────
 function hub() {
   if (G.status !== 'play') return;
-  const pc = G.pc; saveGame(); recalc(); announceFeats();
-  if (pc.flags.cap) return capturedMenu();
+  const pc = G.pc, fl = pc.flags; UI.parked = null; saveGame(); recalc(); announceFeats();
+  if (fl.cap) return capturedMenu();
   let pend = pendingEvents(); if (pend) return pend();
+  if (pc.pts > 0) return spendPoints();
+  const st = fl.stage || 'contrats';
+  if (st === 'contrats') return contractCard();
+  if (st === 'ville') return cityMenu();
   if (G.fresh) G.fresh = false;
-  else { advance(1); if (G.status !== 'play') return; if (pc.flags.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); }
+  else { advance(1); if (G.status !== 'play') return; if (fl.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); if (pc.pts > 0) return spendPoints(); }
+  if ((fl.storyLeft == null ? 3 : fl.storyLeft) <= 0) return enterCity();
+  fl.storyLeft = (fl.storyLeft == null ? 3 : fl.storyLeft) - 1;
   dealCard();
 }
+// Niveau gagné : on dépense le point tout de suite, devant toi.
+function spendPoints() {
+  const pc = G.pc; if (pc.pts <= 0) return hub();
+  show({ kicker: 'NIVEAU SUPÉRIEUR', title: `${pc.pts} point${pc.pts > 1 ? 's' : ''} à répartir`, text: ['Choisis où investir. Tu dois dépenser tous tes points pour continuer.'], choices: ATTRS.map(a => C(`${a.name} · ${A(a.id)} → ${A(a.id) + 1}`, () => { pc.attrs[a.id]++; pc.pts--; recalc(); sfx('win'); spendPoints(); }, { sub: a.desc, ic: '＋', req: { ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })) });
+}
 function dealCard() {
-  const pc = G.pc, W = G.world; const pool = [];
+  const pc = G.pc, W = G.world; let pool = [];
   const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
   pool.push({ w: 34, f: missionCard });
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
@@ -2286,17 +2293,18 @@ function dealCard() {
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
   conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool); lot2Pool(pool);
+  if (pc.flags.stage === 'story') pool = pool.filter(e => ![missionCard, townCard, travelCard, vehicleCard].includes(e.f));
   const e = wpick(pool, x => x.w); e.f();
 }
-function missionCard() { contractCard(); }
+function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
   [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
   if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
-  L.push(C('Poursuivre l’intrigue', hub, { cls: 'back', ic: '▶', sub: 'Laisser les contrats, la suite des événements arrive.' }));
+  L.push(C('Poursuivre l’intrigue', hub, { cls: 'cta', ic: '▶', sub: 'Laisser les contrats : la suite des événements arrive.' }));
   show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.', cityLine()].filter(Boolean), choices: L });
 }
 function stoneCard(s) {
@@ -2434,11 +2442,11 @@ function vehicleGo(vid, to, wk, fuel, r) {
   const fake = { steps: [{ from: stationOf(from), to: stationOf(to), line: 0 }], custom: [[a[0], a[1]], mid, [b[0], b[1]]], vehicle: v.ic };
   const ctl = !v.legal && chance(clamp(detectChance() + 0.12, 0.1, 0.8));
   transit(fake, from, to, () => {
-    G.loc = to; advance(wk); if (G.status !== 'play') return; logEntry(`Voyage en ${ITEMS[vid].n} : ${capName(from)} → ${capName(to)}.`);
+    G.loc = to; G.pc.flags.stage = 'contrats'; G.pc.flags.cityActs = null; advance(wk); if (G.status !== 'play') return; logEntry(`Voyage en ${ITEMS[vid].n} : ${capName(from)} → ${capName(to)}.`);
     const L = !v.legal ? fx({ heat: 2 }) : [];
     if (ctl) return controleFA(r);
     if (chance(0.32)) return (v.scope === 'any' || v.scope === 'cold' || chance(0.5)) ? (v.armed && chance(0.6) ? show({ kicker: 'Route', title: 'Pillards en vue', text: ['Des maraudeurs t’attendent… puis aperçoivent tes canons et décampent.'], fx: fx({ xp: 12 }), choices: [C('Continuer', hub)] }) : climateEvent()) : banditEvent();
-    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Voir les contrats d’ici', () => contractCard(), { ic: '🎯' }), C('Poursuivre l’intrigue', hub, { cls: 'back' })] });
+    show({ extra: envBanner(to, 150), kicker: 'Arrivée', title: capName(to), text: [`${v.ic} Tu arrives à ${esc(capName(to))} sans passer par l’Orbitrail.`], fx: L, choices: [C('Continuer', () => contractCard(), { cls: 'cta' })] });
   });
 }
 function vehicleCard() {

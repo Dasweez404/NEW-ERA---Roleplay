@@ -65,12 +65,12 @@ function hudEl() {
   UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   return h('div', { class: cls },
     h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
-      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn act', title: 'Actions', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, '⚡'), h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
+      h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Son', onclick: () => { toggleMute(); render(true); } }, FX.mute ? '🔇' : '🔊'), h('button', { class: 'ibtn', title: 'Sauvegarder', onclick: () => { saveGame(); toast('Partie sauvegardée'); } }, '💾'), h('button', { class: 'ibtn', title: 'Menu', onclick: () => { saveGame(); titleScreen(); } }, '☰'))),
     h('div', { class: 'hud-bars' },
       h('div', { class: 'stat hp' }, h('span', { class: 'lab' }, 'SANTÉ'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
       h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
-      h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('span', { class: 'pill gem' }, '💎 ' + stoneCount() + '/16'),
+      h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
       h('span', { class: 'pill' }, '📍 ' + capName(G.loc)), h('span', { class: 'pill' }, '🗓 ' + dateStr())));
 }
 function toast(t) { const el = h('div', { class: 'toast' }, t); document.body.append(el); setTimeout(() => el.remove(), 1800); }
@@ -124,13 +124,13 @@ const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '�
 const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
-  box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { UI.tab = k; sfx('click'); render(true); } }, ic + ' ' + n))));
+  box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (k === 'factions') return parkOpen(factionMenu); if (k === 'pierres') return parkOpen(stoneMenu); UI.tab = k; render(true); } }, ic + ' ' + n))));
   box.append(TABFN()[UI.tab]()); return box;
 }
 function dockEl() {
-  return h('nav', { class: 'dock' }, h('button', { class: 'dk agir', onclick: () => { sfx('click'); closeSheet(); actionsMenu(); } }, h('span', { class: 'i' }, '⚡'), h('span', { class: 'n' }, 'Agir')), TABS.map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
+  return h('nav', { class: 'dock' }, TABS.map(([k, ic, n]) => h('button', { class: 'dk' + (UI.sheetOpen && UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (k === 'factions') return parkOpen(factionMenu); if (k === 'pierres') return parkOpen(stoneMenu); if (UI.sheetOpen && UI.tab === k) closeSheet(); else openSheet(k); } }, h('span', { class: 'i' }, ic), h('span', { class: 'n' }, n))));
 }
-function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i - 1] && TABS[i - 1][0] === tab)); }
+function openSheet(tab) { UI.tab = tab; UI.sheetOpen = true; fillSheet(); document.querySelectorAll('.dk').forEach((b, i) => b.classList.toggle('on', TABS[i] && TABS[i][0] === tab)); }
 function closeSheet() { UI.sheetOpen = false; const s = $('#sheet'); if (s) s.classList.remove('open'); document.querySelectorAll('.dk').forEach(b => b.classList.remove('on')); }
 function fillSheet() {
   let s = $('#sheet'); if (!s) { s = h('div', { id: 'sheet' }); document.body.append(s); }
@@ -156,6 +156,7 @@ function tabPerso() {
   box.append(h('h3', {}, 'Progression'));
   const nxt = MERIT_STEPS[pc.grade + 1];
   box.append(h('div', { class: 'kv' }, h('b', {}, 'Grade'), `${gradeName()} (${pc.grade}/5)`, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt} pour le grade suivant` : `${pc.merit}`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Prime'), wantedStars() ? starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] : 'aucune', h('b', {}, 'Éveil'), pc.awakened ? `déjà éveillé ${pc.awakened} fois` : 'jamais éveillé'));
+  box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
   return box;
 }
