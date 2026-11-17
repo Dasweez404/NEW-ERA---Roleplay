@@ -23,7 +23,7 @@ function cityMenu() {
   if (left > 0) {
     const T = []; baseTile(T); atelierTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
-    T.push(C('Marché', () => shopMenu(false), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
+    T.push(C('Marché', () => shopMenu(), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
     T.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
     T.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
     T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
@@ -67,11 +67,28 @@ function detectChance() {
   p -= PK('travel') / 100;
   return clamp(p, 0.02, 0.75);
 }
+function transferStop(r) { // changer de ligne : faible chance d'être arrêté et de devoir faire escale
+  if (!r || !r.legs || r.legs.length < 2) return null; const pc = G.pc; const p = 0.07 + wantedStars() * 0.02;
+  for (let i = 0; i < r.legs.length - 1; i++) if (chance(p)) {
+    const st = r.legs[i].to; const state = OT_ST[st][3]; let k = 0; for (let j = 0; j <= i; j++) k += r.legs[j].stops;
+    const r2 = { steps: r.steps.slice(0, k), legs: r.legs.slice(0, i + 1), hops: k, cost: 0, path: r.path.slice(0, k + 1) };
+    const pool = [...enemiesOf(pc.faction), ...Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen', 'fa'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -5)];
+    const kind = pool.length && chance(0.5) ? 'faction' : 'fa';
+    return { state, r2, kind, fid: kind === 'faction' ? pick(pool) : 'fa', weeks: Math.max(1, Math.round((i + 1) / r.legs.length * 2)) };
+  }
+  return null;
+}
 function travelGo(to, r, weeks) {
   const pc = G.pc; pc.money -= r.cost; const from = G.loc;
   const used = [];
   if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
   const ctl = chance(detectChance());
+  const stop = transferStop(r);
+  if (stop) return transit(stop.r2, from, stop.state, () => {
+    G.loc = stop.state; pc.flags.stage = 'contrats'; pc.flags.cityActs = null; advance(stop.weeks); if (G.status !== 'play') return;
+    logEntry(`Escale forcée à ${capName(stop.state)}.`);
+    show({ kicker: 'ORBITRAIL · ESCALE FORCÉE', title: stop.kind === 'fa' ? 'Le train s’arrête' : 'Des intrus à bord', text: [stop.kind === 'fa' ? `À la correspondance de ${esc(capName(stop.state))}, la Force d’Autorité fait descendre tout le monde : contrôle général.` : `À la correspondance de ${esc(capName(stop.state))}, des membres de ${esc(F[stop.fid].name)} montent dans ta rame. Ils te cherchaient.`, '<span class="mut">Tu devras refaire ton trajet depuis cette ville.</span>'], choices: [C('Continuer', () => (stop.kind === 'fa' ? controleFA(stop.r2) : ambushCard(stop.fid)), { cls: 'cta' })] });
+  });
   transit(r, from, to, () => {
     G.loc = to; pc.flags.stage = 'contrats'; pc.flags.cityActs = null; advance(weeks); if (G.status !== 'play') return;
     logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
@@ -184,5 +201,23 @@ function roleMenu() {
 
 // ───────── Retraite ─────────
 function retireConfirm() {
-  show({ kicker: 'Retraite', title: 'Raccrocher ?', text: ['Tu peux poser les armes et vivre de ce que tu as accumulé. La partie s’arrête : ton score est multiplié par 1,25.', `Score actuel estimé : <b>${fmt(computeScore('retire'))}</b>.`], choices: [C('Prendre ma retraite', () => endGame('retire', '')), C('Non, continuer', hub)] });
+  const pc = G.pc, W = G.world; const lead = W.leader[pc.faction] === 'pc';
+  const R = [[wantedStars() <= 1, 'Prime de 1 étoile au maximum', 'Ta prime est trop haute : on te retrouverait.'], [pc.money >= 3000, '3 000 ¢ pour repartir de zéro', `Il te manque ${fmt(3000 - pc.money)} ¢.`], [G.wk >= 26, 'Au moins 26 semaines dans ce monde', 'Trop tôt : on ne disparaît pas après si peu.'], [!lead, 'Ne pas diriger une faction', 'Transmets ta faction ou quitte-la d’abord.'], [G.wk - (pc.flags.retireWk == null ? -99 : pc.flags.retireWk) >= 8, 'Pas de tentative récente', 'Une tentative a échoué récemment : attends un peu.']];
+  const bad = R.find(x => !x[0]);
+  show({ kicker: 'RETRAITE', title: 'Disparaître', text: ['On n’échappe pas à ce monde si facilement. Pour que personne ne te cherche, il faut remplir quelques conditions, puis réussir une dernière épreuve : une nouvelle identité, des traces effacées et une dernière poursuite.', ...R.map(x => `${x[0] ? '✔' : '✖'} ${x[1]}`), `Score actuel estimé : <b>${fmt(computeScore('retire'))}</b> (×1,25 si tu réussis).`], choices: [C('Organiser ma disparition', startVanish, { cls: 'danger', req: { ok: () => bad ? bad[2] : null } }), C('Non, continuer', () => (UI.parked ? resumeScene() : hub()), { cls: 'back' })] });
+}
+function startVanish() {
+  const pc = G.pc; const st = { ok: 0, i: 0 }; const tier = Math.max(1, wantedStars()); const dc = 12 + 2 * tier;
+  const T = [
+    { t: 'Une nouvelle identité', x: 'Sans nom, pas de retraite possible.', o: [['Des faux papiers parfaits (400 ¢)', 'money', 400], ['Les fabriquer toi-même', 'intellect', ['tech', 'hack']], ['Convaincre un fonctionnaire', 'charisme', ['social', 'disguise']]] },
+    { t: 'Effacer tes traces', x: 'Fichiers, caméras, témoins : il faut tout faire disparaître.', o: [['Brouiller les registres', 'intellect', ['hack']], ['Disparaître de quartier en quartier', 'agilite', ['stealth']], ['Acheter le silence (500 ¢)', 'money', 500]] },
+    { t: 'La dernière poursuite', x: 'Quelqu’un t’a retrouvé au dernier moment…', o: [['Fuir à travers la ville', 'agilite', ['mobility']], ['Régler ça en combat', 'fight'], ['Négocier ta sortie', 'charisme', ['social']]] }
+  ];
+  const fail = () => { pc.flags.retireWk = G.wk; pc.money = Math.max(0, pc.money - 1000); show({ kicker: 'RETRAITE', title: 'Tu es repéré', text: ['Quelqu’un t’a reconnu, ou un maillon a lâché. Tu perds 1 000 ¢ et ta prime monte. On ne disparaît pas comme ça.'], fx: fx({ heat: 6 }), choices: [C('Continuer', hub)] }); };
+  const stepEnd = (ok, text) => { if (ok) st.ok++; st.i++; if (st.i >= 3) return st.ok >= 2 ? endGame('retire', '') : fail(); show({ kicker: 'RETRAITE', title: ok ? 'Étape franchie' : 'Étape ratée', text: [text, `<span class="mut">${st.ok} réussie(s) sur ${st.i}. Il en faut 2 sur 3.</span>`], choices: [C('Continuer', next)] }); };
+  const next = () => { const s = T[st.i]; show({ kicker: `RETRAITE · ÉTAPE ${st.i + 1}/3`, title: s.t, text: [s.x], choices: s.o.map(([lab, attr, tags]) => C(lab, () => {
+    if (attr === 'money') { if (pc.money < tags) return toast('Pas assez de crédits'); pc.money -= tags; return stepEnd(true, 'L’argent règle le problème.'); }
+    if (attr === 'fight') return startCombat({ title: 'La dernière poursuite', foes: foesFor(chance(0.5) ? 'fa' : (enemiesOf(pc.faction)[0] || 'fa'), Math.min(5, tier), 2), lethal: 'capture', intro: 'Ils te rattrapent à la sortie de la ville.', onWin: L => { stepEnd(true, 'Tu t’en sors : ils ne te suivront plus.'); }, onFlee: () => stepEnd(false, 'Tu t’échappes, mais ils savent où tu vas.') });
+    const r = check(attr, dc, tags); stepEnd(r.ok, (r.ok ? 'Ça passe. ' : 'Ça coince. ') + checkLine(r)); }, { odds: (attr === 'money' || attr === 'fight') ? null : [attr, dc, tags], ic: attr === 'money' ? '💰' : attr === 'fight' ? '⚔' : '🎲', req: attr === 'money' ? { money: tags } : undefined })) }); };
+  next();
 }

@@ -49,3 +49,12 @@ function renderPlan() {
   const L = [C('Offensive', () => begin('offensive'), { ic: '⚔', sub: 'Gagner un round te donne +1 d’élan en plus, +1 en force. Une défaite coûte 40 % de plus.' }), C('Équilibrée', () => begin('equilibre'), { ic: '⚖', cls: 'safe', sub: 'Aucun bonus ni malus.' }), C('Prudente', () => begin('prudente'), { ic: '🛡', sub: 'Une défaite coûte 40 % de moins et fait perdre 1 d’élan au lieu de 2.' }), C('Rusée', () => begin('rusee'), { ic: '🎭', sub: '+2 aux jets d’agilité, d’intellect et de charisme, −1 en force.' })];
   show({ compact: true, kicker: 'PRÉPARATION', title: `${CB.cfg.title || 'Un affrontement'} · ${CB.N} rounds`, text: [hints.join(' '), '<span class="mut">Chaque round est une situation différente. L’<b>élan</b> monte quand tu gagnes (+1 aux jets par 2 points) et débloque ton Finisseur à +3.</span>'], choices: L });
 }
+
+// La méthode de combat vient de ton rôle et de ta catégorie : plus de choix à faire avant chaque combat.
+const STANCE_NAME = { offensive: 'Offensive', equilibre: 'Équilibrée', prudente: 'Prudente', rusee: 'Rusée' };
+function autoStance() {
+  const pc = G.pc; const byRole = { combattant: 'offensive', artilleur: 'offensive', gardien: 'prudente', medecin: 'prudente', logisticien: 'equilibre', leader: 'equilibre', eclaireur: 'rusee', hacker: 'rusee', costumier: 'rusee', ingenieur: 'rusee', strategiste: 'rusee' };
+  const byStyle = { brawler: 'offensive', performer: 'offensive', juggernaut: 'prudente', protector: 'prudente', flanker: 'rusee', ranger: 'rusee', engineer: 'rusee', assist: 'equilibre' };
+  const r = (pc.roles || []).find(x => byRole[x]); return r ? byRole[r] : (byStyle[pc.style] || 'equilibre');
+}
+const stanceLine = () => { const pc = G.pc; const r = (pc.roles || []).find(x => ROLES[x]); return `Ta méthode : <b>${STANCE_NAME[autoStance()]}</b> (${STYLES[pc.style].name}${r ? ' · ' + ROLES[r].name : ''})`; };

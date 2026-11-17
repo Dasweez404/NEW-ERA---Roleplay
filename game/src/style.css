@@ -415,3 +415,24 @@ body{background:#08080e}body::before{display:none}body::after{opacity:.0;box-sha
 .relsvg.far .rnode.out .rlabel{display:none}.rnode .rlabel{font-size:calc(13px*var(--gs,1.7))}.rnode .rglyph{font-size:inherit}
 button.pill{font:inherit;cursor:pointer;color:inherit}button.pill:active{transform:scale(.96)}
 .dock{grid-template-columns:repeat(5,1fr)}
+/* ── Marché en mosaïque ── */
+.shopbar{display:grid;gap:8px;margin:2px 0 10px}.shopcats{display:flex;gap:6px;flex-wrap:wrap}.shopcats .tab{flex:1 1 auto;text-align:center;min-height:38px}
+.swt{display:flex;align-items:center;gap:10px;justify-content:center;background:#12121f;border:1px solid #2a2a44;color:#9aa0c8;padding:8px 12px;cursor:pointer;font:600 .82rem var(--fm);letter-spacing:.08em;text-transform:uppercase;min-height:40px}
+.swt .swk{position:relative;width:46px;height:22px;background:#0a0a14;border:1px solid #34344f;border-radius:12px;transition:background .25s}.swt .swk::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fcee09;transition:left .25s,background .25s}
+.swt.on .swk{background:#3a0f22;border-color:#ff3d7f}.swt.on .swk::after{left:26px;background:#ff3d7f}.swt:not(.on) .swl:first-child{color:#fcee09}.swt.on .swl:last-child{color:#ff3d7f}
+.choices.tiles.shop{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.choices.tiles.shop .ch{min-height:86px;padding:8px 9px;text-align:left;align-items:flex-start;justify-content:flex-start;flex-direction:column;gap:2px}
+.choices.tiles.shop .ch .key{display:none}.choices.tiles.shop .ch .l{font-size:.86rem;letter-spacing:.02em;text-transform:none;line-height:1.15}
+.choices.tiles.shop .ch .s{font-size:.6rem;line-height:1.2;color:#8a8fb5;-webkit-line-clamp:3}
+.choices.tiles.shop .ch.back,.choices.tiles.shop .ch:has(.tic){grid-column:span 1}
+/* ── Épuration générale et animations ── */
+.ch .s{-webkit-line-clamp:2}
+.pill.dim{opacity:.6}
+@media(max-width:700px){.pill.dim{display:none}}
+.card.scene{animation:scin .32s cubic-bezier(.2,.9,.3,1) both}@keyframes scin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.ch{transition:transform .15s,border-color .2s,background .2s}.ch:hover:not(:disabled){transform:translateY(-1px)}
+.hud .bar i{transition:width .6s cubic-bezier(.2,.9,.3,1)}
+.chip.good{animation:chipin .35s both,glowg 1.6s .35s ease}@keyframes glowg{50%{box-shadow:0 0 14px rgba(91,227,160,.5)}}
+.tabs .tab,.shopcats .tab{transition:background .2s,color .2s}
+.splash .sp-t{animation:spt .5s cubic-bezier(.2,1.4,.4,1) both}@keyframes spt{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.card.scene,.chip.good,.splash .sp-t{animation:none!important}}

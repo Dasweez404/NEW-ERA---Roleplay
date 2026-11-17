@@ -49,7 +49,7 @@ function contractCard(arrive) {
   [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
   if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
   L.push(C('Poursuivre l’intrigue', hub, { cls: 'cta', ic: '▶', sub: 'Laisser les contrats : la suite des événements arrive.' }));
-  show({ kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.', cityLine()].filter(Boolean), choices: L });
+  show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des affaires sont à prendre ici, de ta faction, du Marché Noir ou de notables locaux. Plus la difficulté est haute, plus ça paie — et plus ça mord.', cityLine()].filter(Boolean), choices: L });
 }
 function stoneCard(s) {
   const hold = G.world.stoneHolder[s.id];

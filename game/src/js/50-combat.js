@@ -58,7 +58,7 @@ function startCombat(cfg) {
   clog(cfg.intro || 'Le combat commence !');
   nextTwist(); CB.preview = !cfg.noPreview; if (CB.preview) renderPreview(); else begin('equilibre');
 }
-function engage() { if (!CB) return; CB.preview = false; renderPlan(); }
+function engage() { if (!CB) return; CB.preview = false; begin(autoStance()); }
 function begin(stance) {
   if (!CB) return; CB.preview = false; CB.stance = stance; CB.planned = true;
   if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); }

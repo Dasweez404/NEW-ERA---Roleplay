@@ -72,13 +72,13 @@ function hudEl() {
       h('div', { class: 'stat en' }, h('span', { class: 'lab' }, 'ÉNERGIE'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
       h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
-      h('span', { class: 'pill' }, '📍 ' + capName(G.loc)), h('span', { class: 'pill' }, '🗓 ' + dateStr())));
+      h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
 }
 function toast(t) { const el = h('div', { class: 'toast' }, t); document.body.append(el); setTimeout(() => el.remove(), 1800); }
 
-function choicesEl(list, tiles) {
+function choicesEl(list, tiles, tcls) {
   const items = list.filter(Boolean); const ctaIdx = items.length <= 3 ? items.findIndex(c => /^(Continuer|Commencer|Suivant|Partir|Accepter|Jouer)/.test(c.label)) : -1;
-  return h('div', { class: 'choices' + (tiles ? ' tiles' : '') }, items.map((c, i) => {
+  return h('div', { class: 'choices' + (tiles ? ' tiles' : '') + (tcls ? ' ' + tcls : '') }, items.map((c, i) => {
     const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); c.go(); } } },
       !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
@@ -102,8 +102,8 @@ function render(quiet) {
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
-    sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles) : null);
-  if (live) { app.append(hudEl()); if (!sc.banner && !back && !sc.compact && !(sc.fx && sc.fx.length) && !sc.roll) app.append(envBanner(G.loc, innerWidth < 640 ? 70 : 92)); const tk = tickerEl(); if (tk) app.append(tk); const tip = sc.compact ? null : tipEl(); if (tip) app.append(tip); }
+    sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);
+  if (live) { app.append(hudEl()); if (sc.arriveBanner && !sc.banner) app.append(envBanner(G.loc, innerWidth < 640 ? 64 : 84)); const tk = sc.arriveBanner ? tickerEl() : null; if (tk) app.append(tk); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
   if (live) app.append(dockEl());
