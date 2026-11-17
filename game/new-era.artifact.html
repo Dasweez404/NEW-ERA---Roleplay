@@ -1896,14 +1896,43 @@ function mkFoe(tid, tier, name, extra = {}) {
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
   const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
-  const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
+  const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(1, tier) && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
   for (let i = 0; i < n; i++) {
     if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, tier)); }
     else { const c = mem[i] || null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
   }
+  if (pool && n >= 2 && G.world && G.world.npc && F[fid] && chance(0.4)) {
+    const cs = shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(0, tier - 1) && G.world.npc[c.id] && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
+    if (cs.length) { const c = cs[0]; const k = out.length - 1; out[k] = mkFoe(out[k].tid, tier, c.name + ' (' + F[fid].name + ')', { cid: c.id }); }
+  }
   return out;
 }
-function dedupeFoes(foes) { const seen = {}; foes.forEach(f => { seen[f.name] = (seen[f.name] || 0) + 1; }); const idx = {}; foes.forEach(f => { if (seen[f.name] > 1) { idx[f.name] = (idx[f.name] || 0) + 1; f.name += ' ' + String.fromCharCode(64 + idx[f.name]); } }); }
+const FOE_ALIAS = {
+  necro: ['Fervent Necropunk', 'Sbire de la Mort', 'Adepte du Chaos', 'Croque-mort punk', 'Disciple Necropunk'],
+  ragnarok: ['Berserker Ragnarök', 'Fils de Odin', 'Pillard du Nord', 'Hache-fer Ragnarök', 'Skald belliqueux'],
+  optimum: ['Zélote Optimum', 'Adepte de la Perfection', 'Disciple Optimum', 'Évangéliste Optimum', 'Inquisiteur Optimum'],
+  secte: ['Fidèle Committed', 'Prêcheur armé', 'Acolyte de la Secte', 'Sentinelle Committed', 'Convaincu'],
+  voyou: ['Racaille des bidonvilles', 'Petit caïd', 'Coupe-jarret', 'Gamin des rues armé', 'Tire-laine'],
+  pirate: ['Forban Galleon', 'Écumeur', 'Matelot Galleon', 'Boucanier', 'Flibustier'],
+  mercenaire: ['Soldat de fortune', 'Mercenaire sans nom', 'Lame à louer', 'Contractuel du Check', 'Tireur à gages'],
+  gladiateur: ['Combattant de l’ARENA', 'Champion de seconde zone', 'Duelliste de l’ARENA', 'Vétéran des gradins', 'Bête de ring'],
+  cyborg: ['Prototype Saibogu', 'Sujet augmenté', 'Unité Saibogu', 'Chair-et-acier', 'Cobaye de Saibogu'],
+  garde: ['Vigile corpo', 'Agent de sécurité', 'Sentinelle privée', 'Cerbère d’entreprise', 'Gorille de service'],
+  fallen: ['Traqueur Fallen', 'Rôdeur implanté', 'Chasseur de primes Fallen', 'Exécuteur Fallen', 'Pisteur Fallen'],
+  porteur: ['Géno-porteur', 'Affilié', 'Adhérent', 'Recrue', 'Partisan', 'Homme de main', 'Fidèle', 'Sbire', 'Agent'],
+  soldat: ['Soldat de la F.A.', 'Fusilier F.A.', 'Garde de l’Autorité', 'Trooper F.A.', 'Sentinelle F.A.'],
+  droide: ['Droïde de combat', 'Unité robotique', 'Automate F.A.', 'Drone sentinelle'],
+  bete: ['Créature mutante', 'Bête enragée', 'Mutant des ruines', 'Rôdeur difforme'],
+};
+function dedupeFoes(foes) {
+  const cnt = {}; foes.forEach(f => { cnt[f.name] = (cnt[f.name] || 0) + 1; }); const used = new Set(foes.map(f => f.name)); const seen = {};
+  foes.forEach(f => {
+    if (cnt[f.name] < 2) return; const base = f.name; seen[base] = (seen[base] || 0) + 1; if (seen[base] === 1) return;
+    const al = FOE_ALIAS[f.tid] || FOE_ALIAS.porteur; const gen = /^Membre de /.test(base) ? base.slice(10) : null;
+    const opts = shuffle(al.slice()).map(x => gen ? x + ' · ' + gen : x).filter(x => !used.has(x));
+    if (opts.length) { f.name = opts[0]; used.add(f.name); } else { f.name = base + ' ' + String.fromCharCode(63 + seen[base]); }
+  });
+}
 let CB = null;
 const POWER_FX = {
   combat: { n: 'Frappe de pouvoir', cost: 3, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 2, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 2, d: 'Absorbe des dégâts' },
@@ -2130,7 +2159,7 @@ function threat() {
 // Les ennemis suivent ton niveau : un perso gradé affronte des adversaires à sa mesure (on reste « petit »)
 function scaleFoes(cfg) {
   if (cfg.noScale || !G || !G.pc) return; const lv = pcLevel(); if (lv < 4) return;
-  cfg.foes.forEach(f => { if (!f.auto) return; const want = clamp(lv + pick([-1, 0, 0, 0, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
+  cfg.foes.forEach(f => { if (!f.auto || f.cid) return; const want = clamp(lv + pick([-1, 0, 0, 0, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
   if (lv >= 5 && cfg.foes.length < 3 && chance(0.3)) { const base = cfg.foes.find(f => f.auto); if (base) cfg.foes.push(mkFoe(base.tid, Math.max(1, base.tier - 2), null, {})); }
 }
 
