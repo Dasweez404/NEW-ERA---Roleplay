@@ -18,7 +18,7 @@ open(dst, 'w', encoding='utf-8').write(out)
 print('OK', dst, round(len(out) / 1024), 'Ko')
 
 # ── variante « artifact » : fragment sans <html>/<head>/<body>, publiable tel quel sur claude.ai
-frag = ('<title>New Era</title>\n<style>' + css + '</style>\n<div id="app"></div>\n<script>\nconst DATA=' + data + ';\nconst SPR_DATA=' + sp + ';\nconst ENV_IMG=' + env + ';\n</script>\n<script>\n' + js + '\n</script>\n')
+frag = ('<title>NEW ERA</title>\n<style>' + css + '</style>\n<div id="app"></div>\n<script>\nconst DATA=' + data + ';\nconst SPR_DATA=' + sp + ';\nconst ENV_IMG=' + env + ';\n</script>\n<script>\n' + js + '\n</script>\n')
 open(os.path.join(here, 'new-era.artifact.html'), 'w', encoding='utf-8').write(frag)
 import shutil; shutil.copy(dst, os.path.join(here, '..', 'index.html'))
 print('OK artifact + index.html')

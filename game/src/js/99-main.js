@@ -4,15 +4,16 @@ const NAME_B = ['ra', 'lo', 'mi', 'na', 'ko', 'ven', 'tis', 'sha', 'dor', 'ex', 
 const randName = () => cap(pick(NAME_A).toLowerCase() + pick(NAME_B) + (chance(0.4) ? pick(NAME_B) : ''));
 let CR = null;
 
+function lastHero() { try { const sg = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (!sg || !sg.pc) return null; const sp = sg.pc.charId || sg.pc.sprite; return { sp: hasSpr(sp) ? sp : null, name: sg.pc.name, faction: F[sg.pc.faction] ? F[sg.pc.faction].name : '', grade: sg.pc.grade || 0, wk: sg.wk || 0 }; } catch (e) { return null; } }
 function titleScreen() {
-  G = null; const sc = hasSave(); const city = pick(DATA.states).id;
-  const logo = h('h1', { class: 'logo2' }, h('span', {}, 'NEW'), h('span', {}, 'ERA'));
-  const btn = (t, f, go) => h('button', { class: 'ch' + (go ? ' go' : ''), onclick: () => { sfx('click'); f(); } }, h('span', { class: 'body' }, h('span', { class: 'l' }, t)));
-  UI.scene = { bare: true, extra: h('div', { class: 'hero' }, envBanner(city, 260, 'night'),
-    h('div', { class: 'brand' }, atomSVG(), logo), h('div', { class: 'tagline' }, 'Cratès · 2071'),
-    h('p', { class: 'lore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'),
-    h('div', { class: 'menu' }, sc ? btn('Continuer la partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true) : null, btn('Nouvelle partie', newGameMenu, !sc), btn('Meilleurs scores', scoresScreen), btn('Règles', rulesScreen), btn('À propos & sources', aboutScreen)),
-    h('div', { class: 'foot' }, '52 États · 31 factions · 441 personnages')) };
+  G = null; const sc = hasSave(); const hero = sc ? lastHero() : null; const wide = innerWidth >= 860;
+  const btn = (n, t, sub, f, go) => h('button', { class: 'tbtn' + (go ? ' go' : ''), style: `--i:${n}`, onclick: () => { sfx('click'); f(); } }, h('span', { class: 'tn' }, String(n).padStart(2, '0')), h('span', { class: 'tt' }, h('b', {}, t), sub ? h('small', {}, sub) : null), h('span', { class: 'ta' }, '›'));
+  const city = pick(DATA.states).id;
+  const side = h('div', { class: 'tside' }, hero && hero.sp ? h('div', { class: 'tfloat' }, h('div', { class: 'tring' }), sprFit(hero.sp, wide ? 320 : 150, 'tspr'), h('div', { class: 'tcap' }, h('b', {}, hero.name), h('span', {}, `${hero.faction} · ${'★'.repeat(hero.grade)}`))) : h('div', { class: 'tfloat emblem' }, h('div', { class: 'tring' }), atomSVG()));
+  const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Règles', 'But, jets, grades, primes', rulesScreen), btn(sc ? 5 : 4, 'À propos', 'Sources et libertés prises', aboutScreen));
+  UI.scene = { bare: true, extra: h('div', { class: 'title2' }, h('div', { class: 'tbg' }, envBanner(city, 340, 'night')), h('div', { class: 'tgrid' }),
+    h('div', { class: 'tmain' }, h('div', { class: 'tleft' }, h('div', { class: 'tkick' }, 'CRATÈS · 2071'), h('h1', { class: 'tlogo' }, h('span', {}, 'NEW'), h('span', {}, 'ERA')), h('p', { class: 'tlore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'), menu), side),
+    h('div', { class: 'tfoot' }, '52 États · 31 factions · 441 personnages')) };
   UI.after = []; render(); runAfter();
 }
 function rulesScreen(back) { show({ kicker: 'Règles', title: 'Comment jouer', text: [], extra: tabAide(), choices: [C('← Retour', typeof back === 'function' ? back : titleScreen)] }); }
@@ -30,13 +31,16 @@ function scoresScreen() {
   show({ kicker: 'Hall of fame', title: 'Meilleurs scores', text: s.length ? [] : ['Aucune partie terminée pour le moment.'], extra: s.length ? t : null, choices: [C('← Retour', titleScreen)] });
 }
 function newGameMenu() {
-  show({ kicker: 'Nouvelle partie', title: 'Qui es-tu ?', text: ['Deux façons de jouer : créer ton personnage de toutes pièces, ou prendre la place d’un des 441 personnages existants — avec son grade, sa faction et ses responsabilités (un chef de faction commence chef).'], choices: [
-    C(UI.mode === 'canon' ? 'Mode : CANON (timeline d’Ora) — changer' : 'Mode : LIBRE (scénario aléatoire) — changer', () => { UI.mode = UI.mode === 'canon' ? 'libre' : 'canon'; newGameMenu(); }, { sub: UI.mode === 'canon' ? 'Les sagas de la Vigilante Squad se déroulent dans le monde.' : 'Chaque partie tire au hasard le contexte : détenteurs des pierres, rival, intrigues. Rien n’est écrit d’avance.', cls: 'risk' }),
-    C('Personnage customisé', () => { CR = { name: '', gender: 'N/B', age: 24, faction: null, origin: null, ptype: null, powers: [], style: null, base: { corps: 2, agilite: 2, intellect: 2, charisme: 2, maitrise: 2 }, add: { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }, canon: true }; crName(); }, { sub: 'Nom, faction, origine, pouvoir, style de combat, attributs. À chaque étape tu peux tirer au hasard (🎲).', cls: 'safe' }),
-    C('Un personnage existant, au hasard', () => randomChar(), { sub: 'Tu es tiré au sort parmi les 441 personnages du tableur, tout est pré-rempli.' }),
-    C('Choisir un personnage existant dans la liste', browseChars, { sub: 'Filtrer par faction.' }),
-    C('📖 Règles du jeu', () => rulesScreen(newGameMenu), { sub: 'À lire avant de commencer : but, jets, grades, primes.' }),
-    C('← Retour', titleScreen)] });
+  const canon = UI.mode === 'canon';
+  const sw = h('div', { class: 'modesw', role: 'group', 'aria-label': 'Type de scénario' },
+    h('button', { class: 'mseg' + (canon ? '' : ' on'), onclick: () => { UI.mode = 'libre'; sfx('click'); newGameMenu(); } }, h('b', {}, 'Libre'), h('small', {}, 'Scénario aléatoire')),
+    h('button', { class: 'mseg' + (canon ? ' on' : ''), onclick: () => { UI.mode = 'canon'; sfx('click'); newGameMenu(); } }, h('b', {}, 'Canon'), h('small', {}, 'Timeline d’Ora')));
+  const desc = h('div', { class: 'modedesc' }, canon ? 'Les sagas de la Vigilante Squad se déroulent dans le monde, dans l’ordre de la timeline. Tu t’y glisses.' : 'Chaque partie tire au hasard le contexte : détenteurs des pierres, rival, intrigues. Rien n’est écrit d’avance.');
+  show({ kicker: 'Nouvelle partie', title: 'Qui es-tu ?', text: [], extra: h('div', {}, h('div', { class: 'small mut', style: 'margin-bottom:6px;letter-spacing:.1em;text-transform:uppercase' }, 'Type de scénario'), sw, desc), choices: [
+    C('Personnage customisé', () => { CR = { name: '', gender: 'N/B', age: 24, faction: null, origin: null, ptype: null, powers: [], style: null, base: { corps: 2, agilite: 2, intellect: 2, charisme: 2, maitrise: 2 }, add: { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }, canon: true }; crName(); }, { sub: 'Nom, faction, origine, pouvoir, style, attributs. 🎲 à chaque étape.', cls: 'safe', ic: '🧬' }),
+    C('Un personnage existant, au hasard', () => randomChar(), { sub: 'Tiré parmi les 441 du tableur, tout est pré-rempli.', ic: '🎲' }),
+    C('Choisir un personnage existant', browseChars, { sub: 'Filtrer par faction.', ic: '📇' }),
+    C('← Retour', titleScreen, { cls: 'back' })] });
 }
 // ── personnage existant ──
 function randomChar() { const c = pick(DATA.chars); charCard(c.id, true); }
