@@ -1185,9 +1185,10 @@ function tipEl() {
 }
 // Banderole unique : environnement de la ville, date, et l'actualité qui défile comme à la télé
 function stripEl() {
-  const n = G.world.news[0]; const news = n && G.wk - n.wk <= 6 ? n.t : null; const w = h('div', { class: 'strip' });
+  if (!G.world.news.length && typeof monthNews === 'function') { monthNews(); monthNews(); }
+  const recent = G.world.news.slice(0, 4).map(x => x.t); const news = recent.length ? recent.join('   ◆   ') : null; const w = h('div', { class: 'strip' });
   w.append(h('div', { class: 'strip-img' }, envBanner(G.loc, innerWidth < 640 ? 72 : 92), h('span', { class: 'sdate' }, dateStr())));
-  if (news) w.append(h('div', { class: 'snews' }, h('span', { class: 'tk' }, 'ACTU'), h('div', { class: 'snt' }, h('span', {}, news))));
+  if (news) w.append(h('div', { class: 'snews' }, h('span', { class: 'tk' }, 'ACTU'), h('div', { class: 'snt' }, h('span', { style: `animation-duration:${Math.max(16, Math.round(news.length / 7))}s` }, news))));
   return w;
 }
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
