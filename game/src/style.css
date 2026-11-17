@@ -517,3 +517,17 @@ details>summary{cursor:pointer;color:#9aa0c8;margin-top:6px}.pwbox{margin:8px 0;
 .mseg.on{background:#fcee09;color:#000;animation:segpop .3s cubic-bezier(.2,1.5,.4,1)}@keyframes segpop{from{transform:scale(.94)}}
 .modedesc{margin:8px 0 4px;color:#9aa0c8;font-size:.92rem;min-height:2.6em}
 @media(prefers-reduced-motion:reduce){.tlogo span,.tbtn,.tfloat,.tring,.tlogo span:last-child::after{animation:none!important}}
+.map .stdia{pointer-events:none}.map .stdia.full{filter:drop-shadow(0 0 5px #b026ff);animation:stpop 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes stpop{50%{transform:scale(1.25)}}
+.stclues{display:grid;gap:6px;margin-top:10px}.stclue{display:grid;gap:2px;padding:8px 10px;background:#12121f;border-left:4px solid var(--c)}.stclue b{font:800 .95rem var(--fb)}.stclue .stlv{float:right;color:var(--c);letter-spacing:.1em}
+.maplegend .lg.p{color:#b026ff}
+/* ── Pierres : emoji, silhouette, infobulle ── */
+.stones2{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin:6px 0}
+.stone2{position:relative;aspect-ratio:1;display:grid;place-items:center;background:#12121f;border:1px solid #2a2a44;font-size:1.5rem;line-height:1;cursor:pointer;padding:0;min-height:0;clip-path:none;transition:transform .15s,border-color .2s}
+.stone2 .em{filter:brightness(0) opacity(.75);transition:filter .3s}.stone2.have{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,#12121f)}.stone2.have .em{filter:drop-shadow(0 0 8px var(--c))}
+.stone2:hover,.stone2.tip{transform:translateY(-2px);border-color:var(--c)}
+.stone2::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:max-content;max-width:210px;background:#0a0a14;border:1px solid var(--c);color:#e9ebff;font:600 .72rem/1.3 var(--fb);text-align:left;white-space:pre-line;padding:6px 9px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:30}
+.stone2:hover::after,.stone2.tip::after{opacity:1}.stones2 .stone2:nth-child(-n+3)::after{left:0;transform:none}.stones2 .stone2:nth-child(8n)::after,.stones2 .stone2:nth-child(8n-1)::after{left:auto;right:0;transform:none}
+/* voyage */
+.mapcorner{position:absolute;right:8px;bottom:8px;z-index:5;background:#12121fe6;border:1px solid #34344f;color:#e9ebff;font:700 .72rem var(--fm);letter-spacing:.06em;padding:7px 10px;min-height:0;clip-path:none;text-transform:none;cursor:pointer}.mapcorner:hover{border-color:#fcee09}
+.travelinfo{margin-top:8px;display:grid;gap:6px;padding:10px;background:#12121f;border-left:3px solid #fcee09}.tvrow{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.tvd{font:800 1.02rem var(--fb)}.tvm{font:700 .9rem var(--fm)}.tvchips{display:flex;gap:6px;flex-wrap:wrap}.pvc.rec{border-color:#fcee09;color:#fcee09}
+.stone2{min-width:0;overflow:visible}.stone2 .em{font-size:clamp(1rem,5vw,1.5rem)}

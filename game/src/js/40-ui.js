@@ -277,6 +277,7 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
+    if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 16},${y - 24} ${x + 23},${y - 16} ${x + 16},${y - 8} ${x + 9},${y - 16}`, fill: full ? '#b026ff' : 'none', stroke: '#e9ebff', 'stroke-width': 2.5, class: 'stdia' + (full ? ' full' : '') })); }
     if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
@@ -331,7 +332,7 @@ function mapBox(o = {}) {
   svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
-    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), h('span', { class: 'lg c' }, '● toi')) : null,
+    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, h('span', { class: 'lg c' }, '● toi')) : null,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
@@ -347,7 +348,7 @@ function tabCarte() {
 // ───────── Destinations conseillées (jaune sur la carte) ─────────
 function recoStates() {
   const m = new Map(); const pc = G.pc, W = G.world; const add = (st, why) => { if (!st || !S[st]) return; (m.get(st) || m.set(st, []).get(st)).push(why); };
-  DATA.stones.forEach(s => { if (!pc.stones[s.id] && W.stoneClue[s.id]) add(W.stoneLoc[s.id], `Pierre de ${s.name} (${holderName(W.stoneHolder[s.id])})`); });
+  DATA.stones.forEach(s => { if (!pc.stones[s.id] && (W.stoneLv[s.id] || 0) >= 2) add(W.stoneLoc[s.id], `Indice sur la pierre de ${s.name}`); });
   (W.arcs || []).forEach(a => { if (!pc.flags['arc_' + a.id]) add(a.state, `Événement : ${a.title}`); });
   if (G.settings.canon) { const mm = dateOf(G.wk); const ym = mm.y * 12 + mm.m; DATA.arcs.forEach((arc, i) => { const [y, mo] = arc.date.split('-').map(Number); const am = y * 12 + mo - 1; if (am <= ym && ym - am <= 1 && !pc.flags['canon_' + i]) add(arc.state, `Canon : ${arc.title}`); }); }
   return m;

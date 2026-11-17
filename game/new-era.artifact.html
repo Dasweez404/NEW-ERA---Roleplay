@@ -518,6 +518,20 @@ details>summary{cursor:pointer;color:#9aa0c8;margin-top:6px}.pwbox{margin:8px 0;
 .mseg.on{background:#fcee09;color:#000;animation:segpop .3s cubic-bezier(.2,1.5,.4,1)}@keyframes segpop{from{transform:scale(.94)}}
 .modedesc{margin:8px 0 4px;color:#9aa0c8;font-size:.92rem;min-height:2.6em}
 @media(prefers-reduced-motion:reduce){.tlogo span,.tbtn,.tfloat,.tring,.tlogo span:last-child::after{animation:none!important}}
+.map .stdia{pointer-events:none}.map .stdia.full{filter:drop-shadow(0 0 5px #b026ff);animation:stpop 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes stpop{50%{transform:scale(1.25)}}
+.stclues{display:grid;gap:6px;margin-top:10px}.stclue{display:grid;gap:2px;padding:8px 10px;background:#12121f;border-left:4px solid var(--c)}.stclue b{font:800 .95rem var(--fb)}.stclue .stlv{float:right;color:var(--c);letter-spacing:.1em}
+.maplegend .lg.p{color:#b026ff}
+/* ── Pierres : emoji, silhouette, infobulle ── */
+.stones2{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin:6px 0}
+.stone2{position:relative;aspect-ratio:1;display:grid;place-items:center;background:#12121f;border:1px solid #2a2a44;font-size:1.5rem;line-height:1;cursor:pointer;padding:0;min-height:0;clip-path:none;transition:transform .15s,border-color .2s}
+.stone2 .em{filter:brightness(0) opacity(.75);transition:filter .3s}.stone2.have{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,#12121f)}.stone2.have .em{filter:drop-shadow(0 0 8px var(--c))}
+.stone2:hover,.stone2.tip{transform:translateY(-2px);border-color:var(--c)}
+.stone2::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:max-content;max-width:210px;background:#0a0a14;border:1px solid var(--c);color:#e9ebff;font:600 .72rem/1.3 var(--fb);text-align:left;white-space:pre-line;padding:6px 9px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:30}
+.stone2:hover::after,.stone2.tip::after{opacity:1}.stones2 .stone2:nth-child(-n+3)::after{left:0;transform:none}.stones2 .stone2:nth-child(8n)::after,.stones2 .stone2:nth-child(8n-1)::after{left:auto;right:0;transform:none}
+/* voyage */
+.mapcorner{position:absolute;right:8px;bottom:8px;z-index:5;background:#12121fe6;border:1px solid #34344f;color:#e9ebff;font:700 .72rem var(--fm);letter-spacing:.06em;padding:7px 10px;min-height:0;clip-path:none;text-transform:none;cursor:pointer}.mapcorner:hover{border-color:#fcee09}
+.travelinfo{margin-top:8px;display:grid;gap:6px;padding:10px;background:#12121f;border-left:3px solid #fcee09}.tvrow{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.tvd{font:800 1.02rem var(--fb)}.tvm{font:700 .9rem var(--fm)}.tvchips{display:flex;gap:6px;flex-wrap:wrap}.pvc.rec{border-color:#fcee09;color:#fcee09}
+.stone2{min-width:0;overflow:visible}.stone2 .em{font-size:clamp(1rem,5vw,1.5rem)}
 </style>
 <div id="app"></div>
 <script>
@@ -830,7 +844,7 @@ function blankPC() {
 }
 
 function initWorld() {
-  const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, flags: {}, wanted: {} };
+  const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, stoneLv: {}, flags: {}, wanted: {} };
   DATA.stones.forEach(s => {
     W.stoneHolder[s.id] = s.holder;
     W.stoneLoc[s.id] = s.id === 'lumiere' ? 'albion' : (F[s.holder] ? F[s.holder].hq : s.temple);
@@ -1378,6 +1392,7 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
+    if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 16},${y - 24} ${x + 23},${y - 16} ${x + 16},${y - 8} ${x + 9},${y - 16}`, fill: full ? '#b026ff' : 'none', stroke: '#e9ebff', 'stroke-width': 2.5, class: 'stdia' + (full ? ' full' : '') })); }
     if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
@@ -1432,7 +1447,7 @@ function mapBox(o = {}) {
   svg.addEventListener('dblclick', e => { const r = wrap.getBoundingClientRect(); zoomAt(1.8, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   const btn = (t, tip, f) => h('button', { class: 'ibtn', title: tip, onclick: f }, t);
   const box = h('div', { class: 'mapbox' }, h('div', { class: 'mapbtns' }, btn('＋', 'Zoom +', () => zoomAt(1.5)), btn('－', 'Zoom −', () => zoomAt(1 / 1.5)), btn('◎', 'Ma position', home), btn('⤢', 'Tout voir', fit)), wrap,
-    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), h('span', { class: 'lg c' }, '● toi')) : null,
+    o.reco ? h('div', { class: 'maplegend' }, h('span', { class: 'lg y' }, '● conseillé'), h('span', { class: 'lg w' }, '● autre station'), o.stones && o.stones.size ? h('span', { class: 'lg p' }, '◆ indice pierre') : null, h('span', { class: 'lg c' }, '● toi')) : null,
     h('div', { class: 'maphint' }, innerWidth < 700 ? 'Glisse · pince pour zoomer · touche une station' : 'Glisse pour déplacer · molette pour zoomer · double-clic = zoom · clique une station allumée'));
   box.setRoute = r => { const old = svg.querySelector('.routegrp'); if (old) old.remove(); if (r) drawRoute(svg, r); };
   const init = () => { home(); }; setTimeout(init, 0); setTimeout(init, 120);
@@ -1448,7 +1463,7 @@ function tabCarte() {
 // ───────── Destinations conseillées (jaune sur la carte) ─────────
 function recoStates() {
   const m = new Map(); const pc = G.pc, W = G.world; const add = (st, why) => { if (!st || !S[st]) return; (m.get(st) || m.set(st, []).get(st)).push(why); };
-  DATA.stones.forEach(s => { if (!pc.stones[s.id] && W.stoneClue[s.id]) add(W.stoneLoc[s.id], `Pierre de ${s.name} (${holderName(W.stoneHolder[s.id])})`); });
+  DATA.stones.forEach(s => { if (!pc.stones[s.id] && (W.stoneLv[s.id] || 0) >= 2) add(W.stoneLoc[s.id], `Indice sur la pierre de ${s.name}`); });
   (W.arcs || []).forEach(a => { if (!pc.flags['arc_' + a.id]) add(a.state, `Événement : ${a.title}`); });
   if (G.settings.canon) { const mm = dateOf(G.wk); const ym = mm.y * 12 + mm.m; DATA.arcs.forEach((arc, i) => { const [y, mo] = arc.date.split('-').map(Number); const am = y * 12 + mo - 1; if (am <= ym && ym - am <= 1 && !pc.flags['canon_' + i]) add(arc.state, `Canon : ${arc.title}`); }); }
   return m;
@@ -1848,7 +1863,7 @@ const FOE = {
 };
 function mkFoe(tid, tier, name, extra = {}) {
   const b = FOE[tid] || FOE.porteur; const hp = Math.round(b.hp * (0.5 + 0.4 * tier) * 0.45);
-  return Object.assign({ tid, tier, name: name || b.n, hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
+  return Object.assign({ tid, tier, name: cap(name || b.n), hp, hpMax: hp, atk: b.atk + 2 * tier, def: b.def + 2 * tier - 1, dmg: Math.ceil((b.dmg + 2 * tier) * 1.8), sp: b.sp, m: !!b.m, stun: 0, shield: 0, buff: 0, fore: 0, dash: 0, dead: false, weak: 0 }, extra);
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
@@ -1874,7 +1889,7 @@ const ANTI = {
 function pop(k, txt, cls) { if (CB) (CB.pops = CB.pops || []).push({ k, txt, cls }); }
 const aliveFoes = () => CB.foes.filter(f => !f.dead);
 const clog = (t, c = '') => { if (!CB) return; CB.log.push({ t, c }); };
-const fname = f => f.name.replace(/\s*\(.*\)/, '');
+const fname = f => cap(f.name.replace(/\s*\(.*\)/, ''));
 const powName = tag => { const p = pcPowers().find(p => p.tags.includes(tag)); return p ? p.name : 'Pouvoir'; };
 function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise' ? 'corps' : a; }
 const powMul = () => (G.pc.ptype === 'hybride' ? 0.8 : 1) * (CB.boost || 1);
@@ -2229,16 +2244,22 @@ const EVENT_FN = {};
 // ───────── Voyager ─────────
 function travelMenu(pre) {
   const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates();
-  const info = h('div', { class: 'travelinfo' }, h('span', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
+  const info = h('div', { class: 'travelinfo' }, h('div', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
+  const ownerName = to => { const o = G.world.terr[to]; return o === 'pc' ? 'ta faction' : F[o] ? F[o].name : (o || '—'); };
   const select = to => {
     const r = otRoute(here, to); if (!r) return; const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
-    sel = to; sfx('click'); box.setRoute(r);
-    info.innerHTML = ''; info.append(h('b', {}, `${capName(here)} → ${capName(to)}`), h('span', { class: 'mut' }, ` · ${routeText(r)}`), h('div', {}, `${r.hops} arrêt(s) · ${weeks} sem. · `, h('b', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, r.cost + ' ¢'), ` · contrôle ~${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' (faux papiers)' : ''}`), feat('monde') && G.world.terr[to] ? h('div', { class: 'small mut' }, 'Contrôle : ' + (G.world.terr[to] === 'pc' ? 'ta faction' : F[G.world.terr[to]] ? F[G.world.terr[to]].name : G.world.terr[to])) : null, reco.has(to) ? h('div', { class: 'recotxt2' }, '★ Conseillé : ' + reco.get(to).join(' · ')) : null, h('div', { class: G.pc.money < r.cost ? 'badc' : 'acc' }, G.pc.money < r.cost ? 'Pas assez de crédits' : '▶ Touche encore ' + capName(to) + ' pour partir'));
+    sel = to; sfx('click'); box.setRoute(r); const poor = G.pc.money < r.cost;
+    info.innerHTML = ''; info.append(...[
+      h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, `${capName(here)} → ${capName(to)}`), h('span', { class: 'tvm' }, h('span', { class: poor ? 'badc' : 'acc' }, `${r.cost} ¢`), ` · ${weeks} sem.`)),
+      h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, '🏴 ' + ownerName(to)), h('span', { class: 'pvc' }, `contrôle ${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' ✔ faux papiers' : ''}`), r.legs.length > 1 ? h('span', { class: 'pvc' }, `${r.legs.length - 1} corresp.`) : null, reco.has(to) ? h('span', { class: 'pvc rec' }, '★ ' + reco.get(to)[0]) : null),
+      h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde') });
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints() });
+  const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
-  show({ kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: [C('Choisir dans la liste', travelList), C('🛴 Voyager autrement (véhicule)', vehicleMenu, { sub: 'Trottinette, vélo volant, hoverboard, skis, voiture, vaisseau…' }), ...((UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [])] });
+  const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
+  show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: back });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -2420,6 +2441,7 @@ function hub() {
   const st = fl.stage || 'contrats';
   if (st === 'contrats') return contractCard();
   if (st === 'ville') return cityMenu();
+  if (fl.stoneStep) { fl.stoneStep = false; const sq = stoneQuestHere(); if (sq) return stoneQuestCard(sq); }
   if (G.fresh) G.fresh = false;
   else { advance(1); if (G.status !== 'play') return; if (fl.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); if (pc.pts > 0) return spendPoints(); }
   if ((fl.storyLeft == null ? 3 : fl.storyLeft) <= 0) return enterCity();
@@ -2451,11 +2473,7 @@ function dealCard() {
   const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
   pool.push({ w: 34, f: missionCard });
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
-  const known = DATA.stones.filter(s => !pc.stones[s.id] && W.stoneClue[s.id]);
-  const here = known.filter(s => W.stoneLoc[s.id] === G.loc), far = known.filter(s => W.stoneLoc[s.id] !== G.loc);
-  if (here.length) pool.push({ w: 34, f: () => stoneCard(pick(here)) });
-  if (far.length) pool.push({ w: 14, f: () => leadCard(pick(far)) });
-  if (stoneCount() < 16) pool.push({ w: 9, f: clueCard });
+  if (stoneCount() < 16 && G.wk >= 6) pool.push({ w: 9, f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
   pool.push({ w: 26, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
@@ -2470,7 +2488,7 @@ function dealCard() {
 function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; pc.flags.stoneStep = !!stoneQuestHere(); G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
   [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
@@ -2526,7 +2544,6 @@ function setupLibre() {
     else { holder = pick(pool); loc = F[holder].hq; }
     W.stoneHolder[s.id] = holder; W.stoneLoc[s.id] = loc;
   });
-  sample(DATA.stones, 2).forEach(s => W.stoneClue[s.id] = true);
   const rival = pick(pool); const prem = pick(PREMISES); W.rival = rival; W.premise = { id: prem.id, t: prem.t, text: prem.x({ r: rival }) };
   W.arcs = []; W.rivalStones = 0;
   if (prem.id === 'fragile') { W.fac.fa.power = 62; }
@@ -2699,8 +2716,8 @@ const HORS = ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'b
 function perkOf(p) { if (!p) return null; if (!_perkAll) buildPerks(); return _perkAll[p.id] || null; }
 function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) : []; }
 const lvF = p => (typeof pxLevel === 'function' && G && G.pc) ? [1, 1, 1.25, 1.5][pxLevel(p.id)] : 1;
-function PK(id) { let t = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id === id) t += x.mag * lvF(p); }); }); return Math.ceil(t - 1e-9); }
-function perkChk(tags) { let b = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag * lvF(p); }); }); return Math.min(3, Math.round(b)); }
+function PK(id) { let t = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id === id) t += x.mag * lvF(p); }); }); return Math.ceil(t - 1e-9) + (typeof stoneBonusSum === 'function' ? stoneBonusSum(id) : 0); }
+function perkChk(tags) { let b = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag * lvF(p); }); }); if (typeof stoneBonusSum === 'function') tags.forEach(t => { b += stoneBonusSum('c_' + t); }); return Math.min(3, Math.round(b)); }
 const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };
 
 // ───────── Conflits entre factions : guerres, incidents de frontière, embuscades, choix de camp ─────────
@@ -3016,7 +3033,7 @@ function finishMission(o, quality, lines, extraFx) {
   pc.party.forEach(al => { al.loy = clamp(al.loy + 3, 0, 100); });
   // butins
   if (chance(0.16 + PK('loot') / 100)) { const id = pick(['capsule', 'kit', 'capsule', 'nanosoin', 'stimulant']); L.push(...fx({ item: { [id]: 1 } })); }
-  if ((o.arch === 'fouille' || o.arch === 'enquete') && chance(0.35)) { const l = stoneClueGain(); if (l) L.push({ t: l, c: 'acc' }); }
+  if (G.wk >= 6 && chance((['fouille', 'enquete', 'ecoute', 'ruines', 'prototype', 'taupe'].includes(o.arch) ? 0.3 : 0.07) * (quality === 'crit' ? 1.8 : 1))) { const l = stoneClueGain(); if (l) L.push({ t: '💎 Indice : ' + cap(l), c: 'acc' }); }
   logEntry(`Mission « ${a.n} » (${o.empName}) : ${quality === 'crit' ? 'triomphe' : quality === 'partial' ? 'demi-succès' : 'réussie'}.`);
   const after = () => {
     if (o.promo && quality !== 'partial') return promote(L);
@@ -3465,6 +3482,18 @@ function capActs(L, k, freeRe) {
   return Math.max(0, left);
 }
 
+// ───────── Pierres antiques : un emoji chacune, silhouette noire tant qu'elle n'est pas obtenue, bonus au survol ─────────
+const STONE_EMOJI = { lumiere: '🌟', plante: '🌿', magma: '🌋', eau: '💧', air: '🌪️', feu: '🔥', fumee: '💨', sable: '⏳', acide: '🧪', roche: '🪨', foudre: '⚡', glace: '❄️', gaz: '🫧', metal: '⚙️', terre: '🌍', tenebres: '🌑' };
+// Bonus passif de chaque pierre possédée (même catalogue que les particularités de pouvoir)
+const STONE_BONUS = { lumiere: ['bond', 1], plante: ['regen', 1], magma: ['dmg', 1], eau: ['rest', 1], air: ['travel', 3], feu: ['c_social', 1], fumee: ['c_stealth', 1], sable: ['c_heal', 1], acide: ['energy', 1], roche: ['loot', 5], foudre: ['c_mobility', 1], glace: ['fix', 3], gaz: ['xp', 5], metal: ['c_tech', 1], terre: ['shield', 3], tenebres: ['first', 1] };
+function stoneBonusSum(id) { let t = 0; if (!G || !G.pc) return 0; DATA.stones.forEach(s => { if (G.pc.stones[s.id] && STONE_BONUS[s.id] && STONE_BONUS[s.id][0] === id) t += STONE_BONUS[s.id][1]; }); return t; }
+function stoneBonusText(s) { const b = STONE_BONUS[s.id]; return b && PERKS[b[0]] ? PERKS[b[0]][1](b[1]) : ''; }
+function stoneBadge(s) {
+  const have = !!G.pc.stones[s.id]; const el = h('button', { class: 'stone2' + (have ? ' have' : ''), style: `--c:${s.color}`, 'data-tip': `${s.name}${have ? '' : ' (non obtenue)'}\n${stoneBonusText(s)}`, 'aria-label': `Pierre de ${s.name}`, onclick: () => { const on = el.classList.contains('tip'); document.querySelectorAll('.stone2.tip').forEach(x => x.classList.remove('tip')); if (!on) el.classList.add('tip'); } }, h('span', { class: 'em' }, STONE_EMOJI[s.id] || '💎'));
+  return el;
+}
+const stoneGrid = () => h('div', { class: 'stones2' }, DATA.stones.map(stoneBadge));
+
 // ───────── Monde vivant : tic mensuel, événements canon, simulation PNJ/factions, événements aléatoires ─────────
 const CANON_NAMES = ['Ora', 'Dafa', 'Multi', 'Guano', 'Vracia', 'Jinsei', 'Shinda', 'Alíngua', 'Myrsky', 'Rozko', 'Bot', 'Blackout', 'Rènào', 'Kuini Wai', 'Inkho', 'Viscous', 'Scatter', 'Kiné', 'Crâne', 'Levit', 'Moon Fang', 'Rènào'];
 const canonGroup = () => DATA.chars.filter(c => CANON_NAMES.includes(c.name)).map(c => c.id);
@@ -3660,31 +3689,48 @@ function arenaInvite() {
 
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; const unk = DATA.stones.filter(s => !G.pc.stones[s.id] && !W.stoneClue[s.id]);
-  if (!unk.length) return null; const s = pick(unk); W.stoneClue[s.id] = true;
-  const hold = W.stoneHolder[s.id]; const where = stateName(W.stoneLoc[s.id]);
-  logEntry(`Piste : pierre de ${s.name} (${where}).`);
-  return hold === 'temple' ? `la pierre de ${s.name} dormirait dans un temple caché, du côté de ${where}.` : hold === 'pnj-levant' ? `la pierre de ${s.name} serait aux mains d’un descendant du peuple du feu, à ${where}.` : hold === 'vigilante' ? `la pierre de ${s.name} est passée à la Vigilante Squad (${where}).` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}, du côté de ${where}.`;
+  const W = G.world; W.stoneLv = W.stoneLv || {}; if (G.wk < 6) return null;
+  const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
+  const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
+  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = 1; } else if (deep.length) { s = pick(deep); lv = lvOf(s.id) + 1; } else return null;
+  W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
+  logEntry(`Indice ${lv}/3 : pierre de ${s.name}.`);
+  if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (un 💎 vide est apparu sur ta carte de l’Orbitrail).`;
+  if (lv === 2) return `la pierre de ${s.name} serait du côté de ${capName(loc)} (${stateName(loc)}). Un 💎 est apparu sur ta carte : une quête t’y attendra.`;
+  return hold === 'temple' ? `la pierre de ${s.name} dort dans un temple oublié près de ${capName(loc)}. Tu sais maintenant où chercher.` : hold === 'pnj-levant' ? `la pierre de ${s.name} est aux mains d’un descendant du peuple du feu, à ${capName(loc)}.` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}, à ${capName(loc)}. Tu connais leurs défenses.`;
 }
+// États où un indice fait apparaître un 💎 sur la carte de l'Orbitrail
+function stoneHints() {
+  const W = G.world; const m = new Map(); const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0);
+  DATA.stones.forEach(s => { if (G.pc.stones[s.id]) return; const lv = lvOf(s.id); if (!lv) return; const loc = W.stoneLoc[s.id];
+    if (lv >= 2) m.set(loc, 'full'); else { const z = zoneOf(loc); DATA.states.forEach(st => { if (zoneOf(st.id) === z && !m.has(st.id)) m.set(st.id, 'hollow'); }); } });
+  return m;
+}
+const stoneQuestHere = () => { const W = G.world; return DATA.stones.find(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || 0) >= 2 && W.stoneLoc[s.id] === G.loc) || null; };
+function stoneQuestCard(s) {
+  const W = G.world; const lv = W.stoneLv[s.id] || 2; const hold = W.stoneHolder[s.id]; const dc = 14 + Math.min(4, stoneCount());
+  const go = () => stoneAttempt(s.id);
+  const L = lv >= 3 ? [C('Tenter de la récupérer', go, { ic: '💎', cls: 'risk' })] : [C('Enquêter sur place', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; if (r.ok) { W.stoneLv[s.id] = 3; show({ kicker: 'QUÊTE SECONDAIRE', title: 'Tu tiens la piste', text: [esc(cap(stoneClueText(s))), checkLine(r)], fx: fx({ xp: 20 }), choices: [C('Tenter de la récupérer', go, { ic: '💎', cls: 'risk' }), C('Plus tard', hub, { cls: 'back' })] }); } else show({ kicker: 'QUÊTE SECONDAIRE', title: 'Rien de concluant', text: ['Les témoins se rétractent, les archives sont incomplètes.', checkLine(r)], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' })];
+  L.push(C('Pas maintenant', hub, { cls: 'back' }));
+  show({ kicker: 'QUÊTE SECONDAIRE · PIERRE ANTIQUE', title: `La pierre de ${s.name}`, text: [lv >= 3 ? `Tu sais ce qui t’attend : ${hold === 'temple' ? 'un temple oublié' : esc(holderName(hold))}. Royaume ${esc(s.ruler)} — ${esc(s.spec)}.` : `Ton indice t’a mené jusqu’ici. La pierre du royaume ${esc(s.ruler)} est tout près, mais il faut d’abord trouver où.`], choices: L });
+}
+function stoneClueText(s) { const W = G.world; const hold = W.stoneHolder[s.id]; const loc = W.stoneLoc[s.id]; return hold === 'temple' ? `la pierre de ${s.name} dort dans un temple oublié près de ${capName(loc)}.` : hold === 'pnj-levant' ? `la pierre de ${s.name} est aux mains d’un descendant du peuple du feu.` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}.`; }
 const repF = h => F[h] ? h : 'civils';
 function holderName(h) { return h === 'temple' ? 'aucun (temple caché)' : h === 'pnj-levant' ? 'le descendant du peuple du feu' : h === 'pc' ? 'toi' : F[h] ? F[h].name : h; }
 function stoneTier(hid) { if (hid === 'temple') return 3; if (hid === 'fa') return 5; if (hid === 'pnj-levant') return 2; const p = G.world.fac[hid] ? G.world.fac[hid].power : 40; return clamp(Math.round(p / 22) + 1, 2, 5); }
 
 function stoneMenu() {
   const pc = G.pc; const W = G.world; const L = [];
-  L.push(C('Mener l’enquête (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const dc = 14 + Math.min(4, stoneCount()); const tags = ['scout', 'relic']; const r = check('intellect', dc, tags, ((pc.rep.artefactors || 0) >= 20 ? 2 : 0) + PK('clue')); if (r.ok) { const l = stoneClueGain(); show({ kicker: 'Enquête', title: l ? 'Une piste' : 'Tout est déjà éclairci', text: [l ? esc(cap(l)) : 'Tu connais déjà tous les détenteurs.', checkLine(r)], fx: fx({ xp: 15 }), choices: [C('Continuer', stoneMenu)] }); } else show({ kicker: 'Enquête', title: 'Rien de concluant', text: ['Des archives incomplètes, des témoins qui se rétractent.', checkLine(r)], choices: [C('Continuer', stoneMenu)] }); }, { odds: ['intellect', 14 + Math.min(4, stoneCount()), ['scout', 'relic']], sub: 'Le Lecteur de glyphes, le rôle d’éclaireur et l’amitié des Artefactors aident.' }));
-  DATA.stones.forEach(s => {
-    if (pc.stones[s.id]) return;
-    const known = !!W.stoneClue[s.id]; const hold = W.stoneHolder[s.id]; const loc = W.stoneLoc[s.id];
-    if (!known) return;
-    if (G.loc !== loc) { const r = otRoute(G.loc, loc); L.push(C(`Pierre de ${s.name} — rends-toi à ${capName(loc)}`, () => travelMenu(loc), { ic: '🚆', sub: `${holderName(hold)} (${stateName(loc)}) · ${r ? r.hops + ' arrêt(s) · ' + r.cost + ' ¢ en Orbitrail' : 'trajet indisponible'} · touche pour y aller` })); }
-    else L.push(C(`Pierre de ${s.name} — ${holderName(hold)} (${stateName(loc)})`, () => stoneAttempt(s.id), { sub: `Difficulté ${stars(stoneTier(hold))}` }));
-  });
+  L.push(C('Mener l’enquête (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const dc = 14 + Math.min(4, stoneCount()); const tags = ['scout', 'relic']; const r = check('intellect', dc, tags, ((pc.rep.artefactors || 0) >= 20 ? 2 : 0) + PK('clue')); if (r.ok) { const l = stoneClueGain(); show({ kicker: 'Enquête', title: l ? 'Un indice' : 'Rien de neuf', text: [l ? esc(cap(l)) : (G.wk < 6 ? 'Il est encore trop tôt : personne ne parle des pierres.' : 'Tu connais déjà tout ce qu’on peut savoir pour l’instant.'), checkLine(r)], fx: fx({ xp: 15 }), choices: [C('Continuer', stoneMenu)] }); } else show({ kicker: 'Enquête', title: 'Rien de concluant', text: ['Des archives incomplètes, des témoins qui se rétractent.', checkLine(r)], choices: [C('Continuer', stoneMenu)] }); }, { odds: ['intellect', 14 + Math.min(4, stoneCount()), ['scout', 'relic']], sub: 'Approfondit un indice ou en découvre un nouveau.' }));
   L.push(C('Lire les glyphes déjà déchiffrés', glyphLib));
   L.push(C('← Retour', actionsMenu));
-  const left = capActs(L, 'stone', /rends-toi|glyphes/i);
-  show({ kicker: 'Pierres antiques', title: `Les 16 pierres — ${stoneCount()}/16 · ${left}/${ACT_MAX.stone} ici`, text: [`« Il y a longtemps, 16 civilisations de géno-porteurs se partageaient 16 éclats appelés <i>pierres muta</i>. » Les réunir toutes met fin à la partie : <b>victoire</b>. Plus tu en as, plus tu es puissant — et plus on te traque.`, 'Seules les pistes connues apparaissent dans la liste. Enquête, fouille, tends l’oreille.'], extra: h('div', { class: 'stones' }, DATA.stones.map(s => h('div', { class: 'stone' + (pc.stones[s.id] ? ' have' : ''), style: `background:${s.color};color:${s.color}` }, h('span', { style: 'color:#000' }, s.order)))), choices: L });
+  const left = capActs(L, 'stone', /glyphes/i);
+  const known = DATA.stones.filter(s => !pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id]));
+  const cards = h('div', { class: 'stclues' }, known.length ? known.map(s => { const lv = W.stoneLv[s.id] || 1; const loc = W.stoneLoc[s.id];
+    return h('div', { class: 'stclue', style: `--c:${s.color}` }, h('b', {}, `Pierre de ${s.name}`), h('span', { class: 'stlv' }, '◆'.repeat(lv) + '◇'.repeat(3 - lv)), h('div', { class: 'small mut' }, lv === 1 ? `Rumeur : zone ${zoneOf(loc)}.` : lv === 2 ? `Quelque part près de ${capName(loc)}. Une quête t’y attend.` : `${esc2(stoneClueText(s))}`)); }) : [h('div', { class: 'mut small' }, G.wk < 6 ? 'Les pierres sont encore des légendes. Les premiers indices arriveront au fil de tes aventures.' : 'Aucun indice pour l’instant. Les missions et les rencontres en livrent parfois.')]);
+  show({ kicker: 'Pierres antiques', title: `${stoneCount()}/16 · ${left}/${ACT_MAX.stone} ici`, text: ['<span class="mut">Les indices font apparaître des 💎 sur la carte de l’Orbitrail. Va là-bas : une quête secondaire s’ouvrira à ton arrivée.</span>'], extra: h('div', {}, stoneGrid(), cards), choices: L });
 }
+const esc2 = t => cap(t);
 function glyphLib() {
   const L = DATA.stones.filter(s => G.pc.stones[s.id]).map(s => C(`${s.order}. Pierre de ${s.name}`, () => show({ kicker: `${s.order}. ${s.name}`, title: `Royaume de ${s.name} — ${s.ruler}`, text: [`Origine : ${esc(s.origin)} · Spécialité : ${esc(s.spec)} · Clan de ${s.clan === 'bidh' ? 'Bidh' : 'Kaos'}.`, `<div class="glyph">${esc(s.glyph)}</div>`, `<span class="mut">Anciens détenteurs : ${esc(s.holders)}</span>`, `<span class="mut">Lecture des héros : ${esc(s.heroes)}</span>`], choices: [C('← Retour', glyphLib)] })));
   L.push(C('← Retour', stoneMenu)); show({ kicker: 'Glyphes', title: 'Glyphes déchiffrés', text: L.length > 1 ? [] : ['Tu n’as encore déchiffré aucun glyphe : il faut posséder la pierre.'], choices: L });

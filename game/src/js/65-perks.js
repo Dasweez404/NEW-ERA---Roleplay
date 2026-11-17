@@ -72,6 +72,6 @@ const HORS = ['cash', 'xp', 'quiet', 'travel', 'rest', 'fix', 'clue', 'loot', 'b
 function perkOf(p) { if (!p) return null; if (!_perkAll) buildPerks(); return _perkAll[p.id] || null; }
 function perkList() { return G && G.pc ? pcPowers().map(perkOf).filter(Boolean) : []; }
 const lvF = p => (typeof pxLevel === 'function' && G && G.pc) ? [1, 1, 1.25, 1.5][pxLevel(p.id)] : 1;
-function PK(id) { let t = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id === id) t += x.mag * lvF(p); }); }); return Math.ceil(t - 1e-9); }
-function perkChk(tags) { let b = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag * lvF(p); }); }); return Math.min(3, Math.round(b)); }
+function PK(id) { let t = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id === id) t += x.mag * lvF(p); }); }); return Math.ceil(t - 1e-9) + (typeof stoneBonusSum === 'function' ? stoneBonusSum(id) : 0); }
+function perkChk(tags) { let b = 0; pcPowers().forEach(p => { const k = perkOf(p); if (k) k.effs.forEach(x => { if (x.id.startsWith('c_') && tags.includes(x.id.slice(2))) b += x.mag * lvF(p); }); }); if (typeof stoneBonusSum === 'function') tags.forEach(t => { b += stoneBonusSum('c_' + t); }); return Math.min(3, Math.round(b)); }
 const perkText = p => { const k = perkOf(p); return k ? `${k.title} — ${k.desc}` : ''; };

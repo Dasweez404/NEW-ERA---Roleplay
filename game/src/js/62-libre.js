@@ -17,7 +17,6 @@ function setupLibre() {
     else { holder = pick(pool); loc = F[holder].hq; }
     W.stoneHolder[s.id] = holder; W.stoneLoc[s.id] = loc;
   });
-  sample(DATA.stones, 2).forEach(s => W.stoneClue[s.id] = true);
   const rival = pick(pool); const prem = pick(PREMISES); W.rival = rival; W.premise = { id: prem.id, t: prem.t, text: prem.x({ r: rival }) };
   W.arcs = []; W.rivalStones = 0;
   if (prem.id === 'fragile') { W.fac.fa.power = 62; }

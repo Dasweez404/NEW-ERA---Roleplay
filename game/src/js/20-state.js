@@ -59,7 +59,7 @@ function blankPC() {
 }
 
 function initWorld() {
-  const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, flags: {}, wanted: {} };
+  const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, stoneLv: {}, flags: {}, wanted: {} };
   DATA.stones.forEach(s => {
     W.stoneHolder[s.id] = s.holder;
     W.stoneLoc[s.id] = s.id === 'lumiere' ? 'albion' : (F[s.holder] ? F[s.holder].hq : s.temple);

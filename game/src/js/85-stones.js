@@ -1,30 +1,47 @@
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; const unk = DATA.stones.filter(s => !G.pc.stones[s.id] && !W.stoneClue[s.id]);
-  if (!unk.length) return null; const s = pick(unk); W.stoneClue[s.id] = true;
-  const hold = W.stoneHolder[s.id]; const where = stateName(W.stoneLoc[s.id]);
-  logEntry(`Piste : pierre de ${s.name} (${where}).`);
-  return hold === 'temple' ? `la pierre de ${s.name} dormirait dans un temple caché, du côté de ${where}.` : hold === 'pnj-levant' ? `la pierre de ${s.name} serait aux mains d’un descendant du peuple du feu, à ${where}.` : hold === 'vigilante' ? `la pierre de ${s.name} est passée à la Vigilante Squad (${where}).` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}, du côté de ${where}.`;
+  const W = G.world; W.stoneLv = W.stoneLv || {}; if (G.wk < 6) return null;
+  const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
+  const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
+  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = 1; } else if (deep.length) { s = pick(deep); lv = lvOf(s.id) + 1; } else return null;
+  W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
+  logEntry(`Indice ${lv}/3 : pierre de ${s.name}.`);
+  if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (un 💎 vide est apparu sur ta carte de l’Orbitrail).`;
+  if (lv === 2) return `la pierre de ${s.name} serait du côté de ${capName(loc)} (${stateName(loc)}). Un 💎 est apparu sur ta carte : une quête t’y attendra.`;
+  return hold === 'temple' ? `la pierre de ${s.name} dort dans un temple oublié près de ${capName(loc)}. Tu sais maintenant où chercher.` : hold === 'pnj-levant' ? `la pierre de ${s.name} est aux mains d’un descendant du peuple du feu, à ${capName(loc)}.` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}, à ${capName(loc)}. Tu connais leurs défenses.`;
 }
+// États où un indice fait apparaître un 💎 sur la carte de l'Orbitrail
+function stoneHints() {
+  const W = G.world; const m = new Map(); const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0);
+  DATA.stones.forEach(s => { if (G.pc.stones[s.id]) return; const lv = lvOf(s.id); if (!lv) return; const loc = W.stoneLoc[s.id];
+    if (lv >= 2) m.set(loc, 'full'); else { const z = zoneOf(loc); DATA.states.forEach(st => { if (zoneOf(st.id) === z && !m.has(st.id)) m.set(st.id, 'hollow'); }); } });
+  return m;
+}
+const stoneQuestHere = () => { const W = G.world; return DATA.stones.find(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || 0) >= 2 && W.stoneLoc[s.id] === G.loc) || null; };
+function stoneQuestCard(s) {
+  const W = G.world; const lv = W.stoneLv[s.id] || 2; const hold = W.stoneHolder[s.id]; const dc = 14 + Math.min(4, stoneCount());
+  const go = () => stoneAttempt(s.id);
+  const L = lv >= 3 ? [C('Tenter de la récupérer', go, { ic: '💎', cls: 'risk' })] : [C('Enquêter sur place', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; if (r.ok) { W.stoneLv[s.id] = 3; show({ kicker: 'QUÊTE SECONDAIRE', title: 'Tu tiens la piste', text: [esc(cap(stoneClueText(s))), checkLine(r)], fx: fx({ xp: 20 }), choices: [C('Tenter de la récupérer', go, { ic: '💎', cls: 'risk' }), C('Plus tard', hub, { cls: 'back' })] }); } else show({ kicker: 'QUÊTE SECONDAIRE', title: 'Rien de concluant', text: ['Les témoins se rétractent, les archives sont incomplètes.', checkLine(r)], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' })];
+  L.push(C('Pas maintenant', hub, { cls: 'back' }));
+  show({ kicker: 'QUÊTE SECONDAIRE · PIERRE ANTIQUE', title: `La pierre de ${s.name}`, text: [lv >= 3 ? `Tu sais ce qui t’attend : ${hold === 'temple' ? 'un temple oublié' : esc(holderName(hold))}. Royaume ${esc(s.ruler)} — ${esc(s.spec)}.` : `Ton indice t’a mené jusqu’ici. La pierre du royaume ${esc(s.ruler)} est tout près, mais il faut d’abord trouver où.`], choices: L });
+}
+function stoneClueText(s) { const W = G.world; const hold = W.stoneHolder[s.id]; const loc = W.stoneLoc[s.id]; return hold === 'temple' ? `la pierre de ${s.name} dort dans un temple oublié près de ${capName(loc)}.` : hold === 'pnj-levant' ? `la pierre de ${s.name} est aux mains d’un descendant du peuple du feu.` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}.`; }
 const repF = h => F[h] ? h : 'civils';
 function holderName(h) { return h === 'temple' ? 'aucun (temple caché)' : h === 'pnj-levant' ? 'le descendant du peuple du feu' : h === 'pc' ? 'toi' : F[h] ? F[h].name : h; }
 function stoneTier(hid) { if (hid === 'temple') return 3; if (hid === 'fa') return 5; if (hid === 'pnj-levant') return 2; const p = G.world.fac[hid] ? G.world.fac[hid].power : 40; return clamp(Math.round(p / 22) + 1, 2, 5); }
 
 function stoneMenu() {
   const pc = G.pc; const W = G.world; const L = [];
-  L.push(C('Mener l’enquête (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const dc = 14 + Math.min(4, stoneCount()); const tags = ['scout', 'relic']; const r = check('intellect', dc, tags, ((pc.rep.artefactors || 0) >= 20 ? 2 : 0) + PK('clue')); if (r.ok) { const l = stoneClueGain(); show({ kicker: 'Enquête', title: l ? 'Une piste' : 'Tout est déjà éclairci', text: [l ? esc(cap(l)) : 'Tu connais déjà tous les détenteurs.', checkLine(r)], fx: fx({ xp: 15 }), choices: [C('Continuer', stoneMenu)] }); } else show({ kicker: 'Enquête', title: 'Rien de concluant', text: ['Des archives incomplètes, des témoins qui se rétractent.', checkLine(r)], choices: [C('Continuer', stoneMenu)] }); }, { odds: ['intellect', 14 + Math.min(4, stoneCount()), ['scout', 'relic']], sub: 'Le Lecteur de glyphes, le rôle d’éclaireur et l’amitié des Artefactors aident.' }));
-  DATA.stones.forEach(s => {
-    if (pc.stones[s.id]) return;
-    const known = !!W.stoneClue[s.id]; const hold = W.stoneHolder[s.id]; const loc = W.stoneLoc[s.id];
-    if (!known) return;
-    if (G.loc !== loc) { const r = otRoute(G.loc, loc); L.push(C(`Pierre de ${s.name} — rends-toi à ${capName(loc)}`, () => travelMenu(loc), { ic: '🚆', sub: `${holderName(hold)} (${stateName(loc)}) · ${r ? r.hops + ' arrêt(s) · ' + r.cost + ' ¢ en Orbitrail' : 'trajet indisponible'} · touche pour y aller` })); }
-    else L.push(C(`Pierre de ${s.name} — ${holderName(hold)} (${stateName(loc)})`, () => stoneAttempt(s.id), { sub: `Difficulté ${stars(stoneTier(hold))}` }));
-  });
+  L.push(C('Mener l’enquête (1 semaine)', () => { advance(1); if (G.status !== 'play') return; const dc = 14 + Math.min(4, stoneCount()); const tags = ['scout', 'relic']; const r = check('intellect', dc, tags, ((pc.rep.artefactors || 0) >= 20 ? 2 : 0) + PK('clue')); if (r.ok) { const l = stoneClueGain(); show({ kicker: 'Enquête', title: l ? 'Un indice' : 'Rien de neuf', text: [l ? esc(cap(l)) : (G.wk < 6 ? 'Il est encore trop tôt : personne ne parle des pierres.' : 'Tu connais déjà tout ce qu’on peut savoir pour l’instant.'), checkLine(r)], fx: fx({ xp: 15 }), choices: [C('Continuer', stoneMenu)] }); } else show({ kicker: 'Enquête', title: 'Rien de concluant', text: ['Des archives incomplètes, des témoins qui se rétractent.', checkLine(r)], choices: [C('Continuer', stoneMenu)] }); }, { odds: ['intellect', 14 + Math.min(4, stoneCount()), ['scout', 'relic']], sub: 'Approfondit un indice ou en découvre un nouveau.' }));
   L.push(C('Lire les glyphes déjà déchiffrés', glyphLib));
   L.push(C('← Retour', actionsMenu));
-  const left = capActs(L, 'stone', /rends-toi|glyphes/i);
-  show({ kicker: 'Pierres antiques', title: `Les 16 pierres — ${stoneCount()}/16 · ${left}/${ACT_MAX.stone} ici`, text: [`« Il y a longtemps, 16 civilisations de géno-porteurs se partageaient 16 éclats appelés <i>pierres muta</i>. » Les réunir toutes met fin à la partie : <b>victoire</b>. Plus tu en as, plus tu es puissant — et plus on te traque.`, 'Seules les pistes connues apparaissent dans la liste. Enquête, fouille, tends l’oreille.'], extra: h('div', { class: 'stones' }, DATA.stones.map(s => h('div', { class: 'stone' + (pc.stones[s.id] ? ' have' : ''), style: `background:${s.color};color:${s.color}` }, h('span', { style: 'color:#000' }, s.order)))), choices: L });
+  const left = capActs(L, 'stone', /glyphes/i);
+  const known = DATA.stones.filter(s => !pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id]));
+  const cards = h('div', { class: 'stclues' }, known.length ? known.map(s => { const lv = W.stoneLv[s.id] || 1; const loc = W.stoneLoc[s.id];
+    return h('div', { class: 'stclue', style: `--c:${s.color}` }, h('b', {}, `Pierre de ${s.name}`), h('span', { class: 'stlv' }, '◆'.repeat(lv) + '◇'.repeat(3 - lv)), h('div', { class: 'small mut' }, lv === 1 ? `Rumeur : zone ${zoneOf(loc)}.` : lv === 2 ? `Quelque part près de ${capName(loc)}. Une quête t’y attend.` : `${esc2(stoneClueText(s))}`)); }) : [h('div', { class: 'mut small' }, G.wk < 6 ? 'Les pierres sont encore des légendes. Les premiers indices arriveront au fil de tes aventures.' : 'Aucun indice pour l’instant. Les missions et les rencontres en livrent parfois.')]);
+  show({ kicker: 'Pierres antiques', title: `${stoneCount()}/16 · ${left}/${ACT_MAX.stone} ici`, text: ['<span class="mut">Les indices font apparaître des 💎 sur la carte de l’Orbitrail. Va là-bas : une quête secondaire s’ouvrira à ton arrivée.</span>'], extra: h('div', {}, stoneGrid(), cards), choices: L });
 }
+const esc2 = t => cap(t);
 function glyphLib() {
   const L = DATA.stones.filter(s => G.pc.stones[s.id]).map(s => C(`${s.order}. Pierre de ${s.name}`, () => show({ kicker: `${s.order}. ${s.name}`, title: `Royaume de ${s.name} — ${s.ruler}`, text: [`Origine : ${esc(s.origin)} · Spécialité : ${esc(s.spec)} · Clan de ${s.clan === 'bidh' ? 'Bidh' : 'Kaos'}.`, `<div class="glyph">${esc(s.glyph)}</div>`, `<span class="mut">Anciens détenteurs : ${esc(s.holders)}</span>`, `<span class="mut">Lecture des héros : ${esc(s.heroes)}</span>`], choices: [C('← Retour', glyphLib)] })));
   L.push(C('← Retour', stoneMenu)); show({ kicker: 'Glyphes', title: 'Glyphes déchiffrés', text: L.length > 1 ? [] : ['Tu n’as encore déchiffré aucun glyphe : il faut posséder la pierre.'], choices: L });
