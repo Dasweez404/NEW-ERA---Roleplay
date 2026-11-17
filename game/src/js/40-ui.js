@@ -103,7 +103,7 @@ function render(quiet) {
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);
-  if (live) { app.append(hudEl()); if (sc.arriveBanner && !sc.banner) app.append(envBanner(G.loc, innerWidth < 640 ? 64 : 84)); const tk = sc.arriveBanner ? tickerEl() : null; if (tk) app.append(tk); }
+  if (live) { app.append(hudEl()); if (!sc.compact && !sc.banner) app.append(stripEl()); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
   if (live) app.append(dockEl());
@@ -117,6 +117,13 @@ function tipEl() {
   let seen = 0; try { seen = +localStorage.getItem('ne_tip') || 0; } catch (e) { } if (seen >= 1 || UI.tipHide) return null;
   try { if (UI.tipShown !== G.wk) { UI.tipShown = G.wk; localStorage.setItem('ne_tip', seen + 1); } } catch (e) { }
   return h('div', { class: 'tip' }, h('span', {}, '💡 Touche un choix pour avancer. ⚡ = menu d’actions (voyage, ville, faction). Barre du bas = fiche, sac, groupe.'), h('button', { class: 'x', onclick: () => { UI.tipHide = 1; try { localStorage.setItem('ne_tip', 9); } catch (e) { } render(true); } }, '✕'));
+}
+// Banderole unique : environnement de la ville, date, et l'actualité qui défile comme à la télé
+function stripEl() {
+  const n = G.world.news[0]; const news = n && G.wk - n.wk <= 6 ? n.t : null; const w = h('div', { class: 'strip' });
+  w.append(h('div', { class: 'strip-img' }, envBanner(G.loc, innerWidth < 640 ? 72 : 92), h('span', { class: 'sdate' }, dateStr())));
+  if (news) w.append(h('div', { class: 'snews' }, h('span', { class: 'tk' }, 'ACTU'), h('div', { class: 'snt' }, h('span', {}, news))));
+  return w;
 }
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
