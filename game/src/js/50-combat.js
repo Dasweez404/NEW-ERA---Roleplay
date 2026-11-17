@@ -252,7 +252,10 @@ function finishCombat(kind) {
   const L = fx(Object.assign({ xp: xp * (bx ? 2 : 1) }, cfg.loot || {}, bm ? { money: ((cfg.loot || {}).money || 0) + bm } : {}, bl ? { item: { capsule: 1 } } : {}));
   if (bil) L.unshift({ t: bil, c: 'bilan' });
   if (awoke && !free) { L.push({ t: 'L’Éveil t’a laissé exsangue : énergie vidée.', c: 'warnc' }); pc.en = 0; }
-  cfg.onWin ? cfg.onWin(L, { rounds, awoke, rage, partial, total: !partial }) : show({ title: 'Victoire', text: ['Le calme revient.'], fx: L, choices: [C('Continuer', hub)] });
+  const info = { rounds, awoke, rage, partial, total: !partial };
+  const vf = !partial && !cfg.noVerdict && foes.find(f => f.cid && f.dead && CH[f.cid] && G.world.npc[f.cid] && G.world.npc[f.cid].alive && G.world.npc[f.cid].st !== 'ally' && !Object.values(F).some(x => x.leaders.includes(f.cid)) && !(pc.flags.nem && pc.flags.nem.cid === f.cid));
+  if (vf) return verdictCard(vf, L, L2 => cfg.onWin ? cfg.onWin(L2, info) : show({ title: 'Victoire', text: ['Le calme revient.'], fx: L2, choices: [C('Continuer', hub)] }));
+  cfg.onWin ? cfg.onWin(L, info) : show({ title: 'Victoire', text: ['Le calme revient.'], fx: L, choices: [C('Continuer', hub)] });
 }
 function loseCombat(surrender) {
   const cfg = CB.cfg; const pc = G.pc; CB = null; const lethal = cfg.lethal || 'capture';
@@ -288,4 +291,14 @@ function scaleFoes(cfg) {
   if (cfg.noScale || !G || !G.pc) return; const lv = pcLevel(); if (lv < 4) return;
   cfg.foes.forEach(f => { if (!f.auto || f.cid) return; const want = clamp(lv + pick([-1, 0, 0, 0, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
   if (lv >= 5 && cfg.foes.length < 3 && chance(0.3)) { const base = cfg.foes.find(f => f.auto); if (base) cfg.foes.push(mkFoe(base.tid, Math.max(1, base.tier - 2), null, {})); }
+}
+
+// Sort du vaincu : un vrai personnage battu n'est pas forcément capturé, c'est toi qui décides
+function verdictCard(f, L, go) {
+  const pc = G.pc; const c = CH[f.cid]; const fac = c.faction; const fn = F[fac] ? F[fac].name : fac; const rk = F[fac] ? fac : 'civils'; const bonus = 120 * ((c.stars || 0) + 1);
+  const end = (txt, o, extra) => { const L2 = [...L, ...fx(o)]; if (extra) extra(); show({ kicker: 'SORT DU VAINCU', title: esc(c.name), text: [txt], fx: L2.slice(L.length), choices: [C('Continuer', () => go(L))] }); };
+  show({ extra: portrait(c.id, 110), kicker: 'VICTOIRE · SORT DU VAINCU', title: esc(c.name), text: [`${esc(c.name)} (${esc(fn)}) est à terre, à ta merci. Que fais-tu ?`], choices: [
+    C('L’épargner', () => end(`Tu baisses ton arme. « Je n’oublierai pas, » souffle ${esc(c.name)} avant de disparaître.`, { rep: { [rk]: 4 }, xp: 10 }, () => { pc.flags['debt_' + c.id] = true; addKarma(1); }), { ic: '🕊', sub: 'Il te devra une faveur. Réputation +.', cls: 'safe' }),
+    C('Le capturer et le livrer', () => end(`Tu le ligotes et le remets à qui de droit. La prime tombe : <b>+${bonus} ¢</b>.`, { money: bonus, rep: { [rk]: -8 } }, () => { G.world.npc[c.id].st = 'captured'; newsPush(`${c.name} (${fn}) a été capturé${c.gender === 'F' ? 'e' : ''} lors d’un affrontement.`); }), { ic: '⛓', sub: `+${bonus} ¢ · sa faction t’en voudra.` }),
+    C('L’achever', () => end(`Tu ne laisses aucune chance à ${esc(c.name)}. Quelqu’un finira par le savoir.`, { rep: { [rk]: -14 }, heat: 4 }, () => { G.world.npc[c.id].alive = false; addKarma(-2); newsPush(`${c.name} (${fn}) est mort${c.gender === 'F' ? 'e' : ''} dans un affrontement.`); }), { ic: '☠', sub: 'Plus de menace… mais karma, réputation et prime en pâtissent.', cls: 'danger', heavy: 'On ne revient pas d’un tel geste.' })] });
 }
