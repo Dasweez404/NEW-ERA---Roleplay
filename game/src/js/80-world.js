@@ -127,7 +127,7 @@ const NEWS = [
   () => 'Hem Industries inaugure de nouveaux abris à la périphérie d’une métropole.',
   () => 'Le Marché Noir change de monnaie parallèle : les cours s’affolent.',
   () => 'Le Panthéon est signalé en mouvement : une opération d’envergure se prépare.',
-  () => 'Des rumeurs parlent de pierres antiques « invincibles » découvertes par des archéologues.',
+  () => stonesUnlocked() ? 'Des rumeurs parlent de pierres antiques « invincibles » découvertes par des archéologues.' : 'Le protocole ANTI s’étend : de nouveaux portiques à radar dans les petites gares.',
   () => 'Un convoi de prisonniers a disparu sur la route du Tartare.',
 ];
 function monthNews() { newsPush(pick(NEWS)()); }

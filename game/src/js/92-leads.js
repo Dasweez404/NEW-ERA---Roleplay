@@ -13,7 +13,7 @@ function ensureLeads() {
   const n = () => Object.keys(W.leads).length; let guard = 0;
   while (n() < 5 && guard++ < 30) {
     const st = pick(DATA.states).id; if (st === G.loc || W.leads[st]) continue;
-    const kinds = ['contrat', 'contrat', 'recrue', 'crise', 'rival', 'butin', ...(G.wk >= 6 ? ['indic'] : [])]; const kind = pick(kinds); const l = { kind, st, exp: G.wk + rint(8, 14) };
+    const kinds = ['contrat', 'contrat', 'recrue', 'crise', 'rival', 'butin', ...(stonesUnlocked() ? ['indic'] : [])]; const kind = pick(kinds); const l = { kind, st, exp: G.wk + rint(8, 14) };
     if (kind === 'recrue') { const c = pick(DATA.chars.filter(c => c.stars >= 1 && c.stars <= 3 && c.faction !== 'civils' && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free' && !G.pc.party.some(p => p.id === c.id))); if (!c) continue; l.cid = c.id; G.world.npc[c.id].loc = st; }
     if (kind === 'rival') { const e = enemiesOf(G.pc.faction); l.fid = e.length ? pick(e) : 'fa'; }
     W.leads[st] = l;

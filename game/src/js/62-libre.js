@@ -1,9 +1,9 @@
 // ───────── Mode libre : scénario général aléatoire (sans la timeline d'Ora) ─────────
 const PREMISES = [
-  { id: 'course', t: 'La course aux pierres', x: ({ r }) => `Une rumeur court : les seize pierres muta existent. <b>${esc(F[r].name)}</b> s’est déjà lancé dans la chasse, et le sillage de ses alliés grossit. Tout dépendra de qui les tiendra en main : la Force d’Autorité aura-t-elle raison des géno-porteurs, ou resteront-ils debout ?` },
-  { id: 'fragile', t: 'Le Régime vacille', x: ({ r }) => `Le Nouveau Régime fissure : scandales, mutineries, oligarques qui se déchirent. Dans la panique, <b>${esc(F[r].name)}</b> cherche les pierres antiques pour s’emparer du vide.` },
-  { id: 'neo', t: 'Néo regarde', x: ({ r }) => `Néo, conseiller du Régime, veut les pierres avant tout le monde. Il laisse <b>${esc(F[r].name)}</b> fouiller à sa place… en attendant de lui reprendre ses trouvailles.` },
-  { id: 'noir', t: 'La guerre du Marché Noir', x: ({ r }) => `Le Marché Noir se déchire. <b>${esc(F[r].name)}</b> profite du chaos pour rafler les pierres antiques et les armes de ses rivaux.` },
+  { id: 'anti', t: 'Le protocole ANTI', x: ({ r }) => `Juin 2071 : le Nouveau Régime lance le <b>protocole ANTI</b>. Radars à géno dans les gares, recensement des porteurs, techniques anti-geno enseignées à la Force d’Autorité. <b>${esc(r ? F[r].name : 'Une faction')}</b> est parmi les premières à réagir. La question n’est plus de savoir si l’on se cache, mais comment l’on survit.` },
+  { id: 'fragile', t: 'Les premières rafles', x: ({ r }) => `Le protocole ANTI est à peine lancé que les premières rafles commencent. La Force d’Autorité s’organise vite, mais pas partout : <b>${esc(F[r].name)}</b> profite des failles pour s’imposer dans le chaos.` },
+  { id: 'neo', t: 'Néo supervise', x: ({ r }) => `Néo, conseiller stratégique du Régime, supervise lui-même le protocole ANTI. Les gares se couvrent de portiques, les listes s’allongent. <b>${esc(F[r].name)}</b> cherche à savoir qui s’y est laissé prendre, et qui y a échappé.` },
+  { id: 'noir', t: 'Les primes du Marché Noir', x: ({ r }) => `Avec le protocole ANTI, des primes apparaissent partout : le Marché Noir tient les registres, les chasseurs s’organisent. <b>${esc(F[r].name)}</b> se positionne sur ce nouveau marché, et sur ceux qui y figurent.` },
 ];
 const ARC_TITLES = [['Évasion au Tartare', 'liberation'], ['Révolte des bidonvilles', 'defense'], ['Tournoi clandestin', 'course'], ['Catastrophe de l’ogénite', 'climat'], ['Convoi disparu', 'escorte'], ['Fuite de données', 'infiltration'], ['Chasse à l’homme', 'prime'], ['Fouilles interdites', 'fouille'], ['Épidémie dans les quartiers bas', 'humanitaire'], ['Usine sous haute garde', 'sabotage'], ['Contrebande en cascade', 'contrebande'], ['Enquête sur une disparition', 'enquete']];
 function setupLibre() {
@@ -36,7 +36,7 @@ function libreMonth() {
     newsPush(`${title} à ${capName(state)} (${F[fac].name} impliqué).`);
   }
   // le rival collecte les pierres
-  if (W.rival && chance(W.premise && W.premise.id === 'course' ? 0.16 : 0.1)) {
+  if (W.rival && stonesUnlocked() && chance(W.premise && W.premise.id === 'anti' ? 0.16 : 0.1)) {
     const cand = DATA.stones.filter(s => W.stoneHolder[s.id] !== W.rival && W.stoneHolder[s.id] !== 'pc');
     if (cand.length) { const s = pick(cand); W.stoneHolder[s.id] = W.rival; W.stoneLoc[s.id] = F[W.rival].hq; newsPush(`${F[W.rival].name} met la main sur la pierre de ${s.name}.`); }
   }

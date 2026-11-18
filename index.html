@@ -2691,10 +2691,10 @@ function factionPoint() {
 
 // ───────── Mode libre : scénario général aléatoire (sans la timeline d'Ora) ─────────
 const PREMISES = [
-  { id: 'course', t: 'La course aux pierres', x: ({ r }) => `Une rumeur court : les seize pierres muta existent. <b>${esc(F[r].name)}</b> s’est déjà lancé dans la chasse, et le sillage de ses alliés grossit. Tout dépendra de qui les tiendra en main : la Force d’Autorité aura-t-elle raison des géno-porteurs, ou resteront-ils debout ?` },
-  { id: 'fragile', t: 'Le Régime vacille', x: ({ r }) => `Le Nouveau Régime fissure : scandales, mutineries, oligarques qui se déchirent. Dans la panique, <b>${esc(F[r].name)}</b> cherche les pierres antiques pour s’emparer du vide.` },
-  { id: 'neo', t: 'Néo regarde', x: ({ r }) => `Néo, conseiller du Régime, veut les pierres avant tout le monde. Il laisse <b>${esc(F[r].name)}</b> fouiller à sa place… en attendant de lui reprendre ses trouvailles.` },
-  { id: 'noir', t: 'La guerre du Marché Noir', x: ({ r }) => `Le Marché Noir se déchire. <b>${esc(F[r].name)}</b> profite du chaos pour rafler les pierres antiques et les armes de ses rivaux.` },
+  { id: 'anti', t: 'Le protocole ANTI', x: ({ r }) => `Juin 2071 : le Nouveau Régime lance le <b>protocole ANTI</b>. Radars à géno dans les gares, recensement des porteurs, techniques anti-geno enseignées à la Force d’Autorité. <b>${esc(r ? F[r].name : 'Une faction')}</b> est parmi les premières à réagir. La question n’est plus de savoir si l’on se cache, mais comment l’on survit.` },
+  { id: 'fragile', t: 'Les premières rafles', x: ({ r }) => `Le protocole ANTI est à peine lancé que les premières rafles commencent. La Force d’Autorité s’organise vite, mais pas partout : <b>${esc(F[r].name)}</b> profite des failles pour s’imposer dans le chaos.` },
+  { id: 'neo', t: 'Néo supervise', x: ({ r }) => `Néo, conseiller stratégique du Régime, supervise lui-même le protocole ANTI. Les gares se couvrent de portiques, les listes s’allongent. <b>${esc(F[r].name)}</b> cherche à savoir qui s’y est laissé prendre, et qui y a échappé.` },
+  { id: 'noir', t: 'Les primes du Marché Noir', x: ({ r }) => `Avec le protocole ANTI, des primes apparaissent partout : le Marché Noir tient les registres, les chasseurs s’organisent. <b>${esc(F[r].name)}</b> se positionne sur ce nouveau marché, et sur ceux qui y figurent.` },
 ];
 const ARC_TITLES = [['Évasion au Tartare', 'liberation'], ['Révolte des bidonvilles', 'defense'], ['Tournoi clandestin', 'course'], ['Catastrophe de l’ogénite', 'climat'], ['Convoi disparu', 'escorte'], ['Fuite de données', 'infiltration'], ['Chasse à l’homme', 'prime'], ['Fouilles interdites', 'fouille'], ['Épidémie dans les quartiers bas', 'humanitaire'], ['Usine sous haute garde', 'sabotage'], ['Contrebande en cascade', 'contrebande'], ['Enquête sur une disparition', 'enquete']];
 function setupLibre() {
@@ -2727,7 +2727,7 @@ function libreMonth() {
     newsPush(`${title} à ${capName(state)} (${F[fac].name} impliqué).`);
   }
   // le rival collecte les pierres
-  if (W.rival && chance(W.premise && W.premise.id === 'course' ? 0.16 : 0.1)) {
+  if (W.rival && stonesUnlocked() && chance(W.premise && W.premise.id === 'anti' ? 0.16 : 0.1)) {
     const cand = DATA.stones.filter(s => W.stoneHolder[s.id] !== W.rival && W.stoneHolder[s.id] !== 'pc');
     if (cand.length) { const s = pick(cand); W.stoneHolder[s.id] = W.rival; W.stoneLoc[s.id] = F[W.rival].hq; newsPush(`${F[W.rival].name} met la main sur la pierre de ${s.name}.`); }
   }
@@ -3857,7 +3857,7 @@ const NEWS = [
   () => 'Hem Industries inaugure de nouveaux abris à la périphérie d’une métropole.',
   () => 'Le Marché Noir change de monnaie parallèle : les cours s’affolent.',
   () => 'Le Panthéon est signalé en mouvement : une opération d’envergure se prépare.',
-  () => 'Des rumeurs parlent de pierres antiques « invincibles » découvertes par des archéologues.',
+  () => stonesUnlocked() ? 'Des rumeurs parlent de pierres antiques « invincibles » découvertes par des archéologues.' : 'Le protocole ANTI s’étend : de nouveaux portiques à radar dans les petites gares.',
   () => 'Un convoi de prisonniers a disparu sur la route du Tartare.',
 ];
 function monthNews() { newsPush(pick(NEWS)()); }
@@ -4390,7 +4390,7 @@ function ensureLeads() {
   const n = () => Object.keys(W.leads).length; let guard = 0;
   while (n() < 5 && guard++ < 30) {
     const st = pick(DATA.states).id; if (st === G.loc || W.leads[st]) continue;
-    const kinds = ['contrat', 'contrat', 'recrue', 'crise', 'rival', 'butin', ...(G.wk >= 6 ? ['indic'] : [])]; const kind = pick(kinds); const l = { kind, st, exp: G.wk + rint(8, 14) };
+    const kinds = ['contrat', 'contrat', 'recrue', 'crise', 'rival', 'butin', ...(stonesUnlocked() ? ['indic'] : [])]; const kind = pick(kinds); const l = { kind, st, exp: G.wk + rint(8, 14) };
     if (kind === 'recrue') { const c = pick(DATA.chars.filter(c => c.stars >= 1 && c.stars <= 3 && c.faction !== 'civils' && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free' && !G.pc.party.some(p => p.id === c.id))); if (!c) continue; l.cid = c.id; G.world.npc[c.id].loc = st; }
     if (kind === 'rival') { const e = enemiesOf(G.pc.faction); l.fid = e.length ? pick(e) : 'fa'; }
     W.leads[st] = l;
@@ -4730,7 +4730,7 @@ function titleScreen() {
   const side = h('div', { class: 'tside' }, hero && hero.sp ? h('div', { class: 'tfloat' }, h('div', { class: 'tring' }), sprFit(hero.sp, wide ? 320 : 150, 'tspr'), h('div', { class: 'tcap' }, h('b', {}, hero.name), h('span', {}, `${hero.faction} · ${rankStr(hero.grade)}`))) : h('div', { class: 'tfloat emblem' }, h('div', { class: 'tring' }), atomSVG()));
   const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Règles', 'But, jets, grades, primes', rulesScreen), btn(sc ? 5 : 4, 'À propos', 'Sources et libertés prises', aboutScreen));
   UI.scene = { bare: true, extra: h('div', { class: 'title2' }, h('div', { class: 'tbg' }, envBanner(city, 340, 'night')), h('div', { class: 'tgrid' }),
-    h('div', { class: 'tmain' }, h('div', { class: 'tleft' }, h('div', { class: 'tkick' }, 'CRATÈS · 2071'), h('h1', { class: 'tlogo' }, h('img', { src: LOGO_TITLE, alt: 'NEW ERA', draggable: 'false' })), h('p', { class: 'tlore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'), menu), side),
+    h('div', { class: 'tmain' }, h('div', { class: 'tleft' }, h('div', { class: 'tkick' }, 'CRATÈS · 2071'), h('h1', { class: 'tlogo' }, h('img', { src: LOGO_TITLE, alt: 'NEW ERA', draggable: 'false' })), h('p', { class: 'tlore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Survis au protocole ANTI.'), menu), side),
     h('div', { class: 'tfoot' }, '52 États · 31 factions · 441 personnages')) };
   UI.after = []; render(); runAfter();
 }
