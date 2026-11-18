@@ -59,7 +59,7 @@ function blankPC() {
 }
 
 // Emplacement de chaque pierre selon le document (lieu canonique), indépendamment du QG du détenteur
-const CANON_LOC = { lumiere: 'albion', sable: 'saha', roche: 'ubunye', feu: 'levant', magma: 'isgarde', fumee: 'atlante', gaz: 'banda', metal: 'annam', air: 'sinotan', eau: 'avaiki', glace: 'polaris', foudre: 'alpomare', plante: 'aymaro', acide: 'khora', terre: 'westrian', tenebres: 'sinotan' };
+const CANON_LOC = { lumiere: 'albion', sable: 'saha', roche: 'ubunye', feu: 'levant', magma: 'isgarde', fumee: 'atlante', gaz: 'banda', metal: 'annam', air: 'sinotan', eau: 'avaiki', glace: 'polaris', foudre: 'alpomare', plante: 'aymaro', acide: 'khora', terre: 'westrian', tenebres: 'slavo' };
 function initWorld() {
   const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, stoneLv: {}, flags: {}, wanted: {} };
   DATA.stones.forEach(s => {
