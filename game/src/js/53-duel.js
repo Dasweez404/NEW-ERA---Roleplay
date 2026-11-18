@@ -167,11 +167,17 @@ function conclude() {
   if (cfg.canFlee === false) return loseCombat(false); finishCombat('flee');
 }
 // ── Affichage ──
+// Ton sprite et ceux de ton équipe en tête du combat
+function teamStrip() {
+  const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
+  if (!(me && hasSpr(me)) && !mates.length) return null;
+  return h('div', { class: 'cteam' }, me && hasSpr(me) ? h('div', { class: 'cme' }, sprFit(me, 56, 'portrait')) : null, ...mates.map(a => h('div', { class: 'cmate', title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))));
+}
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
   const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
     const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : 100)}%` }); const pct = Math.max(0, f.hp) / f.hpMax * 100; bars.push([bi, pct]); CB.prev[i] = pct;
-    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 22) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi)));
+    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 44) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi)));
   }));
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.weak ? 'ennemis affaiblis' : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const need = needW();
@@ -188,7 +194,7 @@ function renderCombat() {
       if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
     }, 60);
   };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, teamStrip(), h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
   const pc = G.pc; const L = [];

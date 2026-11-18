@@ -627,3 +627,11 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .dipflag{position:absolute;top:-8px;left:50%;transform:translateX(-50%);white-space:nowrap;font:800 .6rem var(--fm);letter-spacing:.08em;padding:1px 7px;border-radius:2px;border:1px solid}
 .dipflag.foe{color:#ff8aa6;border-color:#ff2a6d;background:#2a0a16}.dipflag.friend{color:#8affc8;border-color:#05ffa1;background:#06251a}
 .dipcard.base-foe{border-width:2px;border-color:#ff2a6d;margin-top:6px}.dipcard.base-friend{border-width:2px;border-color:#05ffa1;margin-top:6px}
+
+/* sprites de persos */
+.cteam{display:flex;align-items:flex-end;gap:8px;margin:0 0 6px;padding:4px 6px;background:linear-gradient(90deg,rgba(0,240,255,.10),transparent);border-left:3px solid var(--acc2)}
+.cteam .cme img{filter:drop-shadow(0 0 8px rgba(0,240,255,.45))}.cteam .cmate{opacity:.9}.cteam img,.fchip .foeico img{image-rendering:pixelated}
+.fchip .foeico{display:flex;align-items:center;justify-content:center}
+.pcport{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:8px;background:radial-gradient(120% 120% at 0% 50%,rgba(176,38,255,.18),transparent 70%);border:1px solid rgba(0,240,255,.25)}
+.pcport img{image-rendering:pixelated;filter:drop-shadow(0 0 10px rgba(176,38,255,.5))}.pcname{display:flex;flex-direction:column;gap:2px;font-family:var(--fd);font-size:1.05rem}
+.tiles .tspr{display:grid;place-items:center;min-height:64px}.tiles .tspr img{image-rendering:pixelated}

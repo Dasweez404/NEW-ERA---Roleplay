@@ -116,7 +116,7 @@ function choicesEl(list, tiles, tcls) {
   return h('div', { class: 'choices' + (tiles ? ' tiles' : '') + (tcls ? ' ' + tcls : '') }, items.map((c, i) => {
     const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); try { if (typeof tele === 'function') tele('pick', { l: String(c.label || '').slice(0, 40), p: c.pct }); } catch (e) { } c.go(); } } },
-      !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
+      !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.img && hasSpr(c.img) ? h('span', { class: 'tspr' }, sprFit(c.img, 64)) : (tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null),
       h('span', { class: 'body' }, h('span', { class: 'l' }, emo(c.label)), c.sub ? h('span', { class: 's' }, emo(c.sub)) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
       c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%', c.att ? h('small', {}, c.att) : null) : null, cta ? h('span', { class: 'arrow' }, '›') : null);
   }));
@@ -184,6 +184,7 @@ function fillSheet() {
 }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
+  { const sp = pcSprite(); if (sp && hasSpr(sp)) box.append(h('div', { class: 'pcport' }, sprFit(sp, 120, 'portrait'), h('div', { class: 'pcname' }, h('b', {}, pc.name), h('span', { class: 'mut small' }, `${gradeName()} ${rankStr(pc.grade)}`)))); }
   box.append(h('button', { class: 'tab', style: 'margin:0 0 8px', onclick: () => parkOpen(factionMenu) }, pc.faction === 'civils' ? '🏴 Rejoindre une faction' : '🏴 Tableau de faction'));
   box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));

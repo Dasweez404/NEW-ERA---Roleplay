@@ -639,6 +639,14 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .dipflag{position:absolute;top:-8px;left:50%;transform:translateX(-50%);white-space:nowrap;font:800 .6rem var(--fm);letter-spacing:.08em;padding:1px 7px;border-radius:2px;border:1px solid}
 .dipflag.foe{color:#ff8aa6;border-color:#ff2a6d;background:#2a0a16}.dipflag.friend{color:#8affc8;border-color:#05ffa1;background:#06251a}
 .dipcard.base-foe{border-width:2px;border-color:#ff2a6d;margin-top:6px}.dipcard.base-friend{border-width:2px;border-color:#05ffa1;margin-top:6px}
+
+/* sprites de persos */
+.cteam{display:flex;align-items:flex-end;gap:8px;margin:0 0 6px;padding:4px 6px;background:linear-gradient(90deg,rgba(0,240,255,.10),transparent);border-left:3px solid var(--acc2)}
+.cteam .cme img{filter:drop-shadow(0 0 8px rgba(0,240,255,.45))}.cteam .cmate{opacity:.9}.cteam img,.fchip .foeico img{image-rendering:pixelated}
+.fchip .foeico{display:flex;align-items:center;justify-content:center}
+.pcport{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:8px;background:radial-gradient(120% 120% at 0% 50%,rgba(176,38,255,.18),transparent 70%);border:1px solid rgba(0,240,255,.25)}
+.pcport img{image-rendering:pixelated;filter:drop-shadow(0 0 10px rgba(176,38,255,.5))}.pcname{display:flex;flex-direction:column;gap:2px;font-family:var(--fd);font-size:1.05rem}
+.tiles .tspr{display:grid;place-items:center;min-height:64px}.tiles .tspr img{image-rendering:pixelated}
 </style>
 </head>
 <body>
@@ -1374,7 +1382,7 @@ function choicesEl(list, tiles, tcls) {
   return h('div', { class: 'choices' + (tiles ? ' tiles' : '') + (tcls ? ' ' + tcls : '') }, items.map((c, i) => {
     const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); try { if (typeof tele === 'function') tele('pick', { l: String(c.label || '').slice(0, 40), p: c.pct }); } catch (e) { } c.go(); } } },
-      !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
+      !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.img && hasSpr(c.img) ? h('span', { class: 'tspr' }, sprFit(c.img, 64)) : (tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null),
       h('span', { class: 'body' }, h('span', { class: 'l' }, emo(c.label)), c.sub ? h('span', { class: 's' }, emo(c.sub)) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
       c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%', c.att ? h('small', {}, c.att) : null) : null, cta ? h('span', { class: 'arrow' }, '›') : null);
   }));
@@ -1442,6 +1450,7 @@ function fillSheet() {
 }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
+  { const sp = pcSprite(); if (sp && hasSpr(sp)) box.append(h('div', { class: 'pcport' }, sprFit(sp, 120, 'portrait'), h('div', { class: 'pcname' }, h('b', {}, pc.name), h('span', { class: 'mut small' }, `${gradeName()} ${rankStr(pc.grade)}`)))); }
   box.append(h('button', { class: 'tab', style: 'margin:0 0 8px', onclick: () => parkOpen(factionMenu) }, pc.faction === 'civils' ? '🏴 Rejoindre une faction' : '🏴 Tableau de faction'));
   box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
@@ -2387,11 +2396,17 @@ function conclude() {
   if (cfg.canFlee === false) return loseCombat(false); finishCombat('flee');
 }
 // ── Affichage ──
+// Ton sprite et ceux de ton équipe en tête du combat
+function teamStrip() {
+  const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
+  if (!(me && hasSpr(me)) && !mates.length) return null;
+  return h('div', { class: 'cteam' }, me && hasSpr(me) ? h('div', { class: 'cme' }, sprFit(me, 56, 'portrait')) : null, ...mates.map(a => h('div', { class: 'cmate', title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))));
+}
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
   const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
     const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : 100)}%` }); const pct = Math.max(0, f.hp) / f.hpMax * 100; bars.push([bi, pct]); CB.prev[i] = pct;
-    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 22) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi)));
+    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 44) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi)));
   }));
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.weak ? 'ennemis affaiblis' : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const need = needW();
@@ -2408,7 +2423,7 @@ function renderCombat() {
       if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
     }, 60);
   };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, teamStrip(), h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
   const pc = G.pc; const L = [];
