@@ -113,7 +113,13 @@ function menuPop() {
 function toast(t) { const el = h('div', { class: 'toast' }, t); document.body.append(el); setTimeout(() => el.remove(), 1800); }
 
 function choicesEl(list, tiles, tcls) {
-  const items = list.filter(Boolean); const ctaIdx = items.length <= 3 ? items.findIndex(c => /^(Continuer|Commencer|Suivant|Partir|Accepter|Jouer)/.test(c.label)) : -1;
+  let items = list.filter(Boolean);
+  // Mobile : une longue mosaïque est paginée (6 par page) pour tenir dans l'écran
+  if (tiles && innerWidth < 700 && UI.scene) {
+    const isNav = c => /^(←|Annuler|Renoncer|Refuser|Retour|Plus tard)/.test(c.label || '') || c.cls === 'back'; const nav = items.filter(isNav), main = items.filter(c => !isNav(c)); const PER = 6;
+    if (main.length > PER + 2) { const sc = UI.scene; const pages = Math.ceil(main.length / PER); sc._pg = Math.min(sc._pg || 0, pages - 1); const view = main.slice(sc._pg * PER, (sc._pg + 1) * PER);
+      items = [...view, Object.assign(C(`Suite ${sc._pg + 1}/${pages}`, () => { sc._pg = (sc._pg + 1) % pages; render(true); }, { ic: '▸' }), { cls: 'pgbtn' }), ...nav]; }
+  } const ctaIdx = items.length <= 3 ? items.findIndex(c => /^(Continuer|Commencer|Suivant|Partir|Accepter|Jouer)/.test(c.label)) : -1;
   return h('div', { class: 'choices' + (tiles ? ' tiles' : '') + (tcls ? ' ' + tcls : '') }, items.map((c, i) => {
     const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); try { if (typeof tele === 'function') tele('pick', { l: String(c.label || '').slice(0, 40), p: c.pct }); } catch (e) { } c.go(); } } },
@@ -123,6 +129,14 @@ function choicesEl(list, tiles, tcls) {
   }));
 }
 
+// Mobile : tout doit tenir dans l'écran. On réduit la zone de scène (zoom) en dernier recours.
+function fitScreen() {
+  const go = () => { const lay = document.querySelector('#app .layout'); if (!lay) return; lay.style.zoom = ''; if (innerWidth > 700) return;
+    const avail = innerHeight, total = document.documentElement.scrollHeight; if (total <= avail + 1) return;
+    const lh = lay.getBoundingClientRect().height; if (!lh) return; const z = (avail - (total - lh) - 2) / lh; lay.style.zoom = String(Math.max(0.6, Math.min(1, z))); };
+  requestAnimationFrame(go); setTimeout(go, 400); setTimeout(go, 1300);
+}
+window.addEventListener('resize', () => { try { fitScreen(); } catch (e) { } });
 function render(quiet) {
   const app = $('#app'); app.innerHTML = ''; app.className = (quiet ? 'quiet ' : '') + ((UI.scene && UI.scene.compact) ? 'lite' : ''); UI.after = [];
   const sc = UI.scene; if (!sc) return;
@@ -145,7 +159,7 @@ function render(quiet) {
   if (sc.after && !sc.afterRan) { sc.afterRan = true; UI.after.push(sc.after); }
   if (d && !quiet) { const ch = $('.choices', main); if (ch) { ch.style.pointerEvents = 'none'; setTimeout(() => { ch.style.pointerEvents = ''; }, d * 1000 + 200); } }
   if (!quiet) { try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { } }
-  runAfter();
+  runAfter(); fitScreen();
 }
 function railEl(sc) {
   const f = G.pc.flags; const st = f.stage || 'contrats'; const trav = sc && sc.kicker === 'Orbitrail';
@@ -184,22 +198,26 @@ function fillSheet() {
   requestAnimationFrame(() => s.classList.add('open'));
 }
 function tabPerso() {
-  const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
-  { const sp = pcSprite(); if (sp && hasSpr(sp)) box.append(h('div', { class: 'pcport' }, sprFit(sp, 120, 'portrait'), h('div', { class: 'pcname' }, h('b', {}, pc.name), h('span', { class: 'mut small' }, `${gradeName()} ${rankStr(pc.grade)}`)))); }
-  box.append(h('button', { class: 'tab', style: 'margin:0 0 8px', onclick: () => parkOpen(factionMenu) }, pc.faction === 'civils' ? '🏴 Rejoindre une faction' : '🏴 Tableau de faction'));
-  box.append(endingsBox());
-  if (pc.pts > 0) box.append(h('button', { class: 'tab on', style: 'margin:0 0 8px', onclick: () => { closeSheet && closeSheet(); spendPoints(Object.assign(() => hub(), { force: true })); } }, `✨ Répartir ${pc.pts} point${pc.pts > 1 ? 's' : ''}`));
-  { const fp = factionPerk(); if (fp) box.append(h('div', { class: 'fperk' }, h('span', { class: 'fpi' }, fp[0]), h('div', {}, h('b', {}, fp[1]), h('div', { class: 'small mut' }, fp[2])))); }
-  box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
-  if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
+  const pc = G.pc; const box = h('div'); const P1 = h('div'), P2 = h('div'), P3 = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
+  { const sp = pcSprite(); if (sp && hasSpr(sp)) P1.append(h('div', { class: 'pcport' }, sprFit(sp, 120, 'portrait'), h('div', { class: 'pcname' }, h('b', {}, pc.name), h('span', { class: 'mut small' }, `${gradeName()} ${rankStr(pc.grade)}`)))); }
+  P1.append(h('button', { class: 'tab', style: 'margin:0 0 8px', onclick: () => parkOpen(factionMenu) }, pc.faction === 'civils' ? '🏴 Rejoindre une faction' : '🏴 Tableau de faction'));
+  P3.append(endingsBox());
+  if (pc.pts > 0) P1.append(h('button', { class: 'tab on', style: 'margin:0 0 8px', onclick: () => { closeSheet && closeSheet(); spendPoints(Object.assign(() => hub(), { force: true })); } }, `✨ Répartir ${pc.pts} point${pc.pts > 1 ? 's' : ''}`));
+  { const fp = factionPerk(); if (fp) P1.append(h('div', { class: 'fperk' }, h('span', { class: 'fpi' }, fp[0]), h('div', {}, h('b', {}, fp[1]), h('div', { class: 'small mut' }, fp[2])))); }
+  P1.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
+  if (!pcPowers().length) P2.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
   pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
-    box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
-  if (pc.ptype !== 'aucun') box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
-  ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
-  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', { title: 'Mérite' }, '🎖'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', { title: 'Prime' }, '🎯'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] + ' · posée par ' + bountyBy()] : [])));
-  box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais')));
-  box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
-  if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
+    P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
+  if (pc.ptype !== 'aucun') P2.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
+  ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); P1.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
+  P1.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', { title: 'Mérite' }, '🎖'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', { title: 'Prime' }, '🎯'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] + ' · posée par ' + bountyBy()] : [])));
+  P3.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais')));
+  P3.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
+  if (pc.implant) P3.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
+  const pages = [['Profil', P1], ['Pouvoir', P2], ['Fins', P3]]; const body = h('div', {}); const seg = h('div', { class: 'seg' }); let cur = UI.persoPage || 0;
+  const show1 = i => { UI.persoPage = cur = i; body.innerHTML = ''; body.append(pages[i][1]); [...seg.children].forEach((b, j) => b.classList.toggle('on', j === i)); };
+  pages.forEach(([n], i) => seg.append(h('button', { class: 'tab', onclick: () => { sfx('click'); show1(i); } }, n)));
+  box.append(seg, body); show1(cur);
   return box;
 }
 function tabInv() {

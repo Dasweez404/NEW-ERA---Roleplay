@@ -94,7 +94,7 @@ const blackOkNow = () => { const pc = G.pc; return (pc.rep.noir || 0) >= 10 || [
 function itemStat(it) { return it.t === 'arme' ? `+${it.dmg} dég.${it.ranged ? ' · dist.' : ''}` : it.t === 'armure' ? `+${it.def} déf.` : it.t === 'vehicule' ? `${it.v.legal ? '' : 'illégal'}${it.v.armed ? ' armé' : ''}`.trim() : ''; }
 function shopMenu() {
   const pc = G.pc; const cat = SHOP.cat; const steal = SHOP.steal; const bok = blackOkNow();
-  const bar = h('div', { class: 'shopbar' }, h('div', { class: 'shopcats' }, SHOP_CATS.map(([t, ic, n]) => h('button', { class: 'tab' + (cat === t ? ' on' : ''), onclick: () => { SHOP.cat = t; sfx('click'); shopMenu(); }, title: n }, ic + ' ' + n.split(' ')[0]))),
+  const bar = h('div', { class: 'shopbar' }, h('div', { class: 'shopcats' }, SHOP_CATS.map(([t, ic, n]) => h('button', { class: 'tab' + (cat === t ? ' on' : ''), onclick: () => { SHOP.cat = t; SHOP.page = 0; sfx('click'); shopMenu(); }, title: n }, ic + ' ' + n.split(' ')[0]))),
     h('div', { class: 'shopqty' }, [1, 3, 5].map(n => h('button', { class: 'tab' + ((SHOP.qty || 1) === n ? ' on' : ''), title: 'Quantité (consommables)', onclick: () => { SHOP.qty = n; sfx('click'); shopMenu(); } }, '×' + n))),
     h('button', { class: 'swt' + (steal ? ' on' : ''), onclick: () => { SHOP.steal = !steal; sfx('click'); shopMenu(); }, 'aria-pressed': steal }, h('span', { class: 'swl' }, 'Acheter'), h('span', { class: 'swk' }), h('span', { class: 'swl' }, 'Voler')));
   const ids = shopIds().filter(id => ITEMS[id].t === cat).sort((a, b) => ITEMS[a].price - ITEMS[b].price); const L = [];
@@ -104,6 +104,8 @@ function shopMenu() {
     if (steal) L.push(C(label, () => stealItem(id), { sub, odds: ['agilite', stealDc(id), ['stealth', 'disguise']], cls: 'risk', req: { ok: () => blk ? 'Pas de vol au Marché Noir' : (it.t !== 'vehicule' && invFree() < 1) ? 'Sac plein' : null } }));
     else L.push(C(label, () => buy(id, price, q), { sub, req: { money: price * q, ok: () => (blk && !bok) ? 'Marché Noir : 10 de réputation requise' : (ITEMS[id].t !== 'vehicule' && invFree() < q) ? 'Sac plein (' + invCount() + '/' + invCap() + ')' : null } }));
   });
+  const per = innerWidth < 700 ? 6 : 99, pages = Math.max(1, Math.ceil(L.length / per)); SHOP.page = Math.min(SHOP.page || 0, pages - 1); const view = L.splice(0, L.length).slice(SHOP.page * per, (SHOP.page + 1) * per); L.push(...view);
+  if (pages > 1) L.push(C(`Suite ${SHOP.page + 1}/${pages}`, () => { SHOP.page = (SHOP.page + 1) % pages; shopMenu(); }, { ic: '▸', cls: 'back' }));
   L.push(C('Vendre', sellMenu, { ic: '💰', req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
   L.push(C('← Retour', cityBack, { cls: 'back' }));
   show({ kicker: 'MARCHÉ', title: steal ? 'Mode vol' : 'Marché', text: [`<b>${fmt(pc.money)} ¢</b> · 🎒 ${invCount()}/${invCap()}${bok ? '' : ' · 🕶 articles du Marché Noir verrouillés (10 de réputation)'}${steal ? ' · <b class="badc">discret et risqué</b>' : ''}`], extra: bar, choices: L, tiles: true, tileCls: 'shop' });
