@@ -103,10 +103,7 @@ function missionBoard() {
   L.push(C('← Retour', () => contractCard()));
   show({ kicker: 'Missions', title: 'Tableau de missions', text: ['Contrats de ta faction, du Marché Noir ou de notables locaux. La difficulté suit ton grade ; plus haut tu vises, plus ça paie — et plus ça mord.'], choices: L });
 }
-function missionBrief(o) {
-  const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o), ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? { heavy: 'Cette mission est sans retour : des gens en subiront les conséquences.' } : {}), C('Refuser', () => contractCard())] });
-}
+function missionBrief(o) { missionApproach(o); }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
   Object.keys(a.ap).forEach(k => {
@@ -120,7 +117,7 @@ function approachChoices(o) {
 }
 function missionApproach(o) {
   const a = ARCH[o.arch];
-  show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''}</span>`], choices: [...approachChoices(o), C('Renoncer', o.feed ? hub : missionBoard, { cls: 'back' })] });
+  show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), o.tchar && CH[o.tchar] ? `Cible désignée : <b>${esc(CH[o.tchar].name)}</b> (${esc(F[CH[o.tchar].faction].name)}, ${charPowerText(CH[o.tchar])}).` : '', ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? '<span class="badc">Sans retour : des gens en subiront les conséquences.</span>' : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`].filter(Boolean), choices: [...approachChoices(o), C('Renoncer', o.back || (o.feed ? hub : missionBoard), { cls: 'back' })] });
 }
 function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;

@@ -41,7 +41,7 @@ function campCard() {
   const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
     const last = c.ch >= def.ch.length; const gain = fx({ xp: 12 + 4 * wTier(), hp: r.ok ? 0 : -rint(2, 7), heat: r.ok ? 0 : 2 });
-    if (!last) return show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
+    if (!last) return show({ chain: true, chainTitle: `Campagne · ${def.n}`, kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
     const good = c.s >= 2; const [txt, rw] = def.end[good ? 0 : 1]; f.camp = null; done.push(c.id); G.score.camps = (G.score.camps || 0) + (good ? 1 : 0); logEntry(`Campagne « ${def.n} » : ${good ? 'réussie' : 'inachevée'}.`);
     show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: good ? 'Dénouement' : 'Dénouement amer', text: [r.ok ? okT : koT, checkLine(r), txt], fx: [...gain, ...fx(rw)], choices: [C('Continuer', hub)] });
   }, { odds: [attr, dc, tags], ic: '📖' }); });

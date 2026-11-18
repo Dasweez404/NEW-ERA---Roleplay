@@ -36,7 +36,7 @@ function storyCard() {
   const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
     return C(lab, () => {
       const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
-      show({ kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
+      show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
     }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲' });
   });
   L.push(C('Passer ton chemin', hub, { cls: 'back' }));

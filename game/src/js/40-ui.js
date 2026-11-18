@@ -49,13 +49,25 @@ function fxHTML(L) {
   return box;
 }
 
+function carryEl(c) {
+  const ok = c.ok !== false;
+  return h('div', { class: 'carry ' + (ok ? 'ok' : 'ko') }, h('div', { class: 'carry-h' }, h('span', {}, ok ? '✔' : '✖'), h('b', {}, c.title)), c.text ? h('div', { class: 'carry-t' }, c.text) : null, c.fx && c.fx.length ? fxHTML(c.fx) : null);
+}
 function show(sc) {
   if (G && G.status !== 'play' && !sc.final) return;
+  // un simple « Continuer » après un résultat : il passe en bandeau sur la carte suivante (pas d'écran en plus)
+  if (G && G.pc && G.status === 'play' && typeof CB !== 'undefined' && !CB && !sc.final && !sc.noCarry && (sc.chain || sc.title === 'Réussi' || sc.title === 'Raté') && sc.choices && sc.choices.length === 1 && sc.choices[0] && sc.choices[0].label === 'Continuer' && sc.choices[0].go === hub && G.pc.flags.stage === 'story' && !(G.pc.pts > 0)) {
+    const txt = [].concat(sc.text || []).filter(t => typeof t === 'string' && t && !t.startsWith('🎲'))[0] || '';
+    UI.carry = { title: sc.chainTitle || sc.kicker || sc.title, ok: sc.title !== 'Raté' && sc.title !== 'Pas assez' && sc.title !== 'Un contretemps', text: txt.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim(), fx: sc.fx || [] };
+    UI.roll = null; return hub();
+  }
+  if (UI.carry && typeof CB !== 'undefined' && !CB && !sc.final && !sc.bare) { sc.carry = UI.carry; UI.carry = null; }
   if (UI.scene && UI.scene.coachId) tutoMark(UI.scene.coachId);
   if (UI.nextCoach) { sc.coachId = UI.nextCoach; UI.nextCoach = null; }
   if (G && G.pc && G.pc.pts > 0 && !sc.noLevel && !sc.final && typeof CB !== 'undefined' && !CB && sc.choices) sc.choices = sc.choices.map(c => (c && !c.lock && !/^←/.test(c.label || '')) ? Object.assign({}, c, { go: () => spendPoints(c.go) }) : c);
   const roll = UI.roll; UI.roll = null;
-  if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
+  if (roll && roll.r && roll.quick) { sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
+  else if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
   UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
 }
 function paragraphs(t) {
@@ -121,7 +133,7 @@ function render(quiet) {
   const d = sc.roll && !quiet ? 1.05 : 0;
   const back = (sc.choices || []).filter(Boolean).find(c => /^←/.test(c.label)); UI.back = back ? back.go : null;
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
-    sc.coachId ? coachEl(sc.coachId) : null,
+    sc.coachId ? coachEl(sc.coachId) : null, sc.carry ? carryEl(sc.carry) : null,
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);

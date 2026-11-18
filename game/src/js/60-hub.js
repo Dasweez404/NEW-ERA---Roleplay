@@ -20,7 +20,7 @@ function actionsMenu() { resumeScene(); }
 function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 1; cityMenu(); }
 function cityMenu() {
   const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 1; const left = f.cityActs; const L = [];
-  if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; return recapCard(); } return travelMenu(); }
+  if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; UI.recap = recapChips(); } return travelMenu(); }
   if (left > 0) {
     const T = []; baseTile(T); atelierTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
@@ -65,8 +65,12 @@ function travelMenu(pre) {
     return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
+  const recap = UI.recap; UI.recap = null;
+  const quickIds = [...new Set([...focusIds.slice(1), ...neighbors(here)])].filter(x => S[x] && !closureOf(x)).slice(0, 3);
+  const quick = quickIds.map(id => { let r = otRoute(here, id); if (!r) return null; if (freeSet.has(id)) r = Object.assign({}, r, { cost: 0 }); const wk = 1 + Math.floor((r.hops - 1) / 4); const why = (reco.get(id) || [])[0] || (leadMap().has(id) ? leadTitle(leadMap().get(id)) : freeSet.has(id) ? 'Station voisine' : '');
+    return C(`${capName(id)}`, () => { if (G.pc.money < r.cost) return toast('Pas assez de crédits (' + r.cost + ' ¢)'); travelGo(id, r, wk); }, { ic: '🚆', sub: `${why ? why + ' · ' : ''}${r.cost ? r.cost + ' ¢' : 'gratuit'} · ${wk} sem.`, cls: 'safe' }); }).filter(Boolean);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
-  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, clueRow, box, info), choices: back });
+  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, recap ? h('div', { class: 'recapbar' }, h('div', { class: 'recap-h' }, `BILAN · ${capName(recap.loc)}${recap.wks ? ' · ' + recap.wks + ' sem.' : ''}`), fxHTML(recap.chips.length ? recap.chips : [{ t: 'Rien de notable', c: '' }])) : null, h('div', { class: 'qgos' }, quick.map(c => h('button', { class: 'qgo', onclick: () => { sfx('click'); c.go(); } }, h('b', {}, '🚆 ' + c.label), h('small', {}, c.sub)))), clueRow, box, info), choices: back });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -256,13 +260,12 @@ function objectivesMenu() {
   L.push(C('← Retour', actionsMenu)); show({ kicker: 'Objectifs', title: `${objectives().length} chose${objectives().length > 1 ? 's' : ''} à garder en tête`, text: [`<span class="mut">Pierres : ${stoneCount()}/16 · Destination n° ${G.pc.flags.dest || 1}</span>`], choices: L });
 }
 
-// ───────── Bilan avant de repartir (court) ─────────
-function recapCard() {
-  const pc = G.pc, s = pc.flags.snap; const d = (a, b) => a - b; const sg = n => (n > 0 ? '+' : '') + n;
-  const chips = []; const add = (ic, v, unit, bad) => { if (v) chips.push({ t: `${ic} ${sg(v)}${unit}`, c: (v > 0) !== !!bad ? 'good' : 'badc' }); };
-  add('₵', d(pc.money, s.money), ' ¢'); add('✦', d(pc.xp, s.xp), ' XP'); add('🎖', d(pc.merit, s.merit), ' mérite'); add('♥', d(pc.hp, s.hp), ' PV'); add('💎', d(stoneCount(), s.st), ' pierre');
+// ───────── Bilan de la destination (bandeau sur la carte de départ) ─────────
+function recapChips() {
+  const pc = G.pc, s = pc.flags.snap; const sg = n => (n > 0 ? '+' : '') + n; const chips = [];
+  const add = (ic, v, unit) => { if (v) chips.push({ t: `${ic} ${sg(v)}${unit}`, c: v > 0 ? 'good' : 'badc' }); };
+  add('₵', pc.money - s.money, ' ¢'); add('✦', pc.xp - s.xp, ' XP'); add('🎖', pc.merit - s.merit, ' mérite'); add('♥', pc.hp - s.hp, ' PV'); add('💎', stoneCount() - s.st, ' pierre');
   const rv = Object.keys(pc.rep).map(k => [k, (pc.rep[k] || 0) - ((s.rep || {})[k] || 0)]).filter(x => x[1]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
   if (rv) chips.push({ t: `🤝 ${F[rv[0]] ? F[rv[0]].name : rv[0]} ${sg(rv[1])}`, c: rv[1] > 0 ? 'good' : 'badc' });
-  const wks = G.wk - s.wk;
-  show({ kicker: `BILAN · ${capName(s.loc).toUpperCase()}`, title: 'Avant de repartir', text: [wks ? `<span class="mut">${wks} semaine${wks > 1 ? 's' : ''} passée${wks > 1 ? 's' : ''} ici.</span>` : ''].filter(Boolean), fx: chips.length ? chips : [{ t: 'Rien de notable cette fois.', c: '' }], choices: [C('Choisir ma destination', () => travelMenu(), { ic: '🚆', cls: 'cta' })] });
+  return { loc: s.loc, wks: G.wk - s.wk, chips };
 }

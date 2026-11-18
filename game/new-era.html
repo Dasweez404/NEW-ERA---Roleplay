@@ -594,6 +594,13 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .stdia{filter:drop-shadow(0 0 6px #b026ff);animation:dpl 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes dpl{50%{transform:scale(1.18)}}
 
 .pill.obj{background:#1a1230;border-color:#b026ff;color:#e9ebff;cursor:pointer}
+
+.carry{border:1px solid #2a3a44;border-left:3px solid #35f0a0;background:rgba(53,240,160,.06);padding:8px 10px;margin:0 0 10px;animation:carryin .45s cubic-bezier(.2,1.2,.4,1) both}.carry.ko{border-left-color:#ff3d7f;background:rgba(255,61,127,.06)}
+.carry-h{display:flex;gap:8px;align-items:center;font:700 .82rem var(--fb)}.carry.ok .carry-h span{color:#35f0a0}.carry.ko .carry-h span{color:#ff3d7f}.carry-t{font-size:.88rem;color:#b9bde0;margin:4px 0}
+@keyframes carryin{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+.recapbar{border:1px solid #2a2a44;background:#10101f;padding:6px 10px;margin:0 0 8px}.recap-h{font:700 .66rem var(--fb);letter-spacing:.12em;color:#8a90c0;margin-bottom:2px}
+
+.qgos{display:grid;gap:6px;margin:0 0 8px}.qgo{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;background:#0f1d18;border:1px solid #35f0a0;color:#e9ebff;padding:8px 12px;cursor:pointer;font:600 .95rem var(--fb);transition:transform .15s,box-shadow .15s}.qgo:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(53,240,160,.2)}.qgo small{font-weight:500;color:#9fd8c0;font-size:.74rem}
 </style>
 </head>
 <body>
@@ -1075,7 +1082,7 @@ const dcEff = dc => Math.round(3.8 + 0.58 * dc);
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
   const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
-  res.ok = res.crit || (!res.fumble && total >= d);
+  res.ok = res.crit || (!res.fumble && total >= d); res.quick = res.ok && !res.crit && clamp((21 - (d - mod)) / 20, 0.08, 0.93) >= 0.85;
   if (G.pc.stim > 0) G.pc.stim = 0;
   UI.roll = res;
   return res;
@@ -1232,13 +1239,25 @@ function fxHTML(L) {
   return box;
 }
 
+function carryEl(c) {
+  const ok = c.ok !== false;
+  return h('div', { class: 'carry ' + (ok ? 'ok' : 'ko') }, h('div', { class: 'carry-h' }, h('span', {}, ok ? '✔' : '✖'), h('b', {}, c.title)), c.text ? h('div', { class: 'carry-t' }, c.text) : null, c.fx && c.fx.length ? fxHTML(c.fx) : null);
+}
 function show(sc) {
   if (G && G.status !== 'play' && !sc.final) return;
+  // un simple « Continuer » après un résultat : il passe en bandeau sur la carte suivante (pas d'écran en plus)
+  if (G && G.pc && G.status === 'play' && typeof CB !== 'undefined' && !CB && !sc.final && !sc.noCarry && (sc.chain || sc.title === 'Réussi' || sc.title === 'Raté') && sc.choices && sc.choices.length === 1 && sc.choices[0] && sc.choices[0].label === 'Continuer' && sc.choices[0].go === hub && G.pc.flags.stage === 'story' && !(G.pc.pts > 0)) {
+    const txt = [].concat(sc.text || []).filter(t => typeof t === 'string' && t && !t.startsWith('🎲'))[0] || '';
+    UI.carry = { title: sc.chainTitle || sc.kicker || sc.title, ok: sc.title !== 'Raté' && sc.title !== 'Pas assez' && sc.title !== 'Un contretemps', text: txt.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim(), fx: sc.fx || [] };
+    UI.roll = null; return hub();
+  }
+  if (UI.carry && typeof CB !== 'undefined' && !CB && !sc.final && !sc.bare) { sc.carry = UI.carry; UI.carry = null; }
   if (UI.scene && UI.scene.coachId) tutoMark(UI.scene.coachId);
   if (UI.nextCoach) { sc.coachId = UI.nextCoach; UI.nextCoach = null; }
   if (G && G.pc && G.pc.pts > 0 && !sc.noLevel && !sc.final && typeof CB !== 'undefined' && !CB && sc.choices) sc.choices = sc.choices.map(c => (c && !c.lock && !/^←/.test(c.label || '')) ? Object.assign({}, c, { go: () => spendPoints(c.go) }) : c);
   const roll = UI.roll; UI.roll = null;
-  if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
+  if (roll && roll.r && roll.quick) { sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
+  else if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
   UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
 }
 function paragraphs(t) {
@@ -1304,7 +1323,7 @@ function render(quiet) {
   const d = sc.roll && !quiet ? 1.05 : 0;
   const back = (sc.choices || []).filter(Boolean).find(c => /^←/.test(c.label)); UI.back = back ? back.go : null;
   const main = h('div', { class: 'card scene', style: `--d:${d}s` },
-    sc.coachId ? coachEl(sc.coachId) : null,
+    sc.coachId ? coachEl(sc.coachId) : null, sc.carry ? carryEl(sc.carry) : null,
     back ? h('button', { class: 'backchip', onclick: () => { sfx('click'); back.go(); } }, '← ' + back.label.replace(/^←\s*/, '')) : null,
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);
@@ -1634,7 +1653,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' || e.key === 'Backspace') { if (UI.sheetOpen) closeSheet(); else if (UI.back && !document.querySelector('.splash')) { e.preventDefault(); UI.back(); } return; }
   const bs = [...document.querySelectorAll('.choices .ch')].filter(b => !b.disabled);
   if (/^[1-9]$/.test(e.key)) { const b = document.querySelector(`.choices .ch[data-k="${e.key}"]`); if (b && !b.disabled) b.click(); }
-  else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === document.body) { const c = document.querySelector('.choices .ch.cta:not([disabled])'); if (c) { e.preventDefault(); c.click(); } }
+  else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === document.body) { const c = document.querySelector('.choices .ch.cta:not([disabled])') || (bs.length === 1 ? bs[0] : null); if (c) { e.preventDefault(); c.click(); } }
 });
 document.addEventListener('pointerdown', e => { const b = e.target.closest && e.target.closest('.ch,.btn,.dk,.tab,.ibtn'); if (!b || b.disabled) return; const r = b.getBoundingClientRect(); b.style.setProperty('--rx', (e.clientX - r.left) + 'px'); b.style.setProperty('--ry', (e.clientY - r.top) + 'px'); b.classList.remove('rip'); void b.offsetWidth; b.classList.add('rip'); });
 
@@ -2237,7 +2256,7 @@ function startCombat(cfg) {
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
 function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return; const el = h('div', { class: 'vfx ' + cls }, text); document.body.append(el); setTimeout(() => el.remove(), 950); }
-function beginDuel() { if (!CB) return; CB.preview = false; splash({ title: 'COMBAT', sub: CB.cfg.title || '', icon: '⚔', color: '#ff3d7f', ms: 700 }); coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
+function beginDuel() { if (!CB) return; CB.preview = false; coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
 function renderPreview() {
   coach('combat'); const cfg = CB.cfg; const T = CB.thr;
   const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);
@@ -2368,7 +2387,7 @@ function actionsMenu() { resumeScene(); }
 function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 1; cityMenu(); }
 function cityMenu() {
   const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 1; const left = f.cityActs; const L = [];
-  if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; return recapCard(); } return travelMenu(); }
+  if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; UI.recap = recapChips(); } return travelMenu(); }
   if (left > 0) {
     const T = []; baseTile(T); atelierTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
@@ -2413,8 +2432,12 @@ function travelMenu(pre) {
     return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
+  const recap = UI.recap; UI.recap = null;
+  const quickIds = [...new Set([...focusIds.slice(1), ...neighbors(here)])].filter(x => S[x] && !closureOf(x)).slice(0, 3);
+  const quick = quickIds.map(id => { let r = otRoute(here, id); if (!r) return null; if (freeSet.has(id)) r = Object.assign({}, r, { cost: 0 }); const wk = 1 + Math.floor((r.hops - 1) / 4); const why = (reco.get(id) || [])[0] || (leadMap().has(id) ? leadTitle(leadMap().get(id)) : freeSet.has(id) ? 'Station voisine' : '');
+    return C(`${capName(id)}`, () => { if (G.pc.money < r.cost) return toast('Pas assez de crédits (' + r.cost + ' ¢)'); travelGo(id, r, wk); }, { ic: '🚆', sub: `${why ? why + ' · ' : ''}${r.cost ? r.cost + ' ¢' : 'gratuit'} · ${wk} sem.`, cls: 'safe' }); }).filter(Boolean);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
-  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, clueRow, box, info), choices: back });
+  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, recap ? h('div', { class: 'recapbar' }, h('div', { class: 'recap-h' }, `BILAN · ${capName(recap.loc)}${recap.wks ? ' · ' + recap.wks + ' sem.' : ''}`), fxHTML(recap.chips.length ? recap.chips : [{ t: 'Rien de notable', c: '' }])) : null, h('div', { class: 'qgos' }, quick.map(c => h('button', { class: 'qgo', onclick: () => { sfx('click'); c.go(); } }, h('b', {}, '🚆 ' + c.label), h('small', {}, c.sub)))), clueRow, box, info), choices: back });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -2604,15 +2627,14 @@ function objectivesMenu() {
   L.push(C('← Retour', actionsMenu)); show({ kicker: 'Objectifs', title: `${objectives().length} chose${objectives().length > 1 ? 's' : ''} à garder en tête`, text: [`<span class="mut">Pierres : ${stoneCount()}/16 · Destination n° ${G.pc.flags.dest || 1}</span>`], choices: L });
 }
 
-// ───────── Bilan avant de repartir (court) ─────────
-function recapCard() {
-  const pc = G.pc, s = pc.flags.snap; const d = (a, b) => a - b; const sg = n => (n > 0 ? '+' : '') + n;
-  const chips = []; const add = (ic, v, unit, bad) => { if (v) chips.push({ t: `${ic} ${sg(v)}${unit}`, c: (v > 0) !== !!bad ? 'good' : 'badc' }); };
-  add('₵', d(pc.money, s.money), ' ¢'); add('✦', d(pc.xp, s.xp), ' XP'); add('🎖', d(pc.merit, s.merit), ' mérite'); add('♥', d(pc.hp, s.hp), ' PV'); add('💎', d(stoneCount(), s.st), ' pierre');
+// ───────── Bilan de la destination (bandeau sur la carte de départ) ─────────
+function recapChips() {
+  const pc = G.pc, s = pc.flags.snap; const sg = n => (n > 0 ? '+' : '') + n; const chips = [];
+  const add = (ic, v, unit) => { if (v) chips.push({ t: `${ic} ${sg(v)}${unit}`, c: v > 0 ? 'good' : 'badc' }); };
+  add('₵', pc.money - s.money, ' ¢'); add('✦', pc.xp - s.xp, ' XP'); add('🎖', pc.merit - s.merit, ' mérite'); add('♥', pc.hp - s.hp, ' PV'); add('💎', stoneCount() - s.st, ' pierre');
   const rv = Object.keys(pc.rep).map(k => [k, (pc.rep[k] || 0) - ((s.rep || {})[k] || 0)]).filter(x => x[1]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
   if (rv) chips.push({ t: `🤝 ${F[rv[0]] ? F[rv[0]].name : rv[0]} ${sg(rv[1])}`, c: rv[1] > 0 ? 'good' : 'badc' });
-  const wks = G.wk - s.wk;
-  show({ kicker: `BILAN · ${capName(s.loc).toUpperCase()}`, title: 'Avant de repartir', text: [wks ? `<span class="mut">${wks} semaine${wks > 1 ? 's' : ''} passée${wks > 1 ? 's' : ''} ici.</span>` : ''].filter(Boolean), fx: chips.length ? chips : [{ t: 'Rien de notable cette fois.', c: '' }], choices: [C('Choisir ma destination', () => travelMenu(), { ic: '🚆', cls: 'cta' })] });
+  return { loc: s.loc, wks: G.wk - s.wk, chips };
 }
 
 // ───────── Le fil de l'histoire : une carte, deux ou trois choix, un dé, la suite (style Destiny Eleven) ─────────
@@ -2679,7 +2701,7 @@ function contractCard(arrive) {
   ensureLeads(); { const ld = (G.world.leads || {})[G.loc]; if (ld && ld.exp >= G.wk) L.push(C(`${LEAD_KINDS[ld.kind].ic} ${leadTitle(ld)}`, () => leadAct(ld), { cls: 'risk', sub: '🔴 Opportunité · ' + LEAD_KINDS[ld.kind].d })); }
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
-  [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => missionBrief(o), { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
+  [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => { o.back = () => contractCard(); missionBrief(o); }, { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
   if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
   L.push(C('Poursuivre l’intrigue', hub, { cls: 'cta', ic: '▶', sub: 'Laisser les contrats : la suite des événements arrive.' }));
   coach('contrats'); show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des contrats à prendre ici.', cityLine()].filter(Boolean), choices: L });
@@ -3162,10 +3184,7 @@ function missionBoard() {
   L.push(C('← Retour', () => contractCard()));
   show({ kicker: 'Missions', title: 'Tableau de missions', text: ['Contrats de ta faction, du Marché Noir ou de notables locaux. La difficulté suit ton grade ; plus haut tu vises, plus ça paie — et plus ça mord.'], choices: L });
 }
-function missionBrief(o) {
-  const a = ARCH[o.arch]; const t = o.tchar ? CH[o.tchar] : null;
-  show({ extra: t ? portrait(t.id, 120) : null, kicker: `${o.empName} · ${stars(o.tier)}`, title: `${a.n}${o.promo ? ' — épreuve de grade' : ''}`, text: [ctxText(a.intro, o), t ? `Cible désignée : <b>${esc(t.name)}</b> (${esc(F[t.faction].name)}, ${charPowerText(t)}).` : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`], choices: [C('Accepter la mission', () => missionApproach(o), ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? { heavy: 'Cette mission est sans retour : des gens en subiront les conséquences.' } : {}), C('Refuser', () => contractCard())] });
-}
+function missionBrief(o) { missionApproach(o); }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
   Object.keys(a.ap).forEach(k => {
@@ -3179,7 +3198,7 @@ function approachChoices(o) {
 }
 function missionApproach(o) {
   const a = ARCH[o.arch];
-  show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''}</span>`], choices: [...approachChoices(o), C('Renoncer', o.feed ? hub : missionBoard, { cls: 'back' })] });
+  show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), o.tchar && CH[o.tchar] ? `Cible désignée : <b>${esc(CH[o.tchar].name)}</b> (${esc(F[CH[o.tchar].faction].name)}, ${charPowerText(CH[o.tchar])}).` : '', ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? '<span class="badc">Sans retour : des gens en subiront les conséquences.</span>' : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`].filter(Boolean), choices: [...approachChoices(o), C('Renoncer', o.back || (o.feed ? hub : missionBoard), { cls: 'back' })] });
 }
 function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;
@@ -3495,7 +3514,7 @@ function campCard() {
   const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
     const last = c.ch >= def.ch.length; const gain = fx({ xp: 12 + 4 * wTier(), hp: r.ok ? 0 : -rint(2, 7), heat: r.ok ? 0 : 2 });
-    if (!last) return show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
+    if (!last) return show({ chain: true, chainTitle: `Campagne · ${def.n}`, kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
     const good = c.s >= 2; const [txt, rw] = def.end[good ? 0 : 1]; f.camp = null; done.push(c.id); G.score.camps = (G.score.camps || 0) + (good ? 1 : 0); logEntry(`Campagne « ${def.n} » : ${good ? 'réussie' : 'inachevée'}.`);
     show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: good ? 'Dénouement' : 'Dénouement amer', text: [r.ok ? okT : koT, checkLine(r), txt], fx: [...gain, ...fx(rw)], choices: [C('Continuer', hub)] });
   }, { odds: [attr, dc, tags], ic: '📖' }); });
@@ -4584,7 +4603,7 @@ function storyCard() {
   const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
     return C(lab, () => {
       const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
-      show({ kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
+      show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
     }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲' });
   });
   L.push(C('Passer ton chemin', hub, { cls: 'back' }));

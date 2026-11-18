@@ -72,7 +72,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' || e.key === 'Backspace') { if (UI.sheetOpen) closeSheet(); else if (UI.back && !document.querySelector('.splash')) { e.preventDefault(); UI.back(); } return; }
   const bs = [...document.querySelectorAll('.choices .ch')].filter(b => !b.disabled);
   if (/^[1-9]$/.test(e.key)) { const b = document.querySelector(`.choices .ch[data-k="${e.key}"]`); if (b && !b.disabled) b.click(); }
-  else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === document.body) { const c = document.querySelector('.choices .ch.cta:not([disabled])'); if (c) { e.preventDefault(); c.click(); } }
+  else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === document.body) { const c = document.querySelector('.choices .ch.cta:not([disabled])') || (bs.length === 1 ? bs[0] : null); if (c) { e.preventDefault(); c.click(); } }
 });
 document.addEventListener('pointerdown', e => { const b = e.target.closest && e.target.closest('.ch,.btn,.dk,.tab,.ibtn'); if (!b || b.disabled) return; const r = b.getBoundingClientRect(); b.style.setProperty('--rx', (e.clientX - r.left) + 'px'); b.style.setProperty('--ry', (e.clientY - r.top) + 'px'); b.classList.remove('rip'); void b.offsetWidth; b.classList.add('rip'); });
 

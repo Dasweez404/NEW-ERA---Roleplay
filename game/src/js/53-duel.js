@@ -80,7 +80,7 @@ function startCombat(cfg) {
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
 function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return; const el = h('div', { class: 'vfx ' + cls }, text); document.body.append(el); setTimeout(() => el.remove(), 950); }
-function beginDuel() { if (!CB) return; CB.preview = false; splash({ title: 'COMBAT', sub: CB.cfg.title || '', icon: '⚔', color: '#ff3d7f', ms: 700 }); coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
+function beginDuel() { if (!CB) return; CB.preview = false; coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
 function renderPreview() {
   coach('combat'); const cfg = CB.cfg; const T = CB.thr;
   const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);

@@ -42,7 +42,7 @@ const dcEff = dc => Math.round(3.8 + 0.58 * dc);
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
   const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
-  res.ok = res.crit || (!res.fumble && total >= d);
+  res.ok = res.crit || (!res.fumble && total >= d); res.quick = res.ok && !res.crit && clamp((21 - (d - mod)) / 20, 0.08, 0.93) >= 0.85;
   if (G.pc.stim > 0) G.pc.stim = 0;
   UI.roll = res;
   return res;
