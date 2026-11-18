@@ -685,6 +685,8 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .cme.atk{animation-duration:.65s}.cfoe.atk{animation-duration:.65s}.cfoe.hurt{animation-duration:.6s}
 
 .intent{display:flex;gap:10px;align-items:center;margin:6px 0;padding:6px 10px;border:1px solid rgba(255,61,127,.5);background:linear-gradient(90deg,rgba(255,61,127,.14),transparent);animation:intp .5s}.intent .iic{font-size:1.5rem}.intent b{color:#ff7aa8}@keyframes intp{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+
+.endbox{margin:10px 0;padding:8px 10px;border:1px dashed rgba(252,238,9,.4)}.endrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.07)}.endrow.ok{color:#5be3a0}.endrow .small{text-align:right;max-width:46%}
 </style>
 </head>
 <body>
@@ -1504,6 +1506,7 @@ function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
   { const sp = pcSprite(); if (sp && hasSpr(sp)) box.append(h('div', { class: 'pcport' }, sprFit(sp, 120, 'portrait'), h('div', { class: 'pcname' }, h('b', {}, pc.name), h('span', { class: 'mut small' }, `${gradeName()} ${rankStr(pc.grade)}`)))); }
   box.append(h('button', { class: 'tab', style: 'margin:0 0 8px', onclick: () => parkOpen(factionMenu) }, pc.faction === 'civils' ? '🏴 Rejoindre une faction' : '🏴 Tableau de faction'));
+  box.append(endingsBox());
   if (pc.pts > 0) box.append(h('button', { class: 'tab on', style: 'margin:0 0 8px', onclick: () => { closeSheet && closeSheet(); spendPoints(Object.assign(() => hub(), { force: true })); } }, `✨ Répartir ${pc.pts} point${pc.pts > 1 ? 's' : ''}`));
   { const fp = factionPerk(); if (fp) box.append(h('div', { class: 'fperk' }, h('span', { class: 'fpi' }, fp[0]), h('div', {}, h('b', {}, fp[1]), h('div', { class: 'small mut' }, fp[2])))); }
   box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
@@ -2539,7 +2542,7 @@ function cityMenu() {
   const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 1; const left = f.cityActs; const L = [];
   if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; UI.recap = recapChips(); } return travelMenu(); }
   if (left > 0) {
-    const T = []; baseTile(T); atelierTile(T);
+    const T = []; baseTile(T); atelierTile(T); if (typeof endingTile === 'function') endingTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
     T.push(C('Marché', () => shopMenu(), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
     T.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
@@ -4560,7 +4563,7 @@ function hitBuffInit() { return 0; }
 function assaultFA() {
   const pc = G.pc; const W = G.world; const wf = W.fac[pc.faction]; advance(1); if (G.status !== 'play') return;
   const foes = [mkFoe('prometh', 5), mkFoe('centaure', 5), mkFoe('soldat', 5), mkFoe('harpie', 4)];
-  startCombat({ title: 'Assaut sur une base de zone de la F.A.', foes, lethal: 'capture', intro: 'Les sirènes hurlent : tes troupes enfoncent les portes.', onWin: L => { const loot = rint(2000, 3500); wf.power = Math.min(100, wf.power + 8); W.fac.fa.power = Math.max(10, W.fac.fa.power - 6); const s = pick(DATA.states.filter(x => W.terr[x.id] === 'fa')); if (s) { W.terr[s.id] = 'pc'; newsPush(`${F[pc.faction].name} prend ${s.name} d’assaut.`); } newsPush(`Une base de la Force d’Autorité est tombée.`); show({ kicker: 'VICTOIRE', title: 'Une base de la F.A. a chuté', text: ['Les mechas sont à terre. L’annonce fera le tour de la planète.'], fx: [...L, ...fx({ money: loot, heat: 10, xp: 120, rep: { fa: -15 } })], choices: [C('Continuer', leaderMenu)] }); } });
+  startCombat({ title: 'Assaut sur une base de zone de la F.A.', foes, lethal: 'capture', intro: 'Les sirènes hurlent : tes troupes enfoncent les portes.', onWin: L => { const loot = rint(2000, 3500); wf.power = Math.min(100, wf.power + 8); W.fac.fa.power = Math.max(10, W.fac.fa.power - 6); const s = pick(DATA.states.filter(x => W.terr[x.id] === 'fa')); if (s) { W.terr[s.id] = 'pc'; newsPush(`${F[pc.faction].name} prend ${s.name} d’assaut.`); } newsPush(`Une base de la Force d’Autorité est tombée.`); pc.flags.faFall = (pc.flags.faFall || 0) + 1; show({ kicker: 'VICTOIRE', title: 'Une base de la F.A. a chuté', text: ['Les mechas sont à terre. L’annonce fera le tour de la planète.'], fx: [...L, ...fx({ money: loot, heat: 10, xp: 120, rep: { fa: -15 } })], choices: [C('Continuer', leaderMenu)] }); } });
   if (CB) CB.hitBuff = Math.floor(wf.power / 25);
 }
 function diplomacy() {
@@ -5056,6 +5059,34 @@ Object.assign(CAMPS, {
   ], end: [['Les voix se sont tues, apaisées. Tu repars avec un savoir rare.', { xp: 70, rep: { artefactors: 5 }, merit: 2 }], ['Les voix murmurent encore. Quelqu’un finira par les entendre.', { xp: 26 }]] },
 });
 
+// ───────── Autres fins que les 16 pierres ─────────
+// Chaque fin a ses conditions, visibles dans l'onglet Perso ; quand elles sont réunies, une tuile « Conclure » apparaît en ville.
+const ENDINGS = [
+  { id: 'conquete', ic: '👑', n: 'Hégémonie', d: 'Diriger ta faction et tenir 7 territoires.',
+    prog: () => { const pc = G.pc; return [['Chef de ta faction', G.world.leader[pc.faction] === 'pc' ? 1 : 0, 1], ['Territoires', ownedStates().length, 7]]; },
+    title: '👑 HÉGÉMONIE', text: ['Sept territoires, une seule bannière. Les anciennes frontières ne signifient plus rien : c’est ta faction qui fixe les règles, les routes et les prix. On dira que tu as unifié le monde. D’autres diront que tu l’as conquis. Les deux ont raison.'] },
+  { id: 'alliance', ic: '🕊', n: 'Grande Alliance', d: 'Allié avec 8 factions, au plus 2 ennemis déclarés, rang ▲4.',
+    prog: () => { const pf = G.pc.faction; const ids = WAR_FAC().filter(f => f !== pf); return [['Factions alliées', ids.filter(f => relation(pf, f) >= 2).length, 8], ['Rang', Math.min(G.pc.grade, 4), 4], ['Ennemis déclarés (max 2)', Math.min(3, enemiesOf(pf).length), 2, true]]; },
+    title: '🕊 LA GRANDE ALLIANCE', text: ['Huit bannières autour d’une même table : rivaux d’hier, alliés de demain. Les pierres restent où elles sont, endormies. La guerre des porteurs n’aura pas lieu, parce que quelqu’un a eu la patience de la désamorcer. Ce quelqu’un, c’est toi.'] },
+  { id: 'liberation', ic: '☀', n: 'Chute de la Force d’Autorité', d: 'Faire tomber 3 bases de la F.A., rang ▲4.',
+    prog: () => [['Bases de la F.A. tombées', G.pc.flags.faFall || 0, 3], ['Rang', Math.min(G.pc.grade, 4), 4]],
+    title: '☀ LA CHUTE DU NOUVEAU RÉGIME', text: ['La troisième base tombe. Les mechas s’éteignent un à un, les doyens négocient leur reddition. Sans la Force d’Autorité, les porteurs marchent à visage découvert pour la première fois depuis des années. Le protocole ANTI se termine ici.'] },
+  { id: 'sceau', ic: '🔒', n: 'Le Sceau', d: 'Réunir 8 pierres et sceller leur pouvoir (moralité de Protecteur).',
+    prog: () => [['Pierres antiques', stoneCount(), 8], ['Moralité de Protecteur (6+)', Math.max(0, Math.min(karma(), 6)), 6]],
+    title: '🔒 LE SCEAU', text: ['Huit pierres posées en cercle. Tu ne les prends pas : tu les scelles. L’ogénite se tait, les royaumes éteints peuvent enfin dormir. Aucun détenteur ne pourra plus remodeler le monde, ni pour le meilleur ni pour le pire. Une fin sans gloire, et sans regrets.'] },
+];
+const endingDone = e => e.prog().every(([, v, t, inv]) => inv ? v <= t : v >= t);
+const availableEndings = () => (G && G.pc && G.status === 'play') ? ENDINGS.filter(endingDone) : [];
+function endingsBox() {
+  const box = h('div', { class: 'endbox' }, h('b', {}, '🏁 Autres fins possibles'));
+  ENDINGS.forEach(e => { const p = e.prog(); const ok = endingDone(e); box.append(h('div', { class: 'endrow' + (ok ? ' ok' : '') }, h('div', {}, h('b', {}, `${e.ic} ${e.n}`), h('div', { class: 'small mut' }, e.d)), h('div', { class: 'small' }, p.map(([k, v, t, inv]) => `${k} ${v}/${t}`).join(' · '))));});
+  box.append(h('div', { class: 'small mut' }, 'Les 16 pierres restent la victoire ultime.'));
+  return box;
+}
+function endingTile(L) {
+  availableEndings().forEach(e => L.push(C(`Conclure : ${e.n}`, () => show({ kicker: 'FIN POSSIBLE', title: `${e.ic} ${e.n}`, text: [...e.text.slice(0, 1), 'Tu peux conclure ta partie ici. Le score compte comme une victoire.'], choices: [C('Conclure la partie', () => endGame('win', e.id), { cls: 'cta', ic: '🏁', heavy: 'La partie se termine pour de bon.' }), C('Pas maintenant', () => cityMenu(), { cls: 'back' })] }), { ic: e.ic, sub: 'Terminer la partie par cette fin.', cls: 'cta' })));
+}
+
 // ───────── Journal de partie (local) : enregistre ce qui se passe pour étudier et équilibrer ─────────
 // Tout reste dans ton navigateur (localStorage). Rien n'est envoyé : tu peux exporter le fichier et me le donner.
 const TELE_KEY = 'newera.tele.v1', TELE_ON = 'newera.tele.on';
@@ -5308,9 +5339,9 @@ function crRandomAll() {
 }
 // ───────── Fin de partie ─────────
 function showEnding(kind, cause, sc) {
-  const pc = G.pc; const title = kind === 'win' ? '🏆 LES 16 PIERRES !' : kind === 'retire' ? '🌴 Retraite' : '☠ Fin de ta route';
-  const txt = kind === 'win' ? ['La seizième pierre s’illumine au creux de ta main. Les seize éclats vibrent à l’unisson, comme un seul cœur : l’aura de toutes les civilisations passées déferle, et le monde retient son souffle. <b>Tu as gagné la partie.</b>'] : kind === 'retire' ? [`${esc(pc.name)} raccroche. Quelque part, loin des radars, tu vis de tes souvenirs, de tes amis et de ton argent. Les histoires de tes exploits circuleront longtemps.`] : [esc(cause || 'Tu es mort.'), 'Le monde de Cratès est cruel avec ceux qui s’approchent trop des pierres, des chefs et de Néo.'];
-  if (kind === 'win') { splash({ title: '16 / 16', sub: 'LES PIERRES ANTIQUES', icon: '🏆', color: '#ffe83a', ms: 2800, force: true }); sfx('crit'); } else if (kind === 'dead') { splash({ title: 'FIN', sub: 'Ta route s’arrête ici', icon: '☠', color: '#ff3d7f', ms: 2200, force: true }); sfx('lose'); }
+  const pc = G.pc; const alt = kind === 'win' ? ENDINGS.find(e => e.id === cause) : null; const title = alt ? alt.title : kind === 'win' ? '🏆 LES 16 PIERRES !' : kind === 'retire' ? '🌴 Retraite' : '☠ Fin de ta route';
+  const txt = alt ? [...alt.text, '<b>Tu as gagné la partie.</b>'] : kind === 'win' ? ['La seizième pierre s’illumine au creux de ta main. Les seize éclats vibrent à l’unisson, comme un seul cœur : l’aura de toutes les civilisations passées déferle, et le monde retient son souffle. <b>Tu as gagné la partie.</b>'] : kind === 'retire' ? [`${esc(pc.name)} raccroche. Quelque part, loin des radars, tu vis de tes souvenirs, de tes amis et de ton argent. Les histoires de tes exploits circuleront longtemps.`] : [esc(cause || 'Tu es mort.'), 'Le monde de Cratès est cruel avec ceux qui s’approchent trop des pierres, des chefs et de Néo.'];
+  if (kind === 'win') { splash({ title: alt ? alt.n.toUpperCase() : '16 / 16', sub: alt ? 'UNE AUTRE FIN' : 'LES PIERRES ANTIQUES', icon: alt ? alt.ic : '🏆', color: '#ffe83a', ms: 2800, force: true }); sfx('crit'); } else if (kind === 'dead') { splash({ title: 'FIN', sub: 'Ta route s’arrête ici', icon: '☠', color: '#ff3d7f', ms: 2200, force: true }); sfx('lose'); }
   const t = h('table', { class: 't' }); [['Pierres antiques', stoneCount() * 600], ['Grade', pc.grade * 400], ['Mérite', pc.merit * 2], ['Fortune', Math.round(pc.money / 25)], ['Alliés', pc.party.length * 60], ['Missions', (G.score.missions || 0) * 15], ['Territoires', (G.score.terr || 0) * 200], ['Combats gagnés', (G.score.wins || 0) * 25], ['Vies sauvées', (G.score.saved || 0) * 30], ['Durée (mois)', Math.floor(G.wk / 4) * 10]].forEach(([k, v]) => t.append(h('tr', {}, h('td', {}, k), h('td', {}, v))));
   const scores = loadScores(); const rank = scores.findIndex(s => s.score === sc && s.name === pc.name) + 1;
   UI.scene = { kicker: dateStr(), title, text: [...txt, `<b>Score final : ${fmt(sc)}</b>${kind === 'dead' ? ' (×0,6)' : kind === 'retire' ? ' (×1,25)' : ' (+15 000)'} — ${rank ? 'classement : #' + rank : ''}`], extra: t, choices: [C('Meilleurs scores', () => { G = null; scoresScreen(); }), C('📖 Journal de bord', runsScreen), C('Menu principal', titleScreen)] };

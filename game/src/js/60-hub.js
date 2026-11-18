@@ -10,7 +10,7 @@ function cityMenu() {
   const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 1; const left = f.cityActs; const L = [];
   if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; UI.recap = recapChips(); } return travelMenu(); }
   if (left > 0) {
-    const T = []; baseTile(T); atelierTile(T);
+    const T = []; baseTile(T); atelierTile(T); if (typeof endingTile === 'function') endingTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
     T.push(C('Marché', () => shopMenu(), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
     T.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));

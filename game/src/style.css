@@ -673,3 +673,5 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .cme.atk{animation-duration:.65s}.cfoe.atk{animation-duration:.65s}.cfoe.hurt{animation-duration:.6s}
 
 .intent{display:flex;gap:10px;align-items:center;margin:6px 0;padding:6px 10px;border:1px solid rgba(255,61,127,.5);background:linear-gradient(90deg,rgba(255,61,127,.14),transparent);animation:intp .5s}.intent .iic{font-size:1.5rem}.intent b{color:#ff7aa8}@keyframes intp{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+
+.endbox{margin:10px 0;padding:8px 10px;border:1px dashed rgba(252,238,9,.4)}.endrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.07)}.endrow.ok{color:#5be3a0}.endrow .small{text-align:right;max-width:46%}
