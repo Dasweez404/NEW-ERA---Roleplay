@@ -653,3 +653,11 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .cme{position:relative}.cme .aura{position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,rgba(39,240,255,.55),rgba(176,38,255,.25) 50%,transparent 70%);animation:auraP .7s ease-out forwards;pointer-events:none}@keyframes auraP{from{opacity:.9;transform:scale(.5)}to{opacity:0;transform:scale(1.7)}}
 @media(prefers-reduced-motion:reduce){.enter-l,.enter-r,.cme,.cfoe,.cmate,.cvs{animation:none!important}}
 .vfx{font-size:clamp(1.5rem,8vw,2.6rem)}
+
+/* combat : scène plus grande, sprites vivants, impacts */
+.cstage{min-height:104px}.cstage img{animation:idleb 1.7s ease-in-out infinite}.cstage .cmate img{animation-delay:.3s}.cstage .cfoe img{animation-delay:.6s}
+@keyframes idleb{50%{transform:translateY(-3px)}}
+.cme.atk img,.cme.power img,.cme.hurt img,.cfoe.atk img,.cfoe.hurt img{animation:none}
+.spark{position:absolute;bottom:26px;font-style:normal;font-size:2.2rem;pointer-events:none;animation:sparkp .55s .2s both}.spark.r{right:24%}.spark.l{left:24%}.spark.pw{color:#27f0ff;text-shadow:0 0 14px #27f0ff,0 0 26px #b026ff;font-size:2.6rem}
+@keyframes sparkp{0%{opacity:0;transform:scale(.2) rotate(-30deg)}40%{opacity:1;transform:scale(1.4) rotate(10deg)}100%{opacity:0;transform:scale(1.9) rotate(20deg)}}
+@media(prefers-reduced-motion:reduce){.cstage img,.spark{animation:none!important}}

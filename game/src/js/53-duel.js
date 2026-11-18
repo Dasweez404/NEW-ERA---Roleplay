@@ -175,9 +175,10 @@ function teamStrip() {
   if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
   const fx = CB.fx || {}; const first = !CB.entered; CB.entered = true;
   const fp = fx.pc ? ' ' + fx.pc : '', ff = fx.foe ? ' ' + fx.foe : '';
-  const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : '') + (fx.pc === 'atk' || fx.pc === 'power' ? ' assist' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : '') + fp, 'data-k': 'pc' }, sprFit(me, 56, 'portrait'), fx.pc === 'power' ? h('i', { class: 'aura' }) : null) : null);
-  const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ff), style: `animation-delay:${i * 110}ms` }, sprFit(f.cid, 56, 'portrait'))));
-  return h('div', { class: 'cstage' }, left, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '💢' : ''), right);
+  const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : '') + (fx.pc === 'atk' || fx.pc === 'power' ? ' assist' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : '') + fp, 'data-k': 'pc' }, sprFit(me, 72, 'portrait'), fx.pc === 'power' ? h('i', { class: 'aura' }) : null) : null);
+  const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ff), style: `animation-delay:${i * 110}ms` }, sprFit(f.cid, 72, 'portrait'))));
+  const spark = fx.pc === 'atk' ? h('i', { class: 'spark r' }, '💥') : fx.pc === 'power' ? h('i', { class: 'spark r pw' }, '✦') : fx.foe === 'atk' ? h('i', { class: 'spark l' }, '💢') : null;
+  return h('div', { class: 'cstage' }, left, spark, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '🗡' : ''), right);
 }
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
