@@ -568,6 +568,64 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .shopqty{display:flex;gap:4px}
 
 .invrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}.invrow .tab{margin-left:auto}
+
+/* ═════════ UI v3 : habillage néon — ambiance, cartes, tuiles, HUD, rail, dock ═════════ */
+::selection{background:rgba(0,240,255,.35);color:#fff}
+*{scrollbar-width:thin;scrollbar-color:#2b2a55 transparent}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+/* ambiance : aurore lente + vignette */
+body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;background:radial-gradient(600px 420px at 20% 25%,rgba(0,240,255,.10),transparent 70%),radial-gradient(700px 480px at 82% 70%,rgba(176,38,255,.12),transparent 70%),radial-gradient(500px 360px at 60% 10%,rgba(255,42,109,.07),transparent 70%);animation:aurora 26s ease-in-out infinite alternate;will-change:transform}
+@keyframes aurora{to{transform:translate3d(4%,-3%,0) scale(1.08)}}
+#app::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;box-shadow:inset 0 0 160px rgba(0,0,0,.65)}
+/* cartes : liseré lumineux qui court sur le bord haut */
+.card.scene{overflow:visible;animation:cardin .5s cubic-bezier(.2,1,.3,1) both}
+.card.scene::after{content:"";position:absolute;left:14px;right:14px;top:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--acc2),var(--vi),var(--acc),transparent);background-size:220% 100%;animation:edge 5s linear infinite;opacity:.9;filter:drop-shadow(0 0 6px var(--acc2))}
+@keyframes edge{to{background-position:-220% 0}}@keyframes cardin{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.card .title{background:linear-gradient(180deg,#fff 30%,#bff6ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 10px rgba(0,240,255,.22))}
+.kicker{display:inline-block;padding:2px 8px;border:1px solid rgba(252,238,9,.35);background:rgba(252,238,9,.06);border-radius:2px}
+/* choix : numéro en puce, survol qui illumine, pourcentages lisibles */
+.ch{transition:transform .16s cubic-bezier(.2,1.2,.4,1),box-shadow .2s,border-color .2s,background .2s}
+.ch .key{border:1px solid rgba(0,240,255,.5);background:rgba(0,240,255,.08);box-shadow:inset 0 0 8px rgba(0,240,255,.15)}
+.ch:hover:not(:disabled) .key{border-color:var(--acc);color:var(--acc);box-shadow:0 0 10px rgba(252,238,9,.35)}
+.ch:active:not(:disabled){transform:scale(.97)}
+.ch .pct{box-shadow:0 0 10px currentColor;border-radius:2px}
+.ch.safe:not(.cta){background:linear-gradient(90deg,rgba(5,255,161,.10),rgba(10,9,28,.95) 60%)}
+.ch.risk:not(.cta){background:linear-gradient(90deg,rgba(255,159,67,.10),rgba(10,9,28,.95) 60%)}
+.ch.danger:not(.cta){background:linear-gradient(90deg,rgba(255,42,109,.12),rgba(10,9,28,.95) 60%)}
+/* tuiles (mosaïques) */
+.tiles .ch{background:radial-gradient(120% 90% at 50% 0%,rgba(0,240,255,.12),rgba(10,9,28,.96) 70%);border:1px solid rgba(0,240,255,.28);border-left-width:1px;min-height:118px;transition:transform .18s cubic-bezier(.2,1.2,.4,1),box-shadow .2s,border-color .2s}
+.tiles .ch:hover:not(:disabled){transform:translateY(-4px);box-shadow:0 12px 26px rgba(0,0,0,.5),0 0 22px rgba(252,238,9,.18);border-color:var(--acc);background:radial-gradient(120% 90% at 50% 0%,rgba(252,238,9,.16),rgba(10,9,28,.96) 70%)}
+.tiles .tic{display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,0) 70%);box-shadow:0 0 0 1px rgba(255,255,255,.10),0 0 18px rgba(0,240,255,.18);font-size:1.9rem;margin-bottom:2px}
+.tiles .ch.safe:not(.cta){background:radial-gradient(120% 90% at 50% 0%,rgba(5,255,161,.16),rgba(10,9,28,.96) 70%);border-color:rgba(5,255,161,.5)}
+.tiles .ch.risk:not(.cta){background:radial-gradient(120% 90% at 50% 0%,rgba(255,159,67,.16),rgba(10,9,28,.96) 70%);border-color:rgba(255,159,67,.5)}
+.tiles .ch.danger:not(.cta){background:radial-gradient(120% 90% at 50% 0%,rgba(255,42,109,.18),rgba(10,9,28,.96) 70%);border-color:rgba(255,42,109,.55)}
+.tiles .ch.cta{background:linear-gradient(135deg,#fcee09,#fff56a);color:#000;border:0;min-height:96px;box-shadow:0 0 30px rgba(252,238,9,.38);animation:ctaPulse 2.4s ease-in-out infinite}
+.tiles .ch.cta .l{color:#000;font-size:1.05rem}@keyframes ctaPulse{50%{box-shadow:0 0 44px rgba(252,238,9,.6)}}
+.tiles .ch.back{background:transparent;border:1px dashed rgba(142,147,196,.35);min-height:84px}
+/* bouton principal : reflet qui passe */
+.ch.cta{position:relative;overflow:hidden}.ch.cta::after{content:"";position:absolute;top:0;bottom:0;width:36%;left:-50%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:sheen 3.4s ease-in-out infinite}
+@keyframes sheen{0%,60%{left:-50%}100%{left:130%}}
+/* HUD : barres lumineuses, alerte quand les PV sont bas */
+.stat .bar>i{position:relative;background-image:linear-gradient(90deg,var(--c1,#ff2a6d),var(--c2,#ff7a45));box-shadow:0 0 12px var(--c1,#ff2a6d)}
+.stat.en .bar>i{--c1:#00f0ff;--c2:#7a5cff}
+.stat .bar>i::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 6px,rgba(0,0,0,.35) 6px 8px)}
+.hud .pill{backdrop-filter:blur(4px);transition:transform .2s,box-shadow .2s}.hud .pill.cash{box-shadow:0 0 12px rgba(252,238,9,.18)}.hud .pill.gem:hover,.hud .pill:hover{transform:translateY(-1px)}
+.hud .pill.wanted{animation:wantedp 1.8s ease-in-out infinite}@keyframes wantedp{50%{box-shadow:0 0 16px rgba(255,42,109,.55)}}
+/* rail de progression : nœuds reliés */
+.rail{position:relative;gap:6px;margin:4px 0 8px}.rail .rs{position:relative;border-bottom-width:3px;padding-top:6px;font-weight:700}
+.rail .rs::before{content:"";position:absolute;left:50%;top:-3px;width:7px;height:7px;margin-left:-3px;border-radius:50%;background:#2a2a44;box-shadow:0 0 0 2px #0c0b1c}
+.rail .rs.done::before{background:#5be3a0;box-shadow:0 0 0 2px #0c0b1c,0 0 8px #5be3a0}.rail .rs.on::before{background:#fcee09;box-shadow:0 0 0 2px #0c0b1c,0 0 12px #fcee09;animation:railp 1.4s ease-in-out infinite}
+@keyframes railp{50%{transform:scale(1.5)}}
+/* dock : verre dépoli et indicateur actif */
+.dock{backdrop-filter:blur(14px) saturate(1.3);background:linear-gradient(180deg,rgba(14,13,34,.82),rgba(6,6,16,.92))}
+.dk{transition:color .2s,transform .2s}.dk.on{color:var(--acc);transform:translateY(-2px)}.dk.on::after{content:"";position:absolute;left:22%;right:22%;top:0;height:3px;background:var(--acc);box-shadow:0 0 12px var(--acc);border-radius:0 0 3px 3px}
+/* toasts */
+.toast{background:rgba(8,8,20,.95);border:1px solid var(--acc2);box-shadow:0 0 24px rgba(0,240,255,.3);border-radius:2px;font-family:var(--fm);letter-spacing:.06em;animation:toastin .3s cubic-bezier(.2,1.4,.4,1)}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,12px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+/* bandeau de résultat, chips */
+.carry{box-shadow:0 0 24px rgba(5,255,161,.08)}.carry.ko{box-shadow:0 0 24px rgba(255,42,109,.1)}
+.chip{border-radius:2px;box-shadow:0 0 10px rgba(255,255,255,.06)}.chip.good{box-shadow:0 0 12px rgba(5,255,161,.25)}.chip.badc{box-shadow:0 0 12px rgba(255,42,109,.25)}
+@media(prefers-reduced-motion:reduce){body::before,.card.scene,.card.scene::after,.ch.cta::after,.tiles .ch.cta,.hud .pill.wanted,.rail .rs.on::before{animation:none!important}}
 </style>
 </head>
 <body>
@@ -2650,7 +2708,7 @@ function contractCard(arrive) {
   [...promo, ...rest].slice(0, nShow).forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${a.n}`, () => { o.back = () => contractCard(); missionBrief(o); }, { sub: `${o.empName} contre ${o.tgtName} · ${stars(o.tier)} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, ic: '🎯', cls: o.promo ? 'risk' : '' })); });
   if (offers.length > nShow) L.push(C('Voir tous les contrats', missionBoard, { ic: '📋', cls: 'back' }));
   L.push(C('Se faire petit', hub, { cls: 'cta', ic: '🤫' }));
-  coach('contrats'); show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des contrats à prendre ici.', cityLine()].filter(Boolean), choices: L });
+  coach('contrats'); show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [(arrive && !/^Arrivée à /.test(arrive)) ? arrive : (arrive ? '' : 'Des contrats à prendre ici.'), cityLine()].filter(Boolean), choices: L });
 }
 function clueCard() {
   const dc = 14 + Math.min(4, stoneCount());
