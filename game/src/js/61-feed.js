@@ -19,7 +19,7 @@ function hub() {
 const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
 function spendPoints(cont) {
   const pc = G.pc; if (pc.pts <= 0) return cont ? cont() : hub();
-  const total = pc.pts; let done = false;
+  const total = pc.pts; let done = false; if (UI.scene && !UI.scene.noLevel) UI.lvlPrev = UI.scene; // pour « Revenir en arrière » après le gain de niveau
   const gems = h('div', { class: 'lvgems' }); const head = h('div', { class: 'lvhead' }, h('div', { class: 'lvk' }, 'NIVEAU SUPÉRIEUR'), h('div', { class: 'lvn' }, h('span', { class: 'lvplus' }, '+'), h('span', { class: 'lvnum' }, String(pc.pts))), h('div', { class: 'lvsub' }, 'points à répartir'), gems);
   const drawGems = () => { gems.innerHTML = ''; for (let i = 0; i < total; i++) gems.append(h('i', { class: 'lvgem' + (i < pc.pts ? ' on' : '') })); head.querySelector('.lvnum').textContent = String(pc.pts); };
   const cards = h('div', { class: 'lvcards' }, ATTRS.map((a, idx) => {

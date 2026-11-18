@@ -1,7 +1,7 @@
 // ───────── Inspirations Night City Legend : butin à choisir, décisions décisives, vies uniques, demi-points d'attribut ─────────
 function decisive(text, go) {
-  const prev = UI.scene; flash('#ff3d7f'); sfx('lose');
-  show({ compact: true, kicker: 'DÉCISION DÉCISIVE', title: 'Es-tu sûr ?', text: [text, '<span class="badc">Ce choix aura des conséquences durables.</span>'], choices: [C('Je confirme', go, { cls: 'danger', ic: '⚠' }), C('Revenir en arrière', () => { if (prev) { UI.scene = prev; render(true); } else hub(); }, { cls: 'back' })] });
+  const prev = (UI.scene && UI.scene.noLevel && UI.lvlPrev) ? UI.lvlPrev : UI.scene; flash('#ff3d7f'); sfx('lose');
+  show({ compact: true, kicker: 'DÉCISION DÉCISIVE', title: 'Es-tu sûr ?', text: [text, '<span class="badc">Ce choix aura des conséquences durables.</span>'], choices: [C('Je confirme', go, { cls: 'danger', ic: '⚠' }), C('Revenir en arrière', () => { if (prev && !prev.noLevel) { UI.scene = prev; render(true); } else hub(); }, { cls: 'back' })] });
 }
 // ── Butin : on choisit UNE récompense parmi trois ──
 function lootPick(o, quality) {
