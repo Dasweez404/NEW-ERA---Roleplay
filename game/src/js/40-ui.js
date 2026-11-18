@@ -102,6 +102,7 @@ function menuPop() {
   const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
   const ov = h('div', { class: 'popov', onclick: e => { if (e.target === ov) close(); } }, h('div', { class: 'popbox' },
     b(FX.mute ? '🔇  Son coupé : réactiver' : '🔊  Son activé : couper', () => { toggleMute(); close(); render(true); }),
+    b('📊  Journal de partie', () => { close(); parkOpen(teleScreen); }),
     b('💾  Sauvegarder', () => { saveGame(); close(); toast('Partie sauvegardée'); }),
     b('🏠  Menu principal', () => { close(); saveGame(); titleScreen(); }),
     h('button', { class: 'pbtn ghost', onclick: close }, 'Fermer')));
@@ -113,7 +114,7 @@ function choicesEl(list, tiles, tcls) {
   const items = list.filter(Boolean); const ctaIdx = items.length <= 3 ? items.findIndex(c => /^(Continuer|Commencer|Suivant|Partir|Accepter|Jouer)/.test(c.label)) : -1;
   return h('div', { class: 'choices' + (tiles ? ' tiles' : '') + (tcls ? ' ' + tcls : '') }, items.map((c, i) => {
     const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
-    return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); c.go(); } } },
+    return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); try { if (typeof tele === 'function') tele('pick', { l: String(c.label || '').slice(0, 40), p: c.pct }); } catch (e) { } c.go(); } } },
       !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
       h('span', { class: 'body' }, h('span', { class: 'l' }, c.label), c.sub ? h('span', { class: 's' }, c.sub) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
       c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%', c.att ? h('small', {}, c.att) : null) : null, cta ? h('span', { class: 'arrow' }, '›') : null);
