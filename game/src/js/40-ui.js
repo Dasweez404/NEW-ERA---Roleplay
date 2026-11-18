@@ -203,11 +203,10 @@ function tabInv() {
   const ids = Object.keys(pc.inv);
   if (!ids.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Sac vide.'));
   ids.forEach(id => {
-    const it = ITEMS[id]; const row = h('div', { style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, h('b', {}, it.n + (pc.inv[id] > 1 ? ' ×' + pc.inv[id] : '')), h('div', { class: 'small mut' }, it.desc));
-    const btns = h('div', { class: 'row', style: 'margin-top:3px' });
-    if (it.t === 'arme' || it.t === 'armure') { const slot = it.t === 'arme' ? 'arme' : 'armure'; btns.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(true); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
-    if (it.t === 'conso') btns.append(h('span', { class: 'small acc' }, 'Proposé automatiquement quand tu en as besoin'));
-    row.append(btns); box.append(row);
+    const it = ITEMS[id]; const st = (it.t === 'arme' || it.t === 'armure') && typeof itemStat === 'function' ? itemStat(it) : ''; const gear = it.t === 'arme' || it.t === 'armure';
+    const row = h('div', { class: 'invrow' }, h('b', {}, it.n + (pc.inv[id] > 1 ? ' ×' + pc.inv[id] : '')), st ? h('span', { class: 'mut small' }, ' ' + st) : null);
+    if (gear) { const slot = it.t === 'arme' ? 'arme' : 'armure'; row.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(true); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
+    box.append(row);
   });
   return box;
 }
@@ -219,10 +218,10 @@ function useItem(id) {
   if (it.use === 'stim') pc.stim = 1;
 }
 function tabGroupe() {
-  const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, `Groupe : ${pc.party.length}/${partyMax()} (le grade et le rôle de Leader augmentent la taille).`));
-  if (!pc.party.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Tu voyages seul. Recrute des gens dans le menu « Recruter ».'));
+  const pc = G.pc; const box = h('div', {}, h('div', { class: 'small mut' }, `👥 ${pc.party.length}/${partyMax()}`));
+  if (!pc.party.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Tu voyages seul.'));
   pc.party.forEach(a => { const c = CH[a.id]; box.append(h('div', { class: 'mrow', style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, sprFit(c.id, 70, 'mini'), h('div', {}, h('b', {}, c.name), ` — ${F[c.faction].name}`, h('div', { class: 'small' }, `${STYLES[a.style].name} · PV ${a.hp}/${a.hpMax} · loyauté ${a.loy}${a.inj > 0 ? ' · blessé (' + a.inj + ' sem.)' : ''}`),
-    h('div', { class: 'small mut' }, charPowerText(c)), (c.faction === pc.faction && c.stars > pc.grade) ? h('div', { class: 'small badc' }, `Plus haut placé que toi (${c.stars}★ contre ${pc.grade}★) : tu ne peux pas le renvoyer. Dépasse-le en hiérarchie.`) : h('button', { class: 'tab', onclick: e => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'Confirmer le renvoi ?'; return; } removeAlly(a.id); addRep(c.faction, -3); render(true); } }, 'Renvoyer')))); });
+    h('div', { class: 'small mut' }, charPowerText(c)), (c.faction === pc.faction && Object.values(F).some(f => f.leaders.includes(c.id)) && pc.grade < 5) ? h('div', { class: 'small badc' }, 'Chef de ta faction : tu ne peux pas le renvoyer.') : h('button', { class: 'tab', onclick: e => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'Confirmer le renvoi ?'; return; } removeAlly(a.id); addRep(c.faction, -3); render(true); } }, 'Renvoyer')))); });
   return box;
 }
 function charPowerText(c) { const ps = (c.powers.length ? c.powers : fallbackPowers(c)).map(id => PW[id].name); return ps.length ? ps.join(' + ') : 'sans pouvoir'; }
