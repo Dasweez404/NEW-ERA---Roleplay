@@ -1100,7 +1100,7 @@ function charToSpec(c) {
 function stoneCount() { return Object.keys(G.pc.stones).length; }
 function A(id) {
   const pc = G.pc; let v = pc.attrs[id] || 0;
-  { let k = 0; for (const sid in pc.stones) if (STONE_ATTR[sid] === id) k++; v += Math.ceil(k * 0.5); } // rendements décroissants : la 3e pierre d'un même attribut compte moins
+  { let k = 0; for (const sid in pc.stones) if (STONE_ATTR[sid] === id) k++; v += Math.ceil(k / 3); } // rendements décroissants : la 3e pierre d'un même attribut compte moins
   const n = stoneCount(); if (n >= 4) v += 1; // Résonance (l'Aura de 8 pierres n'ajoute plus d'attribut)
   if (pc.implant && false) v -= 0;
   return v;
@@ -3827,7 +3827,7 @@ function cityEventCard() {
     if (chk === 'shop') { if (pc.money < 80) return toast('Il te faut 80 ¢'); pc.money -= 80; const id = pick(['capsule', 'kit', 'jumelles', 'grappin', 'radio', 'stimulant', 'bandage', 'crochets']); giveItem(id); return res('Une trouvaille', `Tu repars avec : ${ITEMS[id].n}.`, {}); }
     if (!chk) return res('Soirée', okT, okE);
     const r = check(chk[0], dc, chk[1]); r.ok ? res('Bien joué', okT, okE, [checkLine(r)]) : res('Mauvais calcul', koT, koE, [checkLine(r)]);
-  }, { odds: Array.isArray(chk) ? [chk[0], dc, chk[1]] : null, ic: '🌃' })) });
+  }, { odds: Array.isArray(chk) ? [chk[0], dc, chk[1]] : null, ic: '🌃', req: chk === 'bet' ? { money: 100 } : chk === 'shop' ? { money: 80 } : undefined })) });
 }
 // ── Planque personnelle / QG ──
 const hqOf = () => { const pc = G.pc; return (G.world.leader[pc.faction] === 'pc' && F[pc.faction] && F[pc.faction].hq) ? F[pc.faction].hq : null; };

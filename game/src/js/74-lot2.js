@@ -100,7 +100,7 @@ function cityEventCard() {
     if (chk === 'shop') { if (pc.money < 80) return toast('Il te faut 80 ¢'); pc.money -= 80; const id = pick(['capsule', 'kit', 'jumelles', 'grappin', 'radio', 'stimulant', 'bandage', 'crochets']); giveItem(id); return res('Une trouvaille', `Tu repars avec : ${ITEMS[id].n}.`, {}); }
     if (!chk) return res('Soirée', okT, okE);
     const r = check(chk[0], dc, chk[1]); r.ok ? res('Bien joué', okT, okE, [checkLine(r)]) : res('Mauvais calcul', koT, koE, [checkLine(r)]);
-  }, { odds: Array.isArray(chk) ? [chk[0], dc, chk[1]] : null, ic: '🌃' })) });
+  }, { odds: Array.isArray(chk) ? [chk[0], dc, chk[1]] : null, ic: '🌃', req: chk === 'bet' ? { money: 100 } : chk === 'shop' ? { money: 80 } : undefined })) });
 }
 // ── Planque personnelle / QG ──
 const hqOf = () => { const pc = G.pc; return (G.world.leader[pc.faction] === 'pc' && F[pc.faction] && F[pc.faction].hq) ? F[pc.faction].hq : null; };
