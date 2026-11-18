@@ -118,6 +118,7 @@ function play(m) {
   else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(pick(['Ils lisent ton geste et ripostent.', 'Ton geste échoue.', 'Tu perds le rythme.']), 'log-miss'); }
   if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
   CB.hist.push(res === 'win' ? 'w' : res === 'loss' ? 'l' : 'd');
+  CB.fx = res === 'win' ? { pc: (m.cat === 'pw' || m.kind === 'sig') ? 'power' : 'atk', foe: 'hurt' } : res === 'loss' ? { pc: 'hurt', foe: 'atk' } : { pc: 'power' };
   pc.en = Math.min(pc.enMax, pc.en + PK('energy')); if (PK('regen') && pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + PK('regen'));
   if (PK('allyheal')) pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
   if (hasAnti('restore')) { if (pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + 1); if (CB.round % 2 === 0) pc.en = Math.min(pc.enMax, pc.en + 1); }
@@ -151,7 +152,7 @@ function hurtPc(sev) {
 function flee() {
   if (!CB || CB.over) return; CB.log = []; CB.pops = [];
   const dc = 11 + CB.foes.length + CB.tier * 2; const r = check('agilite', dc, ['mobility']);
-  if (r.ok) { clog('Tu t’échappes !', 'good'); return finishCombat('flee'); }
+  if (r.ok) { clog('Tu t’échappes !', 'good'); const cb = CB; CB.fx = { pc: 'flee' }; renderCombat(); return void setTimeout(() => { if (CB === cb) finishCombat('flee'); }, 700); }
   clog('Impossible de fuir : on te rattrape.', 'log-dmg'); CB.Lz++; CB.hist.push('l'); CB.preview = false; hurtPc(1); CB.round++;
   if (G.pc.hp <= 0) return loseCombat(false); if (CB.Lz >= CB.N || CB.round > CB.N) return conclude(); renderCombat();
 }
@@ -170,8 +171,13 @@ function conclude() {
 // Ton sprite et ceux de ton équipe en tête du combat
 function teamStrip() {
   const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
-  if (!(me && hasSpr(me)) && !mates.length) return null;
-  return h('div', { class: 'cteam' }, me && hasSpr(me) ? h('div', { class: 'cme' }, sprFit(me, 56, 'portrait')) : null, ...mates.map(a => h('div', { class: 'cmate', title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))));
+  const foes = CB.foes.map((f, i) => [f, i]).filter(([f]) => f.cid && hasSpr(f.cid));
+  if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
+  const fx = CB.fx || {}; const first = !CB.entered; CB.entered = true;
+  const fp = fx.pc ? ' ' + fx.pc : '', ff = fx.foe ? ' ' + fx.foe : '';
+  const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : '') + (fx.pc === 'atk' || fx.pc === 'power' ? ' assist' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : '') + fp, 'data-k': 'pc' }, sprFit(me, 56, 'portrait'), fx.pc === 'power' ? h('i', { class: 'aura' }) : null) : null);
+  const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ff), style: `animation-delay:${i * 110}ms` }, sprFit(f.cid, 56, 'portrait'))));
+  return h('div', { class: 'cstage' }, left, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '💢' : ''), right);
 }
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
@@ -184,7 +190,7 @@ function renderCombat() {
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
   const goal = h('div', { class: 'small mut' }, `Gagne ${need} round${need > 1 ? 's' : ''} sur ${CB.N} pour les battre · ${CB.W} gagné${CB.W > 1 ? 's' : ''}, ${CB.Lz} perdu${CB.Lz > 1 ? 's' : ''}`);
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
+  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false; CB.fx = null;
   const hook = () => {
     requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), 80));
     setTimeout(() => {

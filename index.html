@@ -647,6 +647,24 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .pcport{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:8px;background:radial-gradient(120% 120% at 0% 50%,rgba(176,38,255,.18),transparent 70%);border:1px solid rgba(0,240,255,.25)}
 .pcport img{image-rendering:pixelated;filter:drop-shadow(0 0 10px rgba(176,38,255,.5))}.pcname{display:flex;flex-direction:column;gap:2px;font-family:var(--fd);font-size:1.05rem}
 .tiles .tspr{display:grid;place-items:center;min-height:64px}.tiles .tspr img{image-rendering:pixelated}
+
+/* combat : sprites qui entrent par les côtés, attaquent, se blessent, fuient */
+.cstage{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;min-height:78px;margin:0 0 6px;padding:4px 6px 6px;overflow:hidden;position:relative;background:linear-gradient(90deg,rgba(0,240,255,.10),transparent 40%,transparent 60%,rgba(255,42,109,.12));border-bottom:2px solid rgba(255,255,255,.08)}
+.cstage .cside{display:flex;align-items:flex-end;gap:8px}.cstage .cside.r{flex-direction:row-reverse}.cstage img{image-rendering:pixelated;display:block}
+.cvs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:1.6rem;opacity:.9;pointer-events:none;animation:vsp .5s both}@keyframes vsp{from{opacity:0;transform:translate(-50%,-50%) scale(.4)}60%{transform:translate(-50%,-50%) scale(1.3)}to{opacity:.9;transform:translate(-50%,-50%) scale(1)}}
+.enter-l{animation:enterL .6s cubic-bezier(.2,1,.3,1) both}.enter-r{animation:enterR .6s cubic-bezier(.2,1,.3,1) both}
+@keyframes enterL{from{opacity:0;transform:translateX(-120px)}to{opacity:1;transform:none}}@keyframes enterR{from{opacity:0;transform:translateX(120px)}to{opacity:1;transform:none}}
+.cme.atk{animation:lungeR .5s cubic-bezier(.3,1.4,.4,1)}.cme.power{animation:powerUp .7s ease-out}.cme.hurt{animation:shakeX .45s;filter:drop-shadow(0 0 8px #ff2a6d) brightness(1.3)}.cme.flee{animation:runL .7s cubic-bezier(.5,0,.9,.4) forwards}
+.cfoe.atk{animation:lungeL .5s cubic-bezier(.3,1.4,.4,1)}.cfoe.hurt{animation:shakeX .45s;filter:brightness(1.6) saturate(.5)}.cfoe.ko{animation:koFall .7s forwards}
+.cmate.assist{animation:lungeR .55s .1s cubic-bezier(.3,1.4,.4,1)}
+@keyframes lungeR{0%{transform:none}35%{transform:translateX(46px) scale(1.08)}100%{transform:none}}@keyframes lungeL{0%{transform:none}35%{transform:translateX(-46px) scale(1.08)}100%{transform:none}}
+@keyframes shakeX{0%,100%{transform:none}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes runL{0%{transform:none;opacity:1}100%{transform:translateX(-180px);opacity:0}}
+@keyframes koFall{0%{transform:none}100%{transform:translateY(14px) rotate(14deg);opacity:.25;filter:grayscale(1)}}
+@keyframes powerUp{0%{transform:none;filter:none}30%{transform:translateY(-10px) scale(1.12);filter:drop-shadow(0 0 16px #27f0ff) brightness(1.5)}100%{transform:none;filter:none}}
+.cme{position:relative}.cme .aura{position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,rgba(39,240,255,.55),rgba(176,38,255,.25) 50%,transparent 70%);animation:auraP .7s ease-out forwards;pointer-events:none}@keyframes auraP{from{opacity:.9;transform:scale(.5)}to{opacity:0;transform:scale(1.7)}}
+@media(prefers-reduced-motion:reduce){.enter-l,.enter-r,.cme,.cfoe,.cmate,.cvs{animation:none!important}}
+.vfx{font-size:clamp(1.5rem,8vw,2.6rem)}
 </style>
 </head>
 <body>
@@ -2347,6 +2365,7 @@ function play(m) {
   else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(pick(['Ils lisent ton geste et ripostent.', 'Ton geste échoue.', 'Tu perds le rythme.']), 'log-miss'); }
   if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
   CB.hist.push(res === 'win' ? 'w' : res === 'loss' ? 'l' : 'd');
+  CB.fx = res === 'win' ? { pc: (m.cat === 'pw' || m.kind === 'sig') ? 'power' : 'atk', foe: 'hurt' } : res === 'loss' ? { pc: 'hurt', foe: 'atk' } : { pc: 'power' };
   pc.en = Math.min(pc.enMax, pc.en + PK('energy')); if (PK('regen') && pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + PK('regen'));
   if (PK('allyheal')) pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
   if (hasAnti('restore')) { if (pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + 1); if (CB.round % 2 === 0) pc.en = Math.min(pc.enMax, pc.en + 1); }
@@ -2380,7 +2399,7 @@ function hurtPc(sev) {
 function flee() {
   if (!CB || CB.over) return; CB.log = []; CB.pops = [];
   const dc = 11 + CB.foes.length + CB.tier * 2; const r = check('agilite', dc, ['mobility']);
-  if (r.ok) { clog('Tu t’échappes !', 'good'); return finishCombat('flee'); }
+  if (r.ok) { clog('Tu t’échappes !', 'good'); const cb = CB; CB.fx = { pc: 'flee' }; renderCombat(); return void setTimeout(() => { if (CB === cb) finishCombat('flee'); }, 700); }
   clog('Impossible de fuir : on te rattrape.', 'log-dmg'); CB.Lz++; CB.hist.push('l'); CB.preview = false; hurtPc(1); CB.round++;
   if (G.pc.hp <= 0) return loseCombat(false); if (CB.Lz >= CB.N || CB.round > CB.N) return conclude(); renderCombat();
 }
@@ -2399,8 +2418,13 @@ function conclude() {
 // Ton sprite et ceux de ton équipe en tête du combat
 function teamStrip() {
   const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
-  if (!(me && hasSpr(me)) && !mates.length) return null;
-  return h('div', { class: 'cteam' }, me && hasSpr(me) ? h('div', { class: 'cme' }, sprFit(me, 56, 'portrait')) : null, ...mates.map(a => h('div', { class: 'cmate', title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))));
+  const foes = CB.foes.map((f, i) => [f, i]).filter(([f]) => f.cid && hasSpr(f.cid));
+  if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
+  const fx = CB.fx || {}; const first = !CB.entered; CB.entered = true;
+  const fp = fx.pc ? ' ' + fx.pc : '', ff = fx.foe ? ' ' + fx.foe : '';
+  const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : '') + (fx.pc === 'atk' || fx.pc === 'power' ? ' assist' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : '') + fp, 'data-k': 'pc' }, sprFit(me, 56, 'portrait'), fx.pc === 'power' ? h('i', { class: 'aura' }) : null) : null);
+  const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ff), style: `animation-delay:${i * 110}ms` }, sprFit(f.cid, 56, 'portrait'))));
+  return h('div', { class: 'cstage' }, left, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '💢' : ''), right);
 }
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
@@ -2413,7 +2437,7 @@ function renderCombat() {
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
   const goal = h('div', { class: 'small mut' }, `Gagne ${need} round${need > 1 ? 's' : ''} sur ${CB.N} pour les battre · ${CB.W} gagné${CB.W > 1 ? 's' : ''}, ${CB.Lz} perdu${CB.Lz > 1 ? 's' : ''}`);
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
+  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false; CB.fx = null;
   const hook = () => {
     requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), 80));
     setTimeout(() => {
