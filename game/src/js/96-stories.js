@@ -33,11 +33,12 @@ function storyCard() {
   const f = G.pc.flags; const seen = f.storySeen = f.storySeen || []; const t = wTier(); const place = esc(capName(G.loc));
   let ids = STORIES.map((_, i) => i).filter(i => !seen.includes(i) && !uniqSkip('stories', i)); if (!ids.length) { f.storySeen = []; ids = STORIES.map((_, i) => i); }
   const i = pick(ids); seen.push(i); if (seen.length > STORIES.length - 4) seen.shift(); const s = STORIES[i];
-  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
+  const gates = gateSet(s[3].map(o => ({ lab: o[0], attr: o[1] })), t);
+  const L = s[3].map((o, gi) => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
     return C(lab, () => {
       const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
       show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
-    }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲' });
+    }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '' });
   });
   L.push(C('Passer ton chemin', hub, { cls: 'back' }));
   show({ kicker: s[0] + ' · ' + capName(G.loc).toUpperCase(), title: s[1], text: [s[2](place)], choices: L });

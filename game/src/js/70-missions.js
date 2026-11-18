@@ -106,10 +106,11 @@ function missionBoard() {
 function missionBrief(o) { missionApproach(o); }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
-  Object.keys(a.ap).forEach(k => {
+  const keys = Object.keys(a.ap); const gates = gateSet(keys.map(k => ({ lab: a.ap[k][0], attr: APPROACH[k].a })), o.tier);
+  keys.forEach((k, gi) => {
     const d = APPROACH[k]; let tags = d.t; let sub = '';
     if (k === 'pouvoir') { tags = a.ptags; const match = a.ptags.some(t => (powerTags()[t] || 0) > 0); sub = match ? 'pouvoir adapté ✔' : 'pouvoir peu adapté'; }
-    const rq = Object.assign({}, d.req || {}); if (d.money) rq.money = 40 * o.tier;
+    const rq = Object.assign({}, d.req || {}); if (d.money) rq.money = 40 * o.tier; if (gates.has(gi)) { rq.attr = Object.assign({}, rq.attr, { [d.a]: gates.get(gi) }); sub = (sub ? sub + ' · ' : '') + `🔑 ${AT[d.a].short} ${gates.get(gi)}`; }
     const price = d.money ? ` (${40 * o.tier} ¢)` : '';
     L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' ? 2 : 0), tags, d.money ? 4 : 0], req: rq, cls: d.cls, sub }));
   });

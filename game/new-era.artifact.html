@@ -1183,6 +1183,15 @@ function pcDie(cause) {
   endGame('dead', cause); return null;
 }
 
+// Options à seuil d'attribut : certaines options ne s'ouvrent que si tu as assez de Corps, de Charisme… (jamais toutes : la plus adaptée reste libre).
+const gateNeed = t => clamp(3 + Math.round(t * 1.1), 4, 9);
+function gateSet(opts, tier) {
+  const need = gateNeed(tier); const g = new Map(); if (opts.length < 2) return g;
+  const best = opts.reduce((bi, o, i) => A(o.attr) > A(opts[bi].attr) ? i : bi, 0);
+  opts.forEach((o, i) => { if (i !== best && hashStr(o.lab) % 3 === 0) g.set(i, need); });
+  return g;
+}
+
 // ───────── Interface ─────────
 const UI = { mode: 'libre', tab: 'perso', scene: null, sheetOpen: false, after: [], prev: null, roll: null };
 const PCN = () => esc(G.pc.name);
@@ -2684,23 +2693,24 @@ function dealCard() {
   const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
   pool.push({ w: 34, f: missionCard });
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
-  if (stoneCount() < 16 && G.wk >= 6) pool.push({ w: 9, f: clueCard });
+  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 6, f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
-  pool.push({ w: 26, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
+  pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
   pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
   if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
   const calm = pc.flags.escW != null && G.wk - pc.flags.escW <= 5; // on vient de leur échapper : l'affaire est close
-  if (!calm) conflictPool(pool); pool.push({ w: 16, f: deedCard }); if (!calm) lot1Pool(pool); lot2Pool(pool); storyPool(pool);
+  { const n0 = pool.length; if (!calm) conflictPool(pool); for (let i = n0; i < pool.length; i++) pool[i].enc = true; } pool.push({ w: 16, f: deedCard }); { const n0 = pool.length; if (!calm) lot1Pool(pool); for (let i = n0; i < pool.length; i++) pool[i].enc = true; } lot2Pool(pool); storyPool(pool);
   if (pc.flags.stage === 'story') pool = pool.filter(e => ![missionCard, townCard, travelCard, vehicleCard].includes(e.f));
-  const e = wpick(pool, x => x.w); e.f();
+  if ((pc.flags.encN || 0) >= 1) { const calmPool = pool.filter(x => !x.enc); if (calmPool.length) pool = calmPool; } // une seule rencontre par destination
+  const e = wpick(pool, x => x.w); if (e.enc) pc.flags.encN = (pc.flags.encN || 0) + 1; e.f();
 }
 function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; pc.flags.dest = (pc.flags.dest || 0) + 1; pc.flags.recapDone = false; pc.flags.snap = { money: pc.money, xp: pc.xp, merit: pc.merit, hp: pc.hp, wk: G.wk, st: stoneCount(), rep: Object.assign({}, pc.rep), loc: G.loc }; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; pc.flags.dest = (pc.flags.dest || 0) + 1; pc.flags.encN = 0; pc.flags.recapDone = false; pc.flags.snap = { money: pc.money, xp: pc.xp, merit: pc.merit, hp: pc.hp, wk: G.wk, st: stoneCount(), rep: Object.assign({}, pc.rep), loc: G.loc }; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   { const po = offers.find(o => o.promo), key = G.wk + ':' + G.loc; if (po && pc.flags.promoAsked !== key) { pc.flags.promoAsked = key; const a = ARCH[po.arch]; const lead = typeof leaderName === 'function' ? leaderName(pc.faction) : 'Ta faction'; return show({ kicker: '🎖 ÉPREUVE DE GRADE', title: 'Ta faction te met à l’épreuve', text: [`Ton mérite est suffisant. ${esc(lead)} t’attendait : pour monter en grade, il faut d’abord faire tes preuves.`, ctxText(a.intro, po), `<span class="mut">${esc(a.n)} · ${stars(po.tier)} · grade à la clé</span>`], choices: [C('Relever l’épreuve', () => missionApproach(po), { cls: 'cta', ic: '🎖' })] }); } }
   if (pc.flags.dest >= 5 && pc.flags.dest % 5 === 0 && pc.flags.factionAt !== pc.flags.dest) { pc.flags.factionAt = pc.flags.dest; return factionPoint(); }
   ensureLeads(); { const ld = (G.world.leads || {})[G.loc]; if (ld && ld.exp >= G.wk) L.push(C(`${LEAD_KINDS[ld.kind].ic} ${leadTitle(ld)}`, () => leadAct(ld), { cls: 'risk', sub: '🔴 Opportunité · ' + LEAD_KINDS[ld.kind].d })); }
@@ -3192,10 +3202,11 @@ function missionBoard() {
 function missionBrief(o) { missionApproach(o); }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
-  Object.keys(a.ap).forEach(k => {
+  const keys = Object.keys(a.ap); const gates = gateSet(keys.map(k => ({ lab: a.ap[k][0], attr: APPROACH[k].a })), o.tier);
+  keys.forEach((k, gi) => {
     const d = APPROACH[k]; let tags = d.t; let sub = '';
     if (k === 'pouvoir') { tags = a.ptags; const match = a.ptags.some(t => (powerTags()[t] || 0) > 0); sub = match ? 'pouvoir adapté ✔' : 'pouvoir peu adapté'; }
-    const rq = Object.assign({}, d.req || {}); if (d.money) rq.money = 40 * o.tier;
+    const rq = Object.assign({}, d.req || {}); if (d.money) rq.money = 40 * o.tier; if (gates.has(gi)) { rq.attr = Object.assign({}, rq.attr, { [d.a]: gates.get(gi) }); sub = (sub ? sub + ' · ' : '') + `🔑 ${AT[d.a].short} ${gates.get(gi)}`; }
     const price = d.money ? ` (${40 * o.tier} ¢)` : '';
     L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' ? 2 : 0), tags, d.money ? 4 : 0], req: rq, cls: d.cls, sub }));
   });
@@ -3514,15 +3525,16 @@ const CAMPS = {
 };
 function campCard() {
   const pc = G.pc, f = pc.flags; let c = f.camp; const done = f.campDone = f.campDone || [];
-  if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k) && !uniqSkip('camps', k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
+  if (!c) { const mains = Object.keys(CAMPS).filter(k => CAMPS[k].main && !done.includes(k) && CAMPS[k].req()).sort((a, b) => CAMPS[a].act - CAMPS[b].act); const left = Object.keys(CAMPS).filter(k => !CAMPS[k].main && !done.includes(k) && !uniqSkip('camps', k)); if (!mains.length && !left.length) return missionCard(); c = f.camp = { id: mains.length ? mains[0] : pick(left), ch: 0, s: 0 }; }
   const def = CAMPS[c.id]; const ch = def.ch[c.ch]; f.campWk = G.wk; const place = esc(capName(G.loc));
-  const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
+  const gates = gateSet(ch.o.map(o => ({ lab: o[0], attr: o[1] })), wTier());
+  const L = ch.o.map(([lab, attr, tags, okT, koT], gi) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
     const last = c.ch >= def.ch.length; const gain = fx({ xp: 12 + 4 * wTier(), hp: r.ok ? 0 : -rint(2, 7), heat: r.ok ? 0 : 2 });
     if (!last) return show({ chain: true, chainTitle: `Campagne · ${def.n}`, kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
-    const good = c.s >= 2; const [txt, rw] = def.end[good ? 0 : 1]; f.camp = null; done.push(c.id); G.score.camps = (G.score.camps || 0) + (good ? 1 : 0); logEntry(`Campagne « ${def.n} » : ${good ? 'réussie' : 'inachevée'}.`);
+    const good = c.s >= 2; const [txt, rw] = def.end[good ? 0 : 1]; f.camp = null; done.push(c.id); if (def.after) def.after(good); G.score.camps = (G.score.camps || 0) + (good ? 1 : 0); logEntry(`Campagne « ${def.n} » : ${good ? 'réussie' : 'inachevée'}.`);
     show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: good ? 'Dénouement' : 'Dénouement amer', text: [r.ok ? okT : koT, checkLine(r), txt], fx: [...gain, ...fx(rw)], choices: [C('Continuer', hub)] });
-  }, { odds: [attr, dc, tags], ic: '📖' }); });
+  }, { odds: [attr, dc, tags], ic: '📖', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '' }); });
   show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()} · ${c.ch + 1}/${def.ch.length}`, title: ch.t, text: [ch.x(place, c)], choices: L });
 }
 // ── Compagnons à histoire ──
@@ -3628,7 +3640,8 @@ function lot2Pool(pool) {
   const sp = (w, f) => pool.push({ w, f: spMark(f) });
   if (pc.flags.squad && G.wk >= pc.flags.squad.back) pool.push({ w: 60, f: squadReturn });
   if (!ok) return;
-  if (feat('camp') && (pc.flags.camp || Object.keys(CAMPS).some(k => !(pc.flags.campDone || []).includes(k) && !uniqSkip('camps', k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : 12, campCard);
+  const mainReady = !pc.flags.camp && Object.keys(CAMPS).some(k => CAMPS[k].main && !(pc.flags.campDone || []).includes(k) && CAMPS[k].req());
+  if (feat('camp') && (pc.flags.camp || mainReady || Object.keys(CAMPS).some(k => !CAMPS[k].main && !(pc.flags.campDone || []).includes(k) && !uniqSkip('camps', k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : mainReady ? 40 : 12, campCard);
   if (feat('comp') && pc.party.some(a => !a.story && a.loy >= 60 && a.inj <= 0)) sp(14, companionCard);
   if (feat('ville') && !(pc.flags.cityEv || {})[cityEventNow().key]) sp(14, cityEventCard);
 }
@@ -3979,11 +3992,12 @@ function arenaInvite() {
 
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; W.stoneLv = W.stoneLv || {}; if (G.wk < 6) return null;
+  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < 5) return null;
+  { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 2 + Math.floor(stoneCount() / 3)) return null; }
   const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
   const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
   let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = 1; } else if (deep.length) { s = pick(deep); lv = lvOf(s.id) + 1; } else return null;
-  W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
+  W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; fl.clueWk = G.wk; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
   logEntry(`Indice ${lv}/3 : pierre de ${s.name}.`);
   if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (des 💎 creux marquent les États possibles : ouvre la carte quand tu choisis ta destination).`;
   if (lv === 2) return `la pierre de ${s.name} serait du côté de ${capName(loc)} (${stateName(loc)}). Un 💎 violet marque cet État sur la carte de l’Orbitrail (au moment de choisir ta destination) : une enquête t’y attendra.`;
@@ -4608,16 +4622,81 @@ function storyCard() {
   const f = G.pc.flags; const seen = f.storySeen = f.storySeen || []; const t = wTier(); const place = esc(capName(G.loc));
   let ids = STORIES.map((_, i) => i).filter(i => !seen.includes(i) && !uniqSkip('stories', i)); if (!ids.length) { f.storySeen = []; ids = STORIES.map((_, i) => i); }
   const i = pick(ids); seen.push(i); if (seen.length > STORIES.length - 4) seen.shift(); const s = STORIES[i];
-  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
+  const gates = gateSet(s[3].map(o => ({ lab: o[0], attr: o[1] })), t);
+  const L = s[3].map((o, gi) => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
     return C(lab, () => {
       const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
       show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
-    }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲' });
+    }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '' });
   });
   L.push(C('Passer ton chemin', hub, { cls: 'back' }));
   show({ kicker: s[0] + ' · ' + capName(G.loc).toUpperCase(), title: s[1], text: [s[2](place)], choices: L });
 }
 function storyPool(pool) { pool.push({ w: 30, f: storyCard }); }
+
+// ───────── Trame principale en 5 actes + nouvelles quêtes secondaires ─────────
+// Les pierres n'arrivent qu'à l'issue de l'Acte I : avant, ce ne sont que des rumeurs de météorites.
+const stonesUnlocked = () => !!G.pc.flags.stonesOpen || G.wk >= 40;
+Object.assign(CAMPS, {
+  acte1: { main: true, act: 1, n: 'ACTE I · Les premiers signes', req: () => G.wk >= 6, ch: [
+    { t: 'Les secousses', x: p => `Depuis quelques semaines, la terre tremble sans raison autour de ${p}. Les capteurs d’ogénite affolent les stations. Quelqu’un à la F.A. parle de « dérèglement » ; d’autres de « réveil ».`, o: [['Mesurer les secousses', 'intellect', ['tech', 'scout'], 'Les secousses suivent un motif : une onde, toutes les 38 minutes.', 'Les instruments saturent.'], ['Interroger les anciens', 'charisme', ['social'], 'Une vieille femme se souvient d’un grondement semblable dans son enfance.', 'On te prend pour un agent du recensement.'], ['Descendre dans les galeries', 'agilite', ['mobility', 'scout'], 'Les parois vibrent : une salle ancienne, gravée de glyphes.', 'Un éboulement te refoule.']] },
+    { t: 'Le chercheur mourant', x: (p, c) => c.s >= 1 ? 'Ta piste te mène à un chercheur de la Gamma Lab, blessé, planqué dans un entrepôt. Il t’attendait.' : 'Un inconnu te fait signe depuis une ruelle : un chercheur de la Gamma Lab, blessé, qui te dit avoir besoin de toi.', o: [['Le soigner et l’écouter', 'intellect', ['heal'], 'Il parle de « seize royaumes » et d’un éclat gravé qu’il a volé.', 'Il perd connaissance avant de dire l’essentiel.'], ['Le protéger de ses poursuivants', 'corps', ['defense', 'combat'], 'Tu repousses les hommes de main ; il te donne l’éclat.', 'Ils t’échappent avec une partie de ses notes.'], ['L’exfiltrer discrètement', 'agilite', ['stealth', 'mobility'], 'Tu le sors par les toits : il te confie un carnet.', 'La planque est brûlée pendant ta fuite.']] },
+    { t: 'L’éclat gravé', x: () => 'L’éclat vibre contre ta paume, chaud comme un cœur. Un glyphe s’y dessine : un des seize royaumes. Quelque part, quelque chose se réveille, et d’autres vont le chercher.', o: [['Déchiffrer le glyphe', 'intellect', ['relic', 'scout'], 'Le glyphe te donne un nom de royaume, et un lieu.', 'Le glyphe résiste, mais tu retiens sa forme.'], ['Le confier à des alliés sûrs', 'charisme', ['social', 'ally'], 'Des alliés fiables le gardent : tu sais où le retrouver.', 'Ils hésitent, effrayés.'], ['Le garder sur toi, caché', 'agilite', ['stealth'], 'Personne ne se doute de ce que tu portes.', 'Un regard trop long : on t’a vu.']] },
+  ], end: [['Tu comprends enfin : les pierres antiques existent. Les rumeurs vont courir. Tu en sais un peu plus que les autres.', { xp: 90, rep: { artefactors: 5, gamma: -3 }, merit: 3 }], ['Tu n’as que des bribes : mais assez pour entendre la rumeur quand elle viendra.', { xp: 36 }]], after: () => { G.pc.flags.stonesOpen = true; G.world.stoneLv = G.world.stoneLv || {}; const w = G.wk; G.wk = Math.max(G.wk, 40); stoneClueGain(); G.wk = w; } },
+  acte2: { main: true, act: 2, n: 'ACTE II · Le Régime vacille', req: () => G.pc.flags.stonesOpen && G.wk >= 28 && G.pc.grade >= 1 && (G.pc.flags.campDone || []).includes('acte1'), ch: [
+    { t: 'La note qui fuit', x: p => `À ${p}, un message circule : le Nouveau Régime prépare un « recensement final » des géno-porteurs. Une version expurgée de la note a atteint les bidonvilles. Les gens ont peur.`, o: [['Authentifier la note', 'intellect', ['hack', 'scout'], 'Elle est authentique : la liste est déjà en cours.', 'Impossible de trancher : le doute reste.'], ['Rassurer les quartiers', 'charisme', ['social'], 'Ton calme évite une émeute.', 'On te prend pour un agent du Régime.'], ['Remonter à la source de la fuite', 'agilite', ['stealth', 'mobility'], 'Tu trouves un officier de la F.A. qui a tout copié.', 'La piste se perd.']] },
+    { t: 'L’officier repenti', x: (p, c) => c.s >= 1 ? 'L’officier accepte de te rencontrer : il a peur, il veut sortir de la F.A. vivant.' : 'Un officier te contacte de lui-même, tremblant : « Je sais que vous cherchez. Je peux parler. »', o: [['Le protéger', 'corps', ['defense'], 'Les hommes de la F.A. repartent bredouilles.', 'Il est blessé dans l’échange.'], ['Le faire parler d’abord', 'charisme', ['social'], 'Il te remet les noms des responsables du recensement.', 'Il se ferme.'], ['Le livrer à une faction amie', 'intellect', ['logi', 'social'], 'La Vigilante Squad le prend sous sa garde.', 'La passation tourne mal.']] },
+    { t: 'Le choix', x: () => 'Tu tiens de quoi faire échouer le recensement : publier, saboter, ou négocier. Chaque voie a un prix.', o: [['Tout publier', 'charisme', ['social'], 'Le Régime recule. Le peuple te regarde autrement.', 'La publication est étouffée.'], ['Saboter les serveurs du recensement', 'intellect', ['hack', 'tech'], 'La liste brûle. Les agents cherchent un coupable.', 'Le système te repère.'], ['Négocier avec un cadre du Régime', 'charisme', ['social'], 'Un délai de grâce est arraché.', 'Il ne voit que tes intérêts.']] },
+  ], end: [['Le recensement est retardé. Les porteurs te doivent beaucoup, la F.A. te cherche.', { xp: 110, merit: 4, rep: { civils: 8, vigilante: 6, fa: -10 }, heat: 4 }], ['Le recensement avance, mais tu as sauvé des noms de la liste.', { xp: 45, rep: { civils: 3 } }]] },
+  acte3: { main: true, act: 3, n: 'ACTE III · Néo regarde', req: () => (stoneCount() >= 2 || G.wk >= 70) && (G.pc.flags.campDone || []).includes('acte2'), ch: [
+    { t: 'Un hologramme sans visage', x: p => `À ${p}, un hologramme s’allume dans ta chambre. Une voix posée, sans visage : Néo, conseiller du Nouveau Régime, insensible à l’ogénite. « Tu portes ce qui m’appartient. »`, o: [['Écouter ses conditions', 'charisme', ['social'], 'Il propose une trêve contre un « service ».', 'Il rit : tu n’as pas le choix.'], ['Tracer l’appel', 'intellect', ['hack'], 'Tu localises un relais dans la ville voisine.', 'Le signal se brouille.'], ['Raccrocher', 'corps', ['defense'], 'Tu coupes. Un silence. Puis une alarme.', 'Il rappelle, plus froid.']] },
+    { t: 'Le relais', x: (p, c) => c.s >= 1 ? 'Tu as de l’avance : un relais caché alimente les messages de Néo. Tu peux le frapper avant qu’il ne frappe.' : 'On te suit : le relais est gardé, et les agents savent que tu viens.', o: [['Détruire le relais', 'corps', ['combat'], 'Les antennes tombent. Le Régime perd un œil.', 'Les gardes tiennent.'], ['Le pirater et écouter', 'intellect', ['hack'], 'Tu interceptes trois jours de messages.', 'Tu es repéré en pleine copie.'], ['Retourner le relais contre Néo', 'agilite', ['stealth', 'tech'], 'Ses ordres arrivent chez toi à présent.', 'Il détecte l’intrusion.']] },
+    { t: 'Face à Néo', x: () => 'Néo te donne rendez-vous. Pas en personne : un salon d’hologrammes. Il veut que tu choisisses : lui rendre une pierre, la lui voler, ou le défier.', o: [['Lui promettre une pierre', 'charisme', ['social'], 'Il te laisse tranquille quelques mois.', 'Il sent le mensonge.'], ['Le défier en face', 'maitrise', ['control', 'combat'], 'Tu le fais douter pour la première fois.', 'Son aplomb te glace.'], ['Fuir avec ce que tu as', 'agilite', ['mobility'], 'Tu disparais avant la fin de l’appel.', 'Ses agents te cernent.']] },
+  ], end: [['Néo sait ton nom, et il te craint un peu. Tu as gagné du temps, et des pistes sur ses plans.', { xp: 130, merit: 4, rep: { fa: -6, civils: 4 }, heat: 4 }], ['Néo garde l’avantage, mais tu as appris où il cache ses relais.', { xp: 50, heat: 6 }]] },
+  acte4: { main: true, act: 4, n: 'ACTE IV · La grande chasse', req: () => stoneCount() >= 4 && (G.pc.flags.campDone || []).includes('acte3'), ch: [
+    { t: 'Les rivaux', x: p => `La rumeur a fait le tour du monde : les factions envoient leurs meilleurs chasseurs. À ${p}, plusieurs équipes se croisent, sous des couvertures différentes.`, o: [['Repérer les équipes', 'intellect', ['scout'], 'Tu dresses la liste : trois factions, deux indépendants.', 'Tu en rates la moitié.'], ['Rencontrer un chef d’équipe', 'charisme', ['social'], 'Il parle de territoires que tu ne connaissais pas.', 'Il te toise, silencieux.'], ['Saboter une équipe', 'agilite', ['stealth'], 'Une équipe rivale perd son meilleur indice.', 'On t’y prend.']] },
+    { t: 'Le sommet', x: (p, c) => c.s >= 1 ? 'Tu as des noms et des cartes. Un sommet secret est organisé : celui qui y parle bien dicte la suite.' : 'Un sommet secret se tient : on t’y envoie sans que tu sois prêt.', o: [['Proposer une alliance', 'charisme', ['social'], 'Deux factions te suivent, avec méfiance.', 'Les chefs se méfient de tes motifs.'], ['Prendre la parole pour les porteurs', 'charisme', ['social'], 'Ta voix porte : on t’écoute sans te couper.', 'On t’interrompt.'], ['Piéger le sommet', 'intellect', ['tech', 'hack'], 'Tu ressors avec les plans de chacun.', 'La salle est piégée contre toi.']] },
+    { t: 'L’embuscade', x: () => 'En sortant du sommet, une équipe rivale t’attend. Ils veulent tes pierres, pas ton avis.', o: [['Les affronter', 'corps', ['combat'], 'Tu brises l’embuscade.', 'Ils sont plus nombreux que prévu.'], ['Les semer', 'agilite', ['mobility'], 'Tu disparais dans les ruelles.', 'Ils te suivent trois jours.'], ['Retourner leur chef', 'charisme', ['social'], 'Il baisse les armes, intrigué.', 'Il ne t’écoute pas.']] },
+  ], end: [['La chasse change de forme : tu n’es plus une proie. Des factions te suivent, d’autres te redoutent.', { xp: 150, merit: 5, money: 250, rep: { civils: 4 } }], ['Tu sors du sommet affaibli, mais vivant, et mieux informé.', { xp: 60, heat: 5 }]] },
+  acte5: { main: true, act: 5, n: 'ACTE V · L’ultime royaume', req: () => stoneCount() >= 8 && (G.pc.flags.campDone || []).includes('acte4'), ch: [
+    { t: 'La convergence', x: p => `Toutes tes pierres résonnent. Autour de ${p}, l’air vibre, les capteurs d’ogénite hurlent. Quelque chose t’appelle vers un endroit que tu connais enfin.`, o: [['Suivre l’appel', 'maitrise', ['control', 'relic'], 'Les pierres te guident comme des boussoles.', 'Les pierres s’emballent.'], ['Rassembler tes alliés', 'charisme', ['social', 'ally'], 'Ton groupe te suit sans poser de questions.', 'Certains hésitent.'], ['Préparer la route', 'intellect', ['logi', 'strat'], 'Tout est prêt avant le départ.', 'Tu oublies l’essentiel.']] },
+    { t: 'Le site', x: (p, c) => c.s >= 1 ? 'Tu es sur place avant les autres : une salle immense, gravée de seize glyphes, vide au centre.' : 'Tu arrives presque en même temps que les autres : les rivaux, Néo, la F.A.', o: [['Poser les pierres', 'maitrise', ['control', 'relic'], 'Une lumière monte du sol, lente, tiède.', 'Le sol tremble, et tout se dérègle.'], ['Défendre l’entrée', 'corps', ['defense', 'combat'], 'Personne ne passe. Tu tiens.', 'Une brèche s’ouvre.'], ['Parlementer avec les rivaux', 'charisme', ['social'], 'Ils acceptent d’attendre la fin du rituel.', 'Ils se méfient.']] },
+    { t: 'Le dernier choix', x: () => 'Le dernier roi t’apparaît, ou ce qu’il en reste. Il pose une question simple : à qui revient le pouvoir des pierres ? Aux porteurs, à tous, ou à personne ?', o: [['Le rendre aux porteurs', 'charisme', ['social'], 'Les pierres s’ouvrent : les porteurs ne seront plus traqués.', 'Le roi doute de ta sincérité.'], ['Le partager avec tous', 'intellect', ['relic'], 'Un équilibre fragile s’installe.', 'Les factions se déchirent.'], ['Le sceller à jamais', 'maitrise', ['control'], 'Les pierres s’éteignent. Le monde respire.', 'Le sceau tient à moitié.']] },
+  ], end: [['Le dernier royaume s’ouvre. Quelque chose change pour toujours, et c’est toi qui l’as décidé.', { xp: 250, money: 500, merit: 8, rep: { civils: 10 } }], ['Le monde attendra encore. Mais tu as vu ce que les pierres cachent.', { xp: 100 }]] },
+});
+// ───────── Quêtes secondaires supplémentaires ─────────
+Object.assign(CAMPS, {
+  cartographe: { n: 'La carte du cartographe', ch: [
+    { t: 'Un vieil homme et un tube', x: p => `Un cartographe âgé de ${p} te supplie de garder un tube de carte. Il dit qu’on le suit, et qu’un lieu y est dessiné qui « n’existe plus ».`, o: [['Accepter le tube', 'charisme', ['social'], 'Il te confie le tube avec soulagement.', 'Il hésite : « Pas toi. »'], ['L’examiner discrètement', 'intellect', ['scout'], 'La carte montre une vallée que nulle autre n’indique.', 'Le papier est trop usé.'], ['L’escorter chez lui', 'corps', ['defense'], 'Tu le ramènes sain et sauf.', 'On vous suit jusqu’à sa porte.']] },
+    { t: 'La vallée fantôme', x: (p, c) => c.s >= 1 ? 'Tu as un trajet. La vallée est à trois jours, au bout d’une voie morte de l’Orbitrail.' : 'Tu n’as qu’une vague idée : les traces te mènent quand même à une voie morte.', o: [['Suivre la voie à pied', 'corps', ['mobility'], 'Tu atteins la vallée à l’aube.', 'Tu t’égares une nuit.'], ['Réparer une draisine', 'intellect', ['tech'], 'La draisine tient : tu gagnes deux jours.', 'La draisine déraille.'], ['Engager un guide', 'charisme', ['social'], 'Un guide t’y conduit, pour un prix juste.', 'Il disparaît en route.']] },
+    { t: 'Ce qui dort là', x: () => 'La vallée abrite un village d’avant l’ogénite, intact, vide. Au centre, un obélisque porte la même carte, gravée dans la pierre.', o: [['Recopier les gravures', 'intellect', ['scout', 'relic'], 'Tu repars avec l’histoire d’un peuple oublié.', 'Les gravures s’effritent sous tes doigts.'], ['Emporter l’obélisque', 'corps', ['combat'], 'Tu en détaches un fragment précieux.', 'L’obélisque te repousse.'], ['Laisser le village intact', 'charisme', ['social'], 'Tu gardes le secret, et les gens du coin te remercient.', 'Quelqu’un l’apprendra tôt ou tard.']] },
+  ], end: [['La carte complète est à toi. Un cartographe, plus loin, te doit sa vie.', { xp: 70, money: 180, rep: { artefactors: 5, civils: 3 } }], ['La carte reste incomplète, mais tu en sais assez pour y retourner.', { xp: 26 }]] },
+  orphelinat: { n: 'L’orphelinat de Ringan', ch: [
+    { t: 'Les enfants des rues', x: p => `À ${p}, un orphelinat tient grâce à un seul adulte. Un promoteur veut raser le bâtiment : « il gêne le futur quartier ».`, o: [['Enquêter sur le promoteur', 'intellect', ['scout', 'hack'], 'Tu découvres des permis falsifiés.', 'Il est bien protégé.'], ['Défendre le bâtiment', 'corps', ['defense'], 'Les ouvriers repartent avec des mines basses.', 'On te chasse.'], ['Mobiliser le quartier', 'charisme', ['social'], 'Cent voisins se rassemblent devant l’orphelinat.', 'Personne ne veut se mouiller.']] },
+    { t: 'La pression', x: (p, c) => c.s >= 1 ? 'Le promoteur recule : il envoie des hommes de main.' : 'Le promoteur double la mise : des hommes de main passent la nuit.', o: [['Les affronter', 'corps', ['combat'], 'Ils partent, éparpillés.', 'Tu te fais déborder.'], ['Les dénoncer', 'charisme', ['social'], 'La presse locale s’en empare.', 'Personne ne te croit.'], ['Les piéger', 'agilite', ['stealth', 'tech'], 'Ils tombent dans leurs propres pièges.', 'Ils te repèrent.']] },
+    { t: 'Un toit pour de bon', x: () => 'Le bâtiment tient, mais pour combien de temps ? Il faut un financement, un protecteur ou un nouveau lieu.', o: [['Lever des fonds', 'charisme', ['social'], 'Les dons affluent.', 'On te prend pour un escroc.'], ['Trouver un protecteur', 'intellect', ['logi'], 'Une faction accepte de couvrir l’orphelinat.', 'Personne ne veut s’y engager.'], ['Déménager tout le monde', 'agilite', ['mobility', 'logi'], 'Un lieu sûr les accueille.', 'Le déménagement est repéré.']] },
+  ], end: [['L’orphelinat est sauvé. Les enfants t’appellent « tonton » ou « tata » jusqu’à l’embarras.', { xp: 70, rep: { civils: 9 }, merit: 2 }], ['L’orphelinat ferme. Les enfants se dispersent, mais gardent ton nom.', { xp: 26, rep: { civils: 2 } }]] },
+  fete: { n: 'La nuit de l’Orbitrail', ch: [
+    { t: 'La fête annuelle', x: p => `Chaque année, ${p} fête la plus vieille ligne de l’Orbitrail : lanternes, foule, musique. Cette année, un colis suspect est signalé à la gare.`, o: [['Examiner le colis', 'intellect', ['tech'], 'Un dispositif artisanal, à moitié branché.', 'Le colis est piégé.'], ['Évacuer le quai', 'charisme', ['social', 'logi'], 'Le quai se vide dans le calme.', 'La panique éclate.'], ['Chercher son propriétaire', 'agilite', ['scout', 'mobility'], 'Tu repères un homme qui s’éloigne vite.', 'Il disparaît dans la foule.']] },
+    { t: 'Le poseur de bombe', x: (p, c) => c.s >= 1 ? 'Tu le retrouves : un ouvrier licencié, hors de lui, qui veut « faire entendre sa voix ».' : 'Il te trouve avant toi : un ouvrier licencié, hors de lui, qui brandit un détonateur.', o: [['Le raisonner', 'charisme', ['social'], 'Il pleure et rend le détonateur.', 'Il perd tout contrôle.'], ['Le désarmer', 'agilite', ['combat', 'mobility'], 'Une clé de bras : le détonateur tombe.', 'Il t’échappe un instant.'], ['Désamorcer à distance', 'intellect', ['hack', 'tech'], 'La charge cède sans bruit.', 'Le minuteur accélère.']] },
+    { t: 'Après la fête', x: () => 'La fête continue, sans que personne ne sache ce qui s’est passé. L’ouvrier attend ton verdict : le livrer à la F.A., le laisser partir, ou l’aider à retrouver un emploi.', o: [['Le livrer', 'charisme', ['social'], 'La F.A. te remercie. Lui, pas.', 'Les agents le malmènent : tu n’es pas fier.'], ['Le laisser partir', 'agilite', ['stealth'], 'Il disparaît, honteux et reconnaissant.', 'Un agent le reconnaît.'], ['L’aider à retrouver du travail', 'intellect', ['logi', 'social'], 'Un atelier l’embauche. Il te rend visite parfois.', 'Personne ne veut de lui.']] },
+  ], end: [['Personne n’a rien su, sauf toi. La ville a dansé toute la nuit.', { xp: 65, rep: { civils: 6 }, money: 100 }], ['La fête a eu lieu, mais un doute reste dans l’air.', { xp: 24, rep: { civils: 1 } }]] },
+  ronin: { n: 'Le défi du rōnin', ch: [
+    { t: 'Un défi dans la rue', x: p => `Un guerrier errant, sans maître ni faction, te défie à ${p} : « On m’a dit que tu es de ceux qui comptent. Prouve-le. »`, o: [['Relever le défi', 'corps', ['combat'], 'Le duel est bref, loyal. Il s’incline.', 'Il t’égratigne le bras.'], ['Poser des conditions', 'charisme', ['social'], 'Il accepte : un duel, mais selon tes règles.', 'Il refuse tout compromis.'], ['Décliner poliment', 'agilite', ['mobility'], 'Il hoche la tête, intrigué.', 'Il te traite de lâche.']] },
+    { t: 'Ce qu’il cherche', x: (p, c) => c.s >= 1 ? 'Après ce premier échange, il te confie qu’il cherche l’assassin de son ancien maître.' : 'Il te suit quelques jours, puis avoue qu’il cherche l’assassin de son maître.', o: [['L’aider à enquêter', 'intellect', ['scout'], 'Vous remontez la piste d’une faction.', 'Les témoins se taisent.'], ['Le mettre en garde', 'charisme', ['social'], 'Il t’écoute, pensif.', 'Il s’emporte.'], ['Le suivre en silence', 'agilite', ['stealth'], 'Tu le vois tomber sur un indice, seul.', 'Il te repère et se vexe.']] },
+    { t: 'L’assassin', x: () => 'L’assassin est un notable respecté. Le rōnin veut le tuer ; toi, tu peux l’en empêcher, ou l’aider.', o: [['Empêcher le meurtre', 'corps', ['defense'], 'Le notable est livré à la justice.', 'Le rōnin t’écarte et frappe.'], ['L’aider à frapper', 'agilite', ['stealth', 'combat'], 'Le notable tombe. Une dette est payée.', 'Le notable était prévenu.'], ['Chercher une troisième voie', 'charisme', ['social'], 'Le notable avoue publiquement.', 'Il nie tout, vous êtes arrêtés.']] },
+  ], end: [['Le rōnin s’incline devant toi, pour la dernière fois : il rejoint ton groupe ou te laisse son sabre.', { xp: 80, money: 150, merit: 3, rep: { civils: 4 } }], ['Le rōnin disparaît dans la nuit. Tu garderas son regard en mémoire.', { xp: 28 }]] },
+  marais: { n: 'La bête du marais', ch: [
+    { t: 'Ça rôde la nuit', x: p => `Un marais près de ${p} avale les barques depuis un mois. On parle d’une créature gonflée d’ogénite, grosse comme un autobus. Un chasseur local te supplie d’aider.`, o: [['Étudier les lieux', 'intellect', ['scout', 'tech'], 'Tu repères des traces gigantesques.', 'La boue efface tout.'], ['Suivre le chasseur', 'agilite', ['mobility'], 'Il te montre ses pièges et sa maison.', 'Tu t’enfonces jusqu’aux genoux.'], ['Tendre un appât', 'charisme', ['social'], 'Les villageois te prêtent du bétail pour l’appât.', 'Personne ne veut risquer ses bêtes.']] },
+    { t: 'La traque', x: (p, c) => c.s >= 1 ? 'Tu connais ses habitudes : elle vient boire à la nuit tombée, près d’un vieux ponton.' : 'La bête te trouve avant toi : elle émerge à quelques pas, énorme et silencieuse.', o: [['L’attendre au ponton', 'agilite', ['stealth'], 'Tu la vois venir, tu restes immobile.', 'Elle sent ton odeur.'], ['La piéger au filet', 'intellect', ['tech'], 'Le filet l’immobilise.', 'Le filet cède.'], ['L’apaiser avec ton pouvoir', 'maitrise', ['control'], 'Elle s’allonge, docile.', 'Elle se cabre.']] },
+    { t: 'Que faire d’elle ?', x: () => 'La bête est vaincue, immobile, haletante. Elle n’est pas méchante : elle a faim, et elle a été chassée de son territoire.', o: [['La relâcher plus loin', 'corps', ['mobility', 'logi'], 'Tu l’emmènes vers un marais sauvage, loin des villages.', 'Elle s’échappe en route.'], ['La confier à un refuge', 'charisme', ['social'], 'Un refuge pour créatures l’accepte.', 'Aucun refuge n’a de place.'], ['L’abattre', 'corps', ['combat'], 'Le marais retrouve le calme.', 'Elle se débat et te blesse.']] },
+  ], end: [['Les villageois te remercient, la bête est en paix. Une légende de plus à ton nom.', { xp: 70, money: 140, rep: { civils: 6, natives: 3 } }], ['Le marais redevient dangereux, mais tu as évité le pire.', { xp: 26 }]] },
+  bibliotheque: { n: 'La bibliothèque muette', ch: [
+    { t: 'Les livres qui parlent bas', x: p => `Dans une bibliothèque de ${p}, les livres se murmurent entre eux la nuit, dit-on. Le conservateur te demande de passer une nuit sur place.`, o: [['Veiller toute la nuit', 'corps', ['defense'], 'Tu entends les murmures : des voix anciennes.', 'Le sommeil te prend.'], ['Poser des micros', 'intellect', ['tech'], 'Tu enregistres des bribes de phrases.', 'Les micros ne captent rien.'], ['Questionner le conservateur', 'charisme', ['social'], 'Il avoue : « Ce n’est pas la première fois. »', 'Il se ferme.']] },
+    { t: 'Ce qu’ils disent', x: (p, c) => c.s >= 1 ? 'Les voix parlent de royaumes, de rois, de pierres : tu comprends peu à peu.' : 'Les voix se répètent, saccadées : tu n’en retiens que deux mots : « les seize ».', o: [['Les transcrire', 'intellect', ['scout', 'relic'], 'Tu remplis trois carnets.', 'Les mots t’échappent.'], ['Répondre aux voix', 'charisme', ['social'], 'Les voix se calment, comme soulagées.', 'Les voix se taisent d’un coup.'], ['Chercher leur source', 'agilite', ['scout'], 'Tu trouves un recueil scellé dans un mur.', 'Le mur ne cède pas.']] },
+    { t: 'Le recueil', x: () => 'Le recueil scellé contient les chroniques d’un royaume disparu. Le conservateur te laisse le choix : le garder, le restituer à la bibliothèque, ou le faire connaître au monde.', o: [['Le garder', 'agilite', ['stealth'], 'Il t’enseignera, peu à peu.', 'Tu le perds en chemin.'], ['Le laisser en place', 'charisme', ['social'], 'Le conservateur te sera éternellement redevable.', 'Il hésite à te croire.'], ['Le publier', 'intellect', ['social'], 'Un savoir ancien revient au monde.', 'On étouffe la nouvelle.']] },
+  ], end: [['Les voix se sont tues, apaisées. Tu repars avec un savoir rare.', { xp: 70, rep: { artefactors: 5 }, merit: 2 }], ['Les voix murmurent encore. Quelqu’un finira par les entendre.', { xp: 26 }]] },
+});
 
 // ───────── Écran titre, création de personnage, fin de partie ─────────
 const NAME_A = ['Ka', 'Mi', 'Ro', 'Ta', 'Ne', 'Sa', 'Lu', 'Vo', 'Ze', 'Ari', 'Bo', 'Cy', 'Da', 'El', 'Fa', 'Gi', 'Hy', 'Io', 'Ju', 'Ko', 'Le', 'Ma', 'No', 'Os', 'Pa', 'Qu', 'Ri', 'Su', 'Th', 'Un', 'Vi', 'Wa', 'Xe', 'Yu'];

@@ -147,3 +147,12 @@ function pcDie(cause) {
   }
   endGame('dead', cause); return null;
 }
+
+// Options à seuil d'attribut : certaines options ne s'ouvrent que si tu as assez de Corps, de Charisme… (jamais toutes : la plus adaptée reste libre).
+const gateNeed = t => clamp(3 + Math.round(t * 1.1), 4, 9);
+function gateSet(opts, tier) {
+  const need = gateNeed(tier); const g = new Map(); if (opts.length < 2) return g;
+  const best = opts.reduce((bi, o, i) => A(o.attr) > A(opts[bi].attr) ? i : bi, 0);
+  opts.forEach((o, i) => { if (i !== best && hashStr(o.lab) % 3 === 0) g.set(i, need); });
+  return g;
+}

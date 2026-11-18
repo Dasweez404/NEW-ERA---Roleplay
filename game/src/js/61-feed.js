@@ -40,23 +40,24 @@ function dealCard() {
   const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
   pool.push({ w: 34, f: missionCard });
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
-  if (stoneCount() < 16 && G.wk >= 6) pool.push({ w: 9, f: clueCard });
+  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 6, f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
-  pool.push({ w: 26, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
+  pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
   pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
   if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
   const calm = pc.flags.escW != null && G.wk - pc.flags.escW <= 5; // on vient de leur échapper : l'affaire est close
-  if (!calm) conflictPool(pool); pool.push({ w: 16, f: deedCard }); if (!calm) lot1Pool(pool); lot2Pool(pool); storyPool(pool);
+  { const n0 = pool.length; if (!calm) conflictPool(pool); for (let i = n0; i < pool.length; i++) pool[i].enc = true; } pool.push({ w: 16, f: deedCard }); { const n0 = pool.length; if (!calm) lot1Pool(pool); for (let i = n0; i < pool.length; i++) pool[i].enc = true; } lot2Pool(pool); storyPool(pool);
   if (pc.flags.stage === 'story') pool = pool.filter(e => ![missionCard, townCard, travelCard, vehicleCard].includes(e.f));
-  const e = wpick(pool, x => x.w); e.f();
+  if ((pc.flags.encN || 0) >= 1) { const calmPool = pool.filter(x => !x.enc); if (calmPool.length) pool = calmPool; } // une seule rencontre par destination
+  const e = wpick(pool, x => x.w); if (e.enc) pc.flags.encN = (pc.flags.encN || 0) + 1; e.f();
 }
 function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; pc.flags.dest = (pc.flags.dest || 0) + 1; pc.flags.recapDone = false; pc.flags.snap = { money: pc.money, xp: pc.xp, merit: pc.merit, hp: pc.hp, wk: G.wk, st: stoneCount(), rep: Object.assign({}, pc.rep), loc: G.loc }; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; pc.flags.dest = (pc.flags.dest || 0) + 1; pc.flags.encN = 0; pc.flags.recapDone = false; pc.flags.snap = { money: pc.money, xp: pc.xp, merit: pc.merit, hp: pc.hp, wk: G.wk, st: stoneCount(), rep: Object.assign({}, pc.rep), loc: G.loc }; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   { const po = offers.find(o => o.promo), key = G.wk + ':' + G.loc; if (po && pc.flags.promoAsked !== key) { pc.flags.promoAsked = key; const a = ARCH[po.arch]; const lead = typeof leaderName === 'function' ? leaderName(pc.faction) : 'Ta faction'; return show({ kicker: '🎖 ÉPREUVE DE GRADE', title: 'Ta faction te met à l’épreuve', text: [`Ton mérite est suffisant. ${esc(lead)} t’attendait : pour monter en grade, il faut d’abord faire tes preuves.`, ctxText(a.intro, po), `<span class="mut">${esc(a.n)} · ${stars(po.tier)} · grade à la clé</span>`], choices: [C('Relever l’épreuve', () => missionApproach(po), { cls: 'cta', ic: '🎖' })] }); } }
   if (pc.flags.dest >= 5 && pc.flags.dest % 5 === 0 && pc.flags.factionAt !== pc.flags.dest) { pc.flags.factionAt = pc.flags.dest; return factionPoint(); }
   ensureLeads(); { const ld = (G.world.leads || {})[G.loc]; if (ld && ld.exp >= G.wk) L.push(C(`${LEAD_KINDS[ld.kind].ic} ${leadTitle(ld)}`, () => leadAct(ld), { cls: 'risk', sub: '🔴 Opportunité · ' + LEAD_KINDS[ld.kind].d })); }

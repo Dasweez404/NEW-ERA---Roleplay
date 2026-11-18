@@ -36,15 +36,16 @@ const CAMPS = {
 };
 function campCard() {
   const pc = G.pc, f = pc.flags; let c = f.camp; const done = f.campDone = f.campDone || [];
-  if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k) && !uniqSkip('camps', k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
+  if (!c) { const mains = Object.keys(CAMPS).filter(k => CAMPS[k].main && !done.includes(k) && CAMPS[k].req()).sort((a, b) => CAMPS[a].act - CAMPS[b].act); const left = Object.keys(CAMPS).filter(k => !CAMPS[k].main && !done.includes(k) && !uniqSkip('camps', k)); if (!mains.length && !left.length) return missionCard(); c = f.camp = { id: mains.length ? mains[0] : pick(left), ch: 0, s: 0 }; }
   const def = CAMPS[c.id]; const ch = def.ch[c.ch]; f.campWk = G.wk; const place = esc(capName(G.loc));
-  const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
+  const gates = gateSet(ch.o.map(o => ({ lab: o[0], attr: o[1] })), wTier());
+  const L = ch.o.map(([lab, attr, tags, okT, koT], gi) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
     const last = c.ch >= def.ch.length; const gain = fx({ xp: 12 + 4 * wTier(), hp: r.ok ? 0 : -rint(2, 7), heat: r.ok ? 0 : 2 });
     if (!last) return show({ chain: true, chainTitle: `Campagne · ${def.n}`, kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
-    const good = c.s >= 2; const [txt, rw] = def.end[good ? 0 : 1]; f.camp = null; done.push(c.id); G.score.camps = (G.score.camps || 0) + (good ? 1 : 0); logEntry(`Campagne « ${def.n} » : ${good ? 'réussie' : 'inachevée'}.`);
+    const good = c.s >= 2; const [txt, rw] = def.end[good ? 0 : 1]; f.camp = null; done.push(c.id); if (def.after) def.after(good); G.score.camps = (G.score.camps || 0) + (good ? 1 : 0); logEntry(`Campagne « ${def.n} » : ${good ? 'réussie' : 'inachevée'}.`);
     show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: good ? 'Dénouement' : 'Dénouement amer', text: [r.ok ? okT : koT, checkLine(r), txt], fx: [...gain, ...fx(rw)], choices: [C('Continuer', hub)] });
-  }, { odds: [attr, dc, tags], ic: '📖' }); });
+  }, { odds: [attr, dc, tags], ic: '📖', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '' }); });
   show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()} · ${c.ch + 1}/${def.ch.length}`, title: ch.t, text: [ch.x(place, c)], choices: L });
 }
 // ── Compagnons à histoire ──
@@ -150,7 +151,8 @@ function lot2Pool(pool) {
   const sp = (w, f) => pool.push({ w, f: spMark(f) });
   if (pc.flags.squad && G.wk >= pc.flags.squad.back) pool.push({ w: 60, f: squadReturn });
   if (!ok) return;
-  if (feat('camp') && (pc.flags.camp || Object.keys(CAMPS).some(k => !(pc.flags.campDone || []).includes(k) && !uniqSkip('camps', k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : 12, campCard);
+  const mainReady = !pc.flags.camp && Object.keys(CAMPS).some(k => CAMPS[k].main && !(pc.flags.campDone || []).includes(k) && CAMPS[k].req());
+  if (feat('camp') && (pc.flags.camp || mainReady || Object.keys(CAMPS).some(k => !CAMPS[k].main && !(pc.flags.campDone || []).includes(k) && !uniqSkip('camps', k))) && G.wk - (pc.flags.campWk || -9) >= 3) sp(pc.flags.camp ? 22 : mainReady ? 40 : 12, campCard);
   if (feat('comp') && pc.party.some(a => !a.story && a.loy >= 60 && a.inj <= 0)) sp(14, companionCard);
   if (feat('ville') && !(pc.flags.cityEv || {})[cityEventNow().key]) sp(14, cityEventCard);
 }
