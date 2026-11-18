@@ -61,8 +61,10 @@ function leaderName(fid) { const l = G.world.leader[fid]; if (l === 'pc') return
 function pickTarget(emp, arch) {
   if (emp === 'fa') { const pool = Object.keys(F).filter(f => isAnti(f) && f !== G.pc.faction && relation(G.pc.faction, f) <= 0); return pick(pool); }
   const en = (F[emp] && F[emp].enemies.length) ? F[emp].enemies.filter(f => F[f]) : [];
-  if (arch === 'humanitaire' || arch === 'climat') return pick(['fa', 'manacorp', 'slummer', 'optimum'].filter(x => x !== emp));
-  return en.length ? pick(en) : 'fa';
+  const own = G.pc.faction; const okT = x => x !== own && x !== emp;
+  if (arch === 'humanitaire' || arch === 'climat') return pick(['fa', 'manacorp', 'slummer', 'optimum'].filter(okT));
+  const e2 = en.filter(okT); if (e2.length) return pick(e2);
+  return own === 'fa' ? pick(Object.keys(F).filter(f => isAnti(f))) : 'fa';
 }
 function genOffer(emp, tier, opts = {}) {
   const pool = FACTION_POOL[emp] || FACTION_POOL.civils; const id = opts.arch || pick(pool); const a = ARCH[id];

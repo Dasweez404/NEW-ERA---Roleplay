@@ -979,8 +979,9 @@ function recalc() {
 }
 function minHeat() {
   const pc = G.pc; if (G.world && G.world.era === 'newera') return 0;
-  if (!isAnti(pc.faction)) return 0;
-  return [0, 10, 35, 60, 85, 85][pc.grade];
+  if (pc.faction === 'civils') return 0;
+  // la prime est mise sur ta tête par tes ennemis, via le Marché Noir : plus tu montes en rang, plus elle est haute
+  return (pc.faction === 'fa' ? [0, 0, 10, 35, 60, 85] : [0, 10, 35, 60, 85, 85])[pc.grade];
 }
 function wantedStars() { const h = G.pc.heat; return h >= 85 ? 4 : h >= 60 ? 3 : h >= 35 ? 2 : h >= 10 ? 1 : 0; }
 const starStr = n => '⭐'.repeat(n);
@@ -1009,6 +1010,15 @@ function loadGame() { try { const s = localStorage.getItem(SAVE_KEY); if (!s) re
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 function loadScores() { try { return JSON.parse(localStorage.getItem(SCORE_KEY) || '[]'); } catch (e) { return []; } }
 function pushScore(rec) { try { const s = loadScores(); s.push(rec); s.sort((a, b) => b.score - a.score); localStorage.setItem(SCORE_KEY, JSON.stringify(s.slice(0, 20))); } catch (e) { } }
+
+// Qui a mis ta tête à prix (au Marché Noir) ?
+function bountyBy() {
+  const pc = G.pc; const names = f => F[f] ? F[f].name : f;
+  if (pc.faction === 'fa') { const an = Object.keys(F).filter(f => isAnti(f)).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0)).slice(0, 2); return an.map(names).join(' et ') + ' (via le Marché Noir)'; }
+  const en = [...new Set([...((F[pc.faction] && F[pc.faction].enemies) || []).filter(x => F[x]), ...Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -15)])];
+  if (isAnti(pc.faction) && !en.includes('fa')) en.unshift('fa');
+  return en.slice(0, 2).map(names).join(' et ') + ' (via le Marché Noir)';
+}
 
 // ───────── Cœur des règles : jets, effets, réputation, prime, temps, fin de partie ─────────
 function pcPowers() { return G.pc.powers.map(id => PW[id]).filter(Boolean); }
@@ -1361,7 +1371,7 @@ function tabPerso() {
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
   if (pc.ptype !== 'aucun') box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
-  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', { title: 'Mérite' }, '🎖'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', { title: 'Prime' }, '🎯'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()]] : [])));
+  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', { title: 'Mérite' }, '🎖'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', { title: 'Prime' }, '🎯'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] + ' · posée par ' + bountyBy()] : [])));
   box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais')));
   box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
@@ -1445,7 +1455,7 @@ function tabAide() {
 <p><b>Étoiles ★ = Puissance</b> (1 à 10 💥) ; le <b>rang ▲</b> est ta position (Recrue → Chef). Le chef d’une faction est son membre le plus puissant. Plus tu montes en rang, plus tu es recherché (<b>prime</b> ⭐ à ⭐⭐⭐⭐).</p>
 <p><b>Combat :</b> 3 à 5 rounds. À chaque round, un geste parmi 3, adapté à ta catégorie de style (Offensif, Défensif, Technique, Soutien) ; le % est affiché. Ton pouvoir n’est utilisable qu’1 round sur 3 (2 sur 5). Gagne assez de rounds pour les battre ; perds-en trop et tu encaisses.</p>
 <p><b>Énergie ⚡ :</b> pour les pouvoirs, « Forcer » (+3) et « Se concentrer » (+3). Elle revient lentement. Les consommables du sac sont proposés quand ils servent.</p>
-<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Un échec peut te faire capturer… ou tuer.</p>
+<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Elle est mise sur ta tête par tes ennemis, via le Marché Noir, et monte avec ton rang. Un échec peut te faire capturer… ou tuer.</p>
 <p><b>Orbitrail :</b> 13 lignes, contrôles de la F.A. ; des stations peuvent fermer, des villes être confinées.</p>
 <p><b>Réputation :</b> aider une faction plaît à ses alliés, la trahir braque ses alliés.</p>
 <p class="mut">📊 Le menu ☰ ouvre le journal de partie (local) pour étudier l’équilibrage.</p>` });
@@ -2403,7 +2413,7 @@ function transferStop(r) { // changer de ligne : faible chance d'être arrêté 
     const st = r.legs[i].to; const state = OT_ST[st][3]; if (closureOf(state)) continue; let k = 0; for (let j = 0; j <= i; j++) k += r.legs[j].stops;
     const r2 = { steps: r.steps.slice(0, k), legs: r.legs.slice(0, i + 1), hops: k, cost: 0, path: r.path.slice(0, k + 1) };
     const pool = [...enemiesOf(pc.faction), ...Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen', 'fa'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -5)];
-    const kind = pool.length && chance(0.5) ? 'faction' : 'fa';
+    const kind = pc.faction === 'fa' ? 'faction' : (pool.length && chance(0.5) ? 'faction' : 'fa'); if (kind === 'faction' && !pool.length) continue;
     return { state, r2, kind, fid: kind === 'faction' ? pick(pool) : 'fa', weeks: Math.max(1, Math.round((i + 1) / r.legs.length * 2)) };
   }
   return null;
@@ -3072,8 +3082,10 @@ function leaderName(fid) { const l = G.world.leader[fid]; if (l === 'pc') return
 function pickTarget(emp, arch) {
   if (emp === 'fa') { const pool = Object.keys(F).filter(f => isAnti(f) && f !== G.pc.faction && relation(G.pc.faction, f) <= 0); return pick(pool); }
   const en = (F[emp] && F[emp].enemies.length) ? F[emp].enemies.filter(f => F[f]) : [];
-  if (arch === 'humanitaire' || arch === 'climat') return pick(['fa', 'manacorp', 'slummer', 'optimum'].filter(x => x !== emp));
-  return en.length ? pick(en) : 'fa';
+  const own = G.pc.faction; const okT = x => x !== own && x !== emp;
+  if (arch === 'humanitaire' || arch === 'climat') return pick(['fa', 'manacorp', 'slummer', 'optimum'].filter(okT));
+  const e2 = en.filter(okT); if (e2.length) return pick(e2);
+  return own === 'fa' ? pick(Object.keys(F).filter(f => isAnti(f))) : 'fa';
 }
 function genOffer(emp, tier, opts = {}) {
   const pool = FACTION_POOL[emp] || FACTION_POOL.civils; const id = opts.arch || pick(pool); const a = ARCH[id];
@@ -3899,7 +3911,7 @@ function randomHubEvent(force) {
   pool.push({ w: 2, f: () => show({ kicker: 'Marché Noir', title: 'Une offre', text: ['Un intermédiaire te glisse une carte : « Le Marché Noir aime les gens qui rendent service. Une information, 100 ¢… ou un service, plus tard. »'], choices: [C('Acheter l’information (100 ¢)', () => { const l = stoneClueGain(); show({ title: 'L’information', text: [l ? esc(l) : 'Rien de neuf, mais il te remercie.'], fx: fx({ money: -100, rep: { noir: 4 } }), choices: [C('Continuer', hub)] }); }, { req: { money: 100 } }), C('Refuser', hub)] }) });
   const calm = pc.flags.escW != null && G.wk - pc.flags.escW <= 5;
   if (st >= 1 && !calm) pool.push({ w: 3 + st, f: () => { const tier = clamp(st, 1, 4); show({ kicker: 'Traque', title: 'Un chasseur de primes', text: ['Un Fallen te suit depuis deux ruelles. L’implant sous sa nuque clignote.'], choices: [C('L’affronter', () => startCombat({ title: 'Chasseur Fallen', foes: [mkFoe('fallen', tier)], lethal: 'capture', onWin: L => show({ title: 'Abattu', text: ['Le Fallen s’effondre.'], fx: [...L, ...fx({ money: 100 * tier })], choices: [C('Continuer', hub)] }) })), C('Le semer', () => { const r = check('agilite', dcOf(tier), ['stealth', 'mobility']); if (r.ok) show({ title: 'Semé', text: ['Tu disparais par une trappe d’égout.', checkLine(r)], choices: [C('Continuer', hub)] }); else startCombat({ title: 'Chasseur Fallen', foes: [mkFoe('fallen', tier)], lethal: 'capture', onWin: L => hub() }); })] }); } });
-  if (st >= 1 && !calm && pc.ptype !== 'zoologique') pool.push({ w: 2, f: () => { const tier = clamp(st, 1, 4); show({ kicker: 'Radar à géno', title: 'Patrouille', text: ['Un Griffon survole le quartier. Ton ogénite réagit au radar.'], choices: [C('Te cacher', () => { const r = check('agilite', dcOf(tier), ['stealth']); if (r.ok) show({ title: 'Caché', text: ['Le drone passe sans te voir.', checkLine(r)], choices: [C('Continuer', hub)] }); else startCombat({ title: 'Griffon', foes: [mkFoe('griffon', tier), mkFoe('soldat', tier)], lethal: 'capture', onWin: L => hub() }); }, { odds: ['agilite', dcOf(tier), ['stealth']] }), C('L’abattre', () => startCombat({ title: 'Griffon', foes: [mkFoe('griffon', tier)], lethal: 'capture', onWin: L => show({ title: 'Abattu', text: ['Le drone s’écrase.'], fx: [...L, ...fx({ heat: 3 })], choices: [C('Continuer', hub)] }) }))] }); } });
+  if (st >= 1 && !calm && pc.faction !== 'fa' && pc.ptype !== 'zoologique') pool.push({ w: 2, f: () => { const tier = clamp(st, 1, 4); show({ kicker: 'Radar à géno', title: 'Patrouille', text: ['Un Griffon survole le quartier. Ton ogénite réagit au radar.'], choices: [C('Te cacher', () => { const r = check('agilite', dcOf(tier), ['stealth']); if (r.ok) show({ title: 'Caché', text: ['Le drone passe sans te voir.', checkLine(r)], choices: [C('Continuer', hub)] }); else startCombat({ title: 'Griffon', foes: [mkFoe('griffon', tier), mkFoe('soldat', tier)], lethal: 'capture', onWin: L => hub() }); }, { odds: ['agilite', dcOf(tier), ['stealth']] }), C('L’abattre', () => startCombat({ title: 'Griffon', foes: [mkFoe('griffon', tier)], lethal: 'capture', onWin: L => show({ title: 'Abattu', text: ['Le drone s’écrase.'], fx: [...L, ...fx({ heat: 3 })], choices: [C('Continuer', hub)] }) }))] }); } });
   if (stoneCount() === 0 && pc.grade >= 1) pool.push({ w: 1, f: () => arenaInvite() });
   const e = wpick(pool, x => x.w); if (!e) return null; return force ? e.f : (chance(0.7) ? e.f : null);
 }
@@ -4024,12 +4036,12 @@ EVENT_FN.neo = function () {
 // ───────── Capture, évasion, gladiateurs, Fallen ─────────
 function prisonFor(stars) { return stars >= 4 ? 'swahilis' : G.loc; }
 function capturedScene(text) {
-  const pc = G.pc; const st = wantedStars(); const by = pc.faction === 'fa' ? 'fa' : 'fa';
+  const pc = G.pc; const st = wantedStars(); const fa = pc.faction === 'fa'; const captor = fa ? (Object.keys(F).filter(f => isAnti(f)).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0))[0] || 'noir') : 'fa'; const captorName = fa ? (F[captor] ? F[captor].name : 'le Marché Noir') : 'la Force d’Autorité';
   pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4));
-  pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : 20), tartare: st >= 4 };
+  pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : 20), tartare: st >= 4 && !fa, captor };
   pc.stash = { inv: pc.inv, eq: pc.eq }; pc.inv = { kit: 0 }; delete pc.inv.kit; pc.eq = { arme: null, armure: null };
-  splash({ title: 'CAPTURÉ', sub: pc.flags.cap.tartare ? 'Direction le Tartare' : 'Derrière les barreaux', icon: '⛓', color: '#ff3d7f' }); shake('shake-big'); G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par la Force d’Autorité.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
-  show({ kicker: 'CAPTURÉ', title: pc.flags.cap.tartare ? 'Le Tartare' : 'Cellule', text: [text || 'On te passe les menottes.', st >= 4 ? 'Tu es un multirécidiviste, « représentant » de ta faction, recherché sur tout le globe : direction le <b>Tartare</b>, la plus grande prison du monde, sous la garde de Gaia, Erebe, Nyx et Eros.' : st >= 3 ? 'Prison continentale. Ils ne comptent pas te relâcher de sitôt.' : st >= 2 ? 'Prison d’État. Quelques mois derrière les barreaux t’attendent.' : 'Garde à vue. Pour des infractions mineures, tu n’en as pas pour longtemps.', 'Ton équipement est confisqué. Les captifs vivants peuvent être interrogés, emprisonnés, torturés, exécutés ou vendus selon leur mise à prix.'], choices: [C('Continuer', hub)] });
+  splash({ title: 'CAPTURÉ', sub: pc.flags.cap.tartare ? 'Direction le Tartare' : 'Derrière les barreaux', icon: '⛓', color: '#ff3d7f' }); shake('shake-big'); G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par ${captorName}.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
+  show({ kicker: 'CAPTURÉ', title: pc.flags.cap.tartare ? 'Le Tartare' : fa ? `Prisonnier de ${captorName}` : 'Cellule', text: [text || 'On te passe les menottes.', fa ? `Un officier de la Force d’Autorité, capturé par ${esc(captorName)} : ils te retiennent dans une planque et monnaient ta liberté.` : st >= 4 ? 'Tu es un multirécidiviste, « représentant » de ta faction, recherché sur tout le globe : direction le <b>Tartare</b>, la plus grande prison du monde, sous la garde de Gaia, Erebe, Nyx et Eros.' : st >= 3 ? 'Prison continentale. Ils ne comptent pas te relâcher de sitôt.' : st >= 2 ? 'Prison d’État. Quelques mois derrière les barreaux t’attendent.' : 'Garde à vue. Pour des infractions mineures, tu n’en as pas pour longtemps.', 'Ton équipement est confisqué. Les captifs vivants peuvent être interrogés, emprisonnés, torturés, exécutés ou vendus selon leur mise à prix.'], choices: [C('Continuer', hub)] });
 }
 function capturedMenu() {
   const pc = G.pc; const cap = pc.flags.cap; if (!cap) return hub(); const st = cap.stars; const left = Math.max(0, cap.deadline - G.wk); const L = [];

@@ -190,7 +190,7 @@ function tabPerso() {
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
   if (pc.ptype !== 'aucun') box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
-  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', { title: 'Mérite' }, '🎖'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', { title: 'Prime' }, '🎯'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()]] : [])));
+  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', { title: 'Mérite' }, '🎖'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', { title: 'Prime' }, '🎯'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()] + ' · posée par ' + bountyBy()] : [])));
   box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais')));
   box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
@@ -274,7 +274,7 @@ function tabAide() {
 <p><b>Étoiles ★ = Puissance</b> (1 à 10 💥) ; le <b>rang ▲</b> est ta position (Recrue → Chef). Le chef d’une faction est son membre le plus puissant. Plus tu montes en rang, plus tu es recherché (<b>prime</b> ⭐ à ⭐⭐⭐⭐).</p>
 <p><b>Combat :</b> 3 à 5 rounds. À chaque round, un geste parmi 3, adapté à ta catégorie de style (Offensif, Défensif, Technique, Soutien) ; le % est affiché. Ton pouvoir n’est utilisable qu’1 round sur 3 (2 sur 5). Gagne assez de rounds pour les battre ; perds-en trop et tu encaisses.</p>
 <p><b>Énergie ⚡ :</b> pour les pouvoirs, « Forcer » (+3) et « Se concentrer » (+3). Elle revient lentement. Les consommables du sac sont proposés quand ils servent.</p>
-<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Un échec peut te faire capturer… ou tuer.</p>
+<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Elle est mise sur ta tête par tes ennemis, via le Marché Noir, et monte avec ton rang. Un échec peut te faire capturer… ou tuer.</p>
 <p><b>Orbitrail :</b> 13 lignes, contrôles de la F.A. ; des stations peuvent fermer, des villes être confinées.</p>
 <p><b>Réputation :</b> aider une faction plaît à ses alliés, la trahir braque ses alliés.</p>
 <p class="mut">📊 Le menu ☰ ouvre le journal de partie (local) pour étudier l’équilibrage.</p>` });

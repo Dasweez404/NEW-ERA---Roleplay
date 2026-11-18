@@ -152,8 +152,9 @@ function recalc() {
 }
 function minHeat() {
   const pc = G.pc; if (G.world && G.world.era === 'newera') return 0;
-  if (!isAnti(pc.faction)) return 0;
-  return [0, 10, 35, 60, 85, 85][pc.grade];
+  if (pc.faction === 'civils') return 0;
+  // la prime est mise sur ta tête par tes ennemis, via le Marché Noir : plus tu montes en rang, plus elle est haute
+  return (pc.faction === 'fa' ? [0, 0, 10, 35, 60, 85] : [0, 10, 35, 60, 85, 85])[pc.grade];
 }
 function wantedStars() { const h = G.pc.heat; return h >= 85 ? 4 : h >= 60 ? 3 : h >= 35 ? 2 : h >= 10 ? 1 : 0; }
 const starStr = n => '⭐'.repeat(n);
@@ -182,3 +183,12 @@ function loadGame() { try { const s = localStorage.getItem(SAVE_KEY); if (!s) re
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 function loadScores() { try { return JSON.parse(localStorage.getItem(SCORE_KEY) || '[]'); } catch (e) { return []; } }
 function pushScore(rec) { try { const s = loadScores(); s.push(rec); s.sort((a, b) => b.score - a.score); localStorage.setItem(SCORE_KEY, JSON.stringify(s.slice(0, 20))); } catch (e) { } }
+
+// Qui a mis ta tête à prix (au Marché Noir) ?
+function bountyBy() {
+  const pc = G.pc; const names = f => F[f] ? F[f].name : f;
+  if (pc.faction === 'fa') { const an = Object.keys(F).filter(f => isAnti(f)).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0)).slice(0, 2); return an.map(names).join(' et ') + ' (via le Marché Noir)'; }
+  const en = [...new Set([...((F[pc.faction] && F[pc.faction].enemies) || []).filter(x => F[x]), ...Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -15)])];
+  if (isAnti(pc.faction) && !en.includes('fa')) en.unshift('fa');
+  return en.slice(0, 2).map(names).join(' et ') + ' (via le Marché Noir)';
+}

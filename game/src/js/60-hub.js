@@ -79,7 +79,7 @@ function transferStop(r) { // changer de ligne : faible chance d'être arrêté 
     const st = r.legs[i].to; const state = OT_ST[st][3]; if (closureOf(state)) continue; let k = 0; for (let j = 0; j <= i; j++) k += r.legs[j].stops;
     const r2 = { steps: r.steps.slice(0, k), legs: r.legs.slice(0, i + 1), hops: k, cost: 0, path: r.path.slice(0, k + 1) };
     const pool = [...enemiesOf(pc.faction), ...Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen', 'fa'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -5)];
-    const kind = pool.length && chance(0.5) ? 'faction' : 'fa';
+    const kind = pc.faction === 'fa' ? 'faction' : (pool.length && chance(0.5) ? 'faction' : 'fa'); if (kind === 'faction' && !pool.length) continue;
     return { state, r2, kind, fid: kind === 'faction' ? pick(pool) : 'fa', weeks: Math.max(1, Math.round((i + 1) / r.legs.length * 2)) };
   }
   return null;
