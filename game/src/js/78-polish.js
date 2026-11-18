@@ -2,7 +2,7 @@
 const TUTO = {
   contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Poursuivre l’intrigue ».'],
   trame: ['Voici un événement de la trame.', 'Choisis une option : un dé décide. Le pourcentage indique tes chances.'],
-  combat: ['Un combat dure 3 rounds.', 'À chaque round : Attaquer, te protéger ou utiliser ton Pouvoir. Gagne plus de rounds que l’ennemi.'],
+  combat: ['Chaque ennemi annonce son geste.', 'Joue la carte qui le contre : Garde contre Frappe, Attaque contre Feinte, Ruse contre Garde. La main change à chaque round.'],
   ville: ['Tu es en ville.', 'Tu as une seule action ici (repos, marché, recruter, s’entraîner), puis tu repars. La station voisine est toujours gratuite.'],
   voyage: ['Choisis ta destination.', 'Touche une ville sur la carte, puis touche-la encore pour partir. Le 💎 marque un indice sur une pierre.']
 };

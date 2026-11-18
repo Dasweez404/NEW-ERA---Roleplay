@@ -146,8 +146,8 @@ function A(id) {
 }
 function recalc() {
   const pc = G.pc; const n = stoneCount();
-  pc.hpMax = 22 + A('corps') * 3 + pc.grade * 3 + (pc.style === 'juggernaut' ? 10 : 0) + (pc.ptype === 'zoologique' ? 4 : 0) + n * 2;
-  pc.enMax = Math.max(0, 5 + Math.round(A('maitrise') * 1.5) + (pc.ptype === 'elementaire' ? 4 : 0) + (pc.ptype === 'hybride' ? -2 : 0) + (pc.ptype === 'aucun' ? -8 : 0) + n);
+  pc.hpMax = Math.round(26 + 3.5 * pcPower() + A('corps') * 0.8 + (pc.style === 'juggernaut' ? 6 : 0) + (pc.ptype === 'zoologique' ? 3 : 0) + n * 2);
+  pc.enMax = Math.max(0, 5 + Math.round(pcPower()) + Math.round(A('maitrise') * 0.8) + (pc.ptype === 'elementaire' ? 4 : 0) + (pc.ptype === 'hybride' ? -2 : 0) + (pc.ptype === 'aucun' ? -8 : 0) + n);
   pc.hp = clamp(pc.hp, 0, pc.hpMax); pc.en = clamp(pc.en, 0, pc.enMax);
 }
 function minHeat() {

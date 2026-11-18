@@ -126,7 +126,7 @@ function render(quiet) {
     sc.kicker ? h('div', { class: 'kicker rv', style: '--i:0' }, sc.kicker) : null, rollEl,
     sc.banner ? h('div', { class: 'rv', style: '--i:1' }, cityHead()) : h('div', { class: 'title rv', style: '--i:1' }, sc.title), paragraphs(sc.text), fxHTML(sc.fx), sc.extra || null, sc.choices ? choicesEl(sc.choices, sc.tiles, sc.tileCls) : null);
   if (sc.fx && sc.fx.some(l => /¢|XP|PV/i.test(l.t || '') && l.c !== 'badc')) UI.after.push(() => setTimeout(() => { const c = document.querySelector('.chips .chip.good'); if (c) burstAt(c, '#fcee09', 14); }, 350));
-  if (live) { app.append(hudEl()); if (!sc.compact && !sc.banner) app.append(stripEl()); }
+  if (live) { app.append(hudEl()); if (!CB && !sc.final && !sc.bare) app.append(railEl(sc)); if (!sc.compact && !sc.banner) app.append(stripEl()); }
   const side = live ? sideEl() : null; if (side) side.id = 'sidecard';
   app.append(h('div', { class: 'layout' + (live ? '' : ' solo') }, main, side));
   if (live) app.append(dockEl());
@@ -142,6 +142,13 @@ function tipEl() {
   return h('div', { class: 'tip' }, h('span', {}, '💡 Touche un choix pour avancer. ⚡ = menu d’actions (voyage, ville, faction). Barre du bas = fiche, sac, groupe.'), h('button', { class: 'x', onclick: () => { UI.tipHide = 1; try { localStorage.setItem('ne_tip', 9); } catch (e) { } render(true); } }, '✕'));
 }
 // Banderole unique : environnement de la ville, date, et l'actualité qui défile comme à la télé
+// Rail de progression : on voit toujours où l'on en est dans la boucle d'une destination.
+function railEl(sc) {
+  const f = G.pc.flags; const st = f.stage || 'contrats'; const trav = sc && sc.kicker === 'Orbitrail';
+  const idx = trav ? 3 : st === 'contrats' ? 0 : st === 'story' ? 1 : 2; const left = f.storyLeft == null ? 3 : f.storyLeft;
+  const steps = ['Contrats', left > 0 || st !== 'story' ? 'Histoire' : 'Histoire', 'Ville', 'Départ'];
+  return h('div', { class: 'rail' }, steps.map((n, i) => h('span', { class: 'rs' + (i < idx ? ' done' : i === idx ? ' on' : '') }, n + (i === 1 && st === 'story' ? ` ${Math.max(0, 3 - left)}/3` : ''))));
+}
 function stripEl() {
   if (!G.world.news.length && typeof monthNews === 'function') { monthNews(); monthNews(); }
   const recent = G.world.news.slice(0, 4).map(x => x.t); const news = recent.length ? recent.join('   ◆   ') : null; const w = h('div', { class: 'strip' });
@@ -174,7 +181,7 @@ function fillSheet() {
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', {}, 'Traits'), traitNames().join(' · ')] : [])));
+  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Puissance'), `${pcPower().toFixed(1)} / 10`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', {}, 'Traits'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
   pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });

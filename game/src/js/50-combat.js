@@ -75,89 +75,9 @@ const aliveFoes = () => CB.foes.filter(f => !f.dead);
 const clog = (t, c = '') => { if (!CB) return; CB.log.push({ t, c }); };
 const fname = f => cap(f.name.replace(/\s*\(.*\)/, ''));
 const powName = tag => { const p = pcPowers().find(p => p.tags.includes(tag)); return p ? p.name : 'Pouvoir'; };
-function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise' ? 'corps' : a; }
-const powMul = () => (G.pc.ptype === 'hybride' ? 0.8 : 1) * (CB.boost || 1);
-const hitBonus = () => (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
-const firstFoe = () => aliveFoes()[0];
 // ── Un affrontement = quelques rounds (3 à 5), une décision par round. Le bilan dépend des rounds gagnés. ──
-function roundsFor(cfg, foes) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || Math.round(f.atk / 2))); return t >= 5 || (foes.length >= 3 && t >= 3) ? 5 : (t >= 3 || foes.length >= 3) ? 4 : 3; }
-function startCombat(cfg) {
-  if (cfg.foes.length > 3) cfg.foes = cfg.foes.slice(0, 3);
-  scaleFoes(cfg);
-  dedupeFoes(cfg.foes);
-  CB = { cfg, foes: cfg.foes, N: 5, mom: 0, stance: null, usedSit: [], sit: null, round: 1, W: 0, Lz: 0, hist: [], log: [], tier: Math.max(...cfg.foes.map(f => Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), weakDone: false, hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, halve: 0, pops: [], twist: null, sig: {} };
-  CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
-  CB.thr = threat(); CB.N = cfg.rounds || ((CB.thr.gap >= 2 || CB.tier >= 5) ? 5 : 3);
-  clog(cfg.intro || 'Le combat commence !'); CB.twist = null;
-  if (cfg.noPreview) { CB.preview = false; return begin('equilibre'); }
-  if (CB.thr.gap <= -2) return sweepAway();
-  if (CB.thr.gap >= 1) { CB.preview = true; return renderPreview(); }
-  CB.preview = false; begin(autoStance());
-}
-function engage() { if (!CB) return; CB.preview = false; begin(autoStance()); }
-function begin(stance) {
-  if (!CB) return; CB.preview = false; CB.stance = stance; CB.planned = true; coach('combat');
-  if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); }
-  renderCombat();
-}
-function nextTwist() { CB.twist = null; }
-const twistMod = cat => (CB.twist && CB.twist.cat === cat) ? CB.twist.mod : 0;
-const avgDef = () => { const a = aliveFoes(); return a.length ? a.reduce((t, f) => t + f.def, 0) / a.length : 0; };
-const roundDc = () => 14 + Math.round(avgDef() * 0.7);
 // ── Les décisions proposées ──
-function offense() {
-  const pc = G.pc; const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const w = weaponOf();
-  if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return { id: 'power', ic: '✦', label: `${powName('combat')} : frappe de pouvoir`, sub: `${POWER_FX.combat.cost} énergie · +3 au jet`, attr: 'maitrise', tags: ['combat'], cat: 'atk', cost: POWER_FX.combat.cost, bonus: 3, kind: 'hit' };
-  return { id: 'strike', ic: '⚔', label: 'Frapper de front', sub: w ? w.n : 'À mains nues', attr: primAttr(), tags: ['combat'], cat: 'atk', bonus: (w ? Math.floor(w.dmg / 3) : 0) + (hasRole('combattant') ? 1 : 0), kind: 'hit' };
-}
-function feint() { return { id: 'feint', ic: '💨', label: 'Feinte et contre', sub: 'Si tu perds ce round, tu encaisses moitié moins', attr: 'agilite', tags: ['mobility', 'stealth'], cat: 'feint', bonus: G.pc.style === 'flanker' ? 2 : 0, kind: 'feint' }; }
-function tactic() {
-  const pc = G.pc; const tags = Object.keys(powerTags()); const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
-  if (pc.hp < pc.hpMax * 0.5 && heal && !CB.noItems) return { id: 'item', ic: '💊', label: `Se soigner (${ITEMS[heal].n})`, sub: ITEMS[heal].desc + ' · round nul (ni gagné ni perdu)', kind: 'item', item: heal };
-  if (aliveFoes().some(f => f.m) && hasCap('hack')) return { id: 'hack', ic: '💻', label: 'Pirater la machine', sub: 'Une machine ennemie est neutralisée', attr: 'intellect', tags: ['hack'], cat: 'tac', cost: tags.includes('hack') ? POWER_FX.hack.cost : 0, bonus: 2, kind: 'hack' };
-  if (tags.includes('control') && aliveFoes().length >= 2 && pc.en >= POWER_FX.control.cost) return { id: 'bind', ic: '🕸', label: `${powName('control')} : entraver`, sub: 'Les ennemis sont paralysés : prochain round +2', attr: 'maitrise', tags: ['control'], cat: 'tac', cost: POWER_FX.control.cost, kind: 'bind' };
-  if (pc.hp < pc.hpMax * 0.6 && tags.includes('heal') && pc.en >= POWER_FX.heal.cost) return { id: 'heal', ic: '💚', label: `${powName('heal')} : te régénérer`, sub: `${POWER_FX.heal.cost} énergie · soigne ~25 % · round nul`, kind: 'heal', cost: POWER_FX.heal.cost };
-  if (tags.includes('social') || A('charisme') >= 6) return { id: 'intim', ic: '🗣', label: 'Intimider', sub: 'Ils hésitent : tes défaites coûtent moitié moins ensuite', attr: 'charisme', tags: ['social'], cat: 'tac', kind: 'intim' };
-  return { id: 'guard', ic: '🛡', label: 'Se mettre en garde', sub: 'Si tu perds ce round, tu encaisses 60 % de moins ; +2 énergie', attr: 'corps', tags: ['defense'], cat: 'tac', kind: 'guard' };
-}
-function techMove() { const pc = G.pc; const st = STYLES[pc.style]; return { id: 'tech', ic: '★', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost} énergie · +2 au jet`, attr: primAttr(), tags: ['combat', ...(pc.style === 'flanker' ? ['mobility'] : [])], cat: 'atk', cost: st.tech.cost, bonus: 2, kind: 'tech', lock: (pc.style === 'performer' && !pcPowers().length) ? 'Requiert un pouvoir' : pc.en < st.tech.cost ? 'Énergie insuffisante' : null }; }
-function moves() { return sitMoves(); }
-function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + CB.nextBonus + twistMod(m.cat) + elanBonus() + stanceBonus(m)]; }
 // ── Résolution d’un round ──
-function play(m) {
-  if (!CB || CB.over) return; CB.preview = false; CB.spec = false; CB.stance = CB.stance || 'equilibre'; CB.sit = null; CB.log = []; CB.pops = [];
-  const pc = G.pc; if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
-  let res = 'draw', sev = 1; const nb = CB.nextBonus; CB.nextBonus = 0;
-  if (m.kind === 'sig') { sigDo(m); res = 'win'; }
-  else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); sev = 0.4; res = 'loss0'; }
-  else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); sev = 0.4; res = 'loss0'; }
-  else {
-    const r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + twistMod(m.cat) + elanBonus() + stanceBonus(m)); CB.lastR = r; const f = firstFoe(); const crit = r.crit || (PK('crit') && r.r >= 19);
-    if (r.ok) {
-      res = 'win'; const win = { hit: [`Ton coup passe la garde de ${fname(f)}.`, `${fname(f)} recule sous l’impact.`, `Un enchaînement net : ${fname(f)} encaisse.`], feint: [`Tu dupes ${fname(f)} et ripostes.`, 'Une feinte parfaite.'], intim: ['Ton regard les glace : ils reculent.'], bind: ['Les ennemis sont entravés.'], hack: [`${fname(aliveFoes().find(x => x.m) || f)} est neutralisé.`], guard: ['Tu tiens bon, l’ennemi s’épuise.'], tech: ['Ta technique fait mouche.'], awaken: ['⚡ Ton pouvoir s’éveille !'] }[m.kind] || ['Tu gagnes ce round.'];
-      clog(pick(win) + (crit ? ' (CRITIQUE)' : ''), 'log-hit'); pop('f0', 'ROUND GAGNÉ', crit ? 'crit' : 'dmg');
-      if (m.kind === 'intim') CB.halve = 2; if (m.kind === 'bind') { CB.nextBonus += 2; aliveFoes().forEach(x => { x.stun = 1; }); } if (m.kind === 'guard') pc.en = Math.min(pc.enMax, pc.en + 1);
-      if (m.kind === 'hack') { const mc = aliveFoes().find(x => x.m); if (mc) mc.dmg = 1; }
-      if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken();
-      if (crit) CB.nextBonus += 1;
-    } else {
-      res = 'loss'; sev = m.kind === 'feint' ? 0.5 : m.kind === 'guard' ? 0.4 : m.kind === 'gamble' ? 1.5 : 1; if (r.fumble) sev *= 1.5; sev *= (CB.stance === 'offensive' ? 1.4 : CB.stance === 'prudente' ? 0.6 : 1); clog(pick([`${fname(f)} lit ton mouvement et réplique.`, `Ton geste échoue : ${fname(f)} te contre.`, 'Tu perds le rythme.']), 'log-miss'); pop('pc', 'ROUND PERDU', 'miss');
-      if (PK('thorns') && chance(Math.min(0.6, PK('thorns') * 0.12))) { res = 'draw'; sev = 0.3; clog('Ta riposte contrebalance : round nul.', 'good'); }
-    }
-  }
-  if (res === 'loss0') res = 'draw';
-  if (res === 'win') { CB.W++; if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - PK('weaken') * 2); }); clog('Tes ennemis faiblissent.', 'warnc'); } if (PK('stun') && chance(PK('stun') / 100)) { CB.nextBonus += 2; clog('Sidérés, ils vacillent : +2 au prochain round.', 'warnc'); } if (PK('drain')) { const g = Math.min(PK('drain') * 2, pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } } }
-  if (res === 'loss') CB.Lz++;
-  if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
-  CB.hist.push(res === 'win' ? 'w' : res === 'loss' ? 'l' : 'd'); momUpdate(res, m);
-  pc.en = Math.min(pc.enMax, pc.en + PK('energy')); if (PK('regen') && pc.hp < pc.hpMax) { pc.hp = Math.min(pc.hpMax, pc.hp + PK('regen')); }
-  if (PK('allyheal')) pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
-  if (CB.halve > 0) CB.halve--; aliveFoes().forEach(x => { if (x.stun > 0) x.stun--; });
-  CB.round++; const ratio = 1 - CB.W / CB.N; CB.foes.forEach(x => { x.hp = Math.max(0, Math.round(x.hpMax * ratio)); });
-  if (pc.hp <= 0) return loseCombat(false);
-  if (CB.round > CB.N) return conclude();
-  nextTwist(); renderCombat();
-}
 function techEffect() {
   const s = G.pc.style;
   if (s === 'juggernaut' || s === 'protector') { CB.shield += 8; clog('Ta garde est de fer : bouclier +8.', 'good'); }
@@ -167,19 +87,6 @@ function techEffect() {
   else if (s === 'engineer') { CB.hitBuff += 1; clog('Gadget improvisé : un drone te couvre (+1 aux jets).', 'good'); }
   else if (s === 'brawler') { CB.nextBonus += 2; clog('Enchaînement : +2 au prochain round.', 'good'); }
   else if (s === 'performer') { CB.nextBonus += 3; clog('Surcharge : +3 au prochain round.', 'good'); }
-}
-function hurtPc(sev) {
-  const pc = G.pc; const hostile = aliveFoes().filter(f => f.stun <= 0); if (!hostile.length) { clog('Les ennemis, sonnés, ne ripostent pas.', 'good'); return; }
-  if (CB.dodge > 0 && sev >= 0.5) { CB.dodge--; pop('pc', 'ESQUIVE', 'ok'); clog('Tu esquives la riposte !', 'good'); return; }
-  let total = 0;
-  hostile.forEach(f => {
-    const dmg = Math.max(1, Math.round(f.dmg * 0.88 * sev * (G.pc.hp < G.pc.hpMax * 0.4 ? 1.2 : 1) * (CB.halve > 0 ? 0.5 : 1) * (0.8 + Math.random() * 0.4)) + ((CB.twist && CB.twist.sp === 'buff' && CB.twist.f === f) ? 2 : 0));
-    const allies = pc.party.filter(a => a.inj <= 0);
-    if (allies.length && chance(0.2)) { const a = pick(allies); a.hp -= dmg; clog(`${fname(f)} blesse ${CH[a.id].name} (${dmg}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
-    total += Math.max(1, dmg - PK('def') - Math.floor(pcArm() / 2) - (hasRole('gardien') ? 1 : 0));
-  });
-  if (CB.shield > 0 && total > 0) { const ab = Math.min(CB.shield, total); CB.shield -= ab; total -= ab; clog(`Ton bouclier absorbe ${ab}.`, 'good'); }
-  if (total > 0) { pc.hp = Math.max(0, pc.hp - total); CB.hurt = true; pop('pc', `−${total}`, 'dmg'); clog(`Tu encaisses ${total} dégâts.`, 'log-dmg'); if (pc.hp <= 0 && CB.lb) { CB.lb = false; pc.hp = 1; clog('Dernier souffle : tu t’accroches à 1 PV !', 'good'); } }
 }
 const pcArm = () => { const a = armorOf(); return a ? a.def : 0; };
 function awaken() {
@@ -191,57 +98,8 @@ function awaken() {
   else { CB.boost = 1.2; pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.25)); pc.en = Math.min(pc.enMax, pc.en + 6); clog('Un éveil partiel.', 'good'); }
   CB.awk = free ? 0 : 1;
 }
-function flee() {
-  if (!CB || CB.over) return; CB.log = []; CB.pops = [];
-  const dc = 11 + CB.foes.length + CB.tier * 2; const r = check('agilite', dc, ['mobility']);
-  if (r.ok) { clog('Tu t’échappes !', 'good'); return finishCombat('flee'); }
-  clog('Impossible de fuir : on te rattrape.', 'log-dmg'); CB.Lz++; CB.hist.push('l'); hurtPc(1); CB.round++; if (G.pc.hp <= 0) return loseCombat(false); if (CB.round > CB.N) return conclude(); nextTwist(); renderCombat();
-}
 // ── Bilan ──
-function sweepAway() {
-  const T = CB.thr; G.pc.hp = Math.max(1, G.pc.hp - Math.round(G.pc.hpMax * 0.03)); CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.over = true; CB.bilan = '💨 Ils ne font pas le poids'; finishCombat('win');
-}
-function conclude() {
-  const { W, Lz, N } = CB; const cfg = CB.cfg; const pc = G.pc; CB.over = true; const hist = CB.hist.map(x => x === 'w' ? '✔' : x === 'l' ? '✖' : '–').join(' ');
-  const fate = cfg.lethal === 'death' ? 'tué' : cfg.lethal === 'capture' ? 'capturé' : 'hors de combat';
-  if (Lz >= N) { toast(`${hist} · Défaite`); return loseCombat(false); }
-  if (W >= N) { CB.bilan = `${hist} · adversaire ${fate}`; return finishCombat('win'); }
-  if (W > Lz) { CB.partial = true; CB.bilan = `${hist} · il s’enfuit, blessé`; return finishCombat('win'); }
-  let txt = W === Lz ? 'impasse, chacun se replie' : 'tu es blessé, tu te replies'; if (W < Lz) { const loss = Math.round(pc.hpMax * 0.2); pc.hp = Math.max(1, pc.hp - loss); txt += ` (−${loss} PV)`; }
-  toast(`${hist} · ${txt}`);
-  if (cfg.canFlee === false) return loseCombat(false); finishCombat('flee');
-}
 // ── Affichage ──
-function renderCombat() {
-  const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
-  const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
-    const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : 100)}%` }); const pct = Math.max(0, f.hp) / f.hpMax * 100; bars.push([bi, pct]); CB.prev[i] = pct;
-    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 22) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f) + (f.stun > 0 ? ' ⚡' : '')), h('div', { class: 'bar hp mini' }, bi)));
-  }));
-  const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
-  const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
-  const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  const tw = null; const sit = currentSit(); const sitEl = h('div', { class: 'sit' }, sit.t);
-  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
-  const hook = () => {
-    const delay = UI.scene && UI.scene.roll ? 560 : 0;
-    requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), delay));
-    setTimeout(() => {
-      let dmgF = false, dmgP = false, miss = false;
-      pops.forEach((p, n) => { const host = document.querySelector(`.combat [data-k="${p.k}"]`); if (!host) return; if (p.cls === 'dmg' || p.cls === 'crit') { if (p.k === 'pc') dmgP = true; else dmgF = true; host.classList.add('hit'); } if (p.cls === 'miss') miss = true;
-        const el = h('span', { class: 'pop ' + p.cls, style: `animation-delay:${n * 140}ms` }, p.txt); host.append(el); setTimeout(() => el.remove(), 1500 + n * 140); });
-      if (dmgF) { sfx('hit'); buzz(20); } else if (miss) sfx('miss'); if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
-    }, delay);
-  };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips, momEl()), rows, st ? h('div', { class: 'small acc' }, st) : null, sitEl, rlog, tw), choices: combatChoices() });
-}
-function combatChoices() {
-  const pc = G.pc; const L = [];
-  moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
-  if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.cfg.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
-  else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
-  return L;
-}
 function finishCombat(kind) {
   const cfg = CB.cfg; const pc = G.pc; const awoke = CB.wasAwake; const free = stoneCount() >= 8; const rage = CB.rage;
   if (CB.rage && !free) { pc.en = 0; }
@@ -279,7 +137,6 @@ function defeatOutcome(lethal, text) {
   show({ kicker: 'DÉFAITE', title: 'Repli', text: [text, 'Tu t’en sors avec des bleus et ta fierté en miettes.'], choices: [C('Continuer', hub)] });
 }
 
-function pcLevel() { const pc = G.pc; const w = weaponOf(), a = armorOf(); return clamp(Math.round(pc.grade + (A(primAttr()) - 5) / 3 + (w ? w.dmg / 4 : 0) + (a ? a.def / 4 : 0)), 1, 6); }
 function threat() {
   const foes = CB.foes; const t = Math.max(...foes.map(f => f.tier || Math.round(f.atk / 2))) + (foes.length >= 3 ? 1 : 0); const lv = pcLevel(); const gap = t - lv;
   const L = gap <= -2 ? ['Insignifiant', 0.25, '#5be3a0'] : gap === -1 ? ['Facile', 0.6, '#5be3a0'] : gap === 0 ? ['Équilibré', 1, '#fcee09'] : gap === 1 ? ['Dangereux', 1.3, '#ff8a1f'] : ['Écrasant', 1.6, '#ff3d7f'];
