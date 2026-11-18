@@ -83,7 +83,10 @@ function getBoard() {
   const home = pc.faction;
   const addF = (emp, n) => { for (let i = 0; i < n; i++) L.push(genOffer(emp, rint(Math.max(1, t0 - 1), t1))); };
   if (home !== 'civils') addF(home, 2);
-  addF('civils', 1); if ((pc.rep.noir || 0) >= 5 || ['galleon', 'check', 'slummer', 'rapinas', 'manacorp', 'arena'].includes(home)) addF('noir', 1);
+  addF('civils', 1);
+  // Pays d'une base de faction : contrats liés à cette faction (sur place)
+  Object.keys(F).filter(f => f !== home && f !== 'own' && F[f].hq === G.loc && !F[f].secret).slice(0, 2).forEach((f, i) => { const o = genOffer(f, rint(Math.max(1, t0 - 1), t1)); o.local = true; L.push(o); if (i === 0 && chance(0.6)) { const o2 = genOffer(f, rint(Math.max(1, t0), t1)); o2.local = true; L.push(o2); } });
+  if ((pc.rep.noir || 0) >= 5 || ['galleon', 'check', 'slummer', 'rapinas', 'manacorp', 'arena'].includes(home)) addF('noir', 1);
   if (home === 'fallen') { /* contrats imposés */ }
   pc.roles.forEach(r => { const emp = home !== 'civils' && chance(0.5) ? home : 'civils'; const o = genOffer(emp, rint(Math.max(1, t0), t1), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; L.push(o); });
   const promo = promoOffer(); if (promo) L.unshift(promo);
@@ -99,7 +102,7 @@ function missionBoard() {
   const pc = G.pc; const offers = getBoard(); const L = [];
   const co = typeof canonOffers === 'function' ? canonOffers() : []; co.forEach(c => L.push(C(`⭐ ${c.title}`, c.go, { sub: c.sub, cls: 'risk' })));
   L.push(C('Combattre à l’ARENA (1 à 3 combats)', () => arenaTournament(rint(1, 3)), { cls: 'risk', sub: 'Gros gains, mort possible.', req: { ok: () => pc.faction === 'fa' ? 'Un officier de la F.A. n’y combat pas' : null } }));
-  offers.forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${o.roleOffer ? '🎭 ' + ROLES[o.roleOffer].name + ' — ' : ''}${a.n} (${o.empName}) — difficulté ${stars(o.tier)}`, () => missionBrief(o), { sub: `${o.tgtName} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, req: { ok: () => pc.faction === 'fa' && o.emp === 'noir' ? 'Impossible pour un officier de la F.A.' : null } })); });
+  offers.forEach(o => { const a = ARCH[o.arch]; L.push(C(`${o.promo ? '🎖 ÉPREUVE DE GRADE — ' : ''}${o.local ? '📍 ' : ''}${o.roleOffer ? '🎭 ' + ROLES[o.roleOffer].name + ' — ' : ''}${a.n} (${o.empName}) — difficulté ${stars(o.tier)}`, () => missionBrief(o), { sub: `${o.tgtName} · ${o.pay} ¢ · ${o.weeks} sem.${o.merit ? ' · +' + o.merit + ' mérite' : ''}`, req: { ok: () => pc.faction === 'fa' && o.emp === 'noir' ? 'Impossible pour un officier de la F.A.' : null } })); });
   if (pc.implant) L.unshift(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   L.push(C('Chercher d’autres contrats (1 semaine)', () => { advance(1); if (G.status !== 'play') return; G.board = null; missionBoard(); }));
   L.push(C('← Retour', () => contractCard()));
