@@ -848,6 +848,9 @@ const FA_UNITS = {
   chimere: 'Chimère (drone-tourelle)', cyclope: 'Cyclope (mecha de renfort)', atlas: 'Atlas (Super-Mecha)', prometh: 'Prométhée (Super-Mecha)', epimeth: 'Épiméthée (Super-Mecha)', menet: 'Ménétios (Super-Mecha)',
 };
 
+// Le rang (grade) s'affiche en chevrons ▲ ; les étoiles ★ ne désignent que la puissance.
+const rankStr = g => g > 0 ? '▲'.repeat(g) : '△';
+
 // ───────── État de partie, création de personnage, sauvegarde ─────────
 let G = null;
 const SAVE_KEY = 'newera.save.v1', SCORE_KEY = 'newera.scores.v1';
@@ -891,9 +894,9 @@ function fallbackPowers(c) {
   return out;
 }
 function gradeFromChar(c) {
+  // Les étoiles = puissance, pas position : tout le monde commence Recrue, sauf le chef (le plus puissant de sa faction).
   if (Object.values(F).some(f => f.leaders.includes(c.id))) return 5;
-  if (c.stars) return Math.min(c.stars, c.faction === 'fa' ? 4 : 4);
-  return c.ratio >= 100 ? 4 : c.ratio >= 40 ? 3 : c.ratio >= 10 ? 2 : 1;
+  return 0;
 }
 function ageNum(s) { const m = String(s).match(/(\d+)-(\d+)/); return m ? Math.round((+m[1] + +m[2]) / 2) : 28; }
 function ptypeOf(types) { const t = types.filter(x => x !== 'aucun'); return !t.length ? 'aucun' : t.length > 1 ? 'hybride' : t[0]; }
@@ -969,18 +972,18 @@ function startGame(spec) {
 function startKit(pc) {
   const w = { brawler: 'matraque', juggernaut: 'matraque', protector: 'matraque', flanker: 'lame', ranger: 'tube', assist: 'tube', engineer: 'outils', performer: null }[pc.style];
   const strong = { brawler: 'gantelets', juggernaut: 'gantelets', protector: 'gantelets', ranger: 'plasma', engineer: 'plasma', assist: 'plasma', flanker: 'tube', performer: null }[pc.style];
-  const wp = pc.grade >= 3 ? strong : w; if (wp && ITEMS[wp].t === 'arme') { giveItem(wp); pc.eq.arme = wp; } else if (w && ITEMS[w].t === 'gadget') giveItem(w);
-  if (pc.grade >= 1) { giveItem('gilet'); pc.eq.armure = 'gilet'; } if (pc.grade >= 3) { giveItem('nano'); pc.eq.armure = 'nano'; }
-  if (pc.grade >= 2 && !hasItemOf(pc, 'drone')) giveItem('drone');
+  const lv = Math.max(pc.grade, pc.pstars || 0); const wp = lv >= 3 ? strong : w; if (wp && ITEMS[wp].t === 'arme') { giveItem(wp); pc.eq.arme = wp; } else if (w && ITEMS[w].t === 'gadget') giveItem(w);
+  if (lv >= 1) { giveItem('gilet'); pc.eq.armure = 'gilet'; } if (lv >= 3) { giveItem('nano'); pc.eq.armure = 'nano'; }
+  if (lv >= 2 && !hasItemOf(pc, 'drone')) giveItem('drone');
 }
 function hasItemOf(pc, id) { return (pc.inv[id] || 0) > 0; }
 function charToSpec(c) {
   const grade = gradeFromChar(c); const st = c.style || ['brawler', 'ranger', 'assist', 'flanker'][hashStr(c.id) % 4];
   const cc = Object.assign({}, c, { style: st });
   const powers = c.powers.length ? c.powers.slice() : fallbackPowers(c);
-  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).filter(x => x.stars <= 3).slice(0, Math.max(0, Math.floor((grade - 2) / 2))).map(x => x.id);
+  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).filter(x => x.stars <= 3).slice(0, Math.max(0, Math.floor((Math.max(grade, c.stars || 0) - 2) / 2))).map(x => x.id);
   return {
-    pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 800, 1200, 1800, 2600][grade], charId: c.id, xp: grade * 60 },
+    pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, pstars: c.stars || 0, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 800, 1200, 1800, 2600][Math.min(5, Math.max(grade, c.stars || 0))], charId: c.id, xp: Math.max(grade, c.stars || 0) * 60 },
     recruits: mates,
   };
 }
@@ -1287,7 +1290,7 @@ function hudEl() {
   if (pc.hp < pv.hp) UI.after.push(() => { shake(); });
   UI.prev = { hp: pc.hp, en: pc.en, money: pc.money, stones: stoneCount(), heat: pc.heat };
   return h('div', { class: cls },
-    h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${'★'.repeat(pc.grade)}`)),
+    h('div', { class: 'hud-top' }, avatar(), h('div', { class: 'who' }, h('div', { class: 'nm' }, pc.name), h('div', { class: 'sub' }, `${f.name} · ${gradeName()} ${rankStr(pc.grade)}`)),
       h('div', { class: 'hud-btns' }, h('button', { class: 'ibtn', title: 'Menu', onclick: () => menuPop() }, '☰'))),
     h('div', { class: 'hud-bars' },
       h('div', { class: 'stat hp' }, h('span', { class: 'lab ic' }, '♥'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
@@ -1393,7 +1396,7 @@ function fillSheet() {
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
+  box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
   pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
@@ -2762,7 +2765,7 @@ function factionPoint() {
   const pc = G.pc; const done = () => contractCard();
   if (pc.faction === 'civils') return show({ kicker: '🏴 POINT DE FACTION', title: 'Toujours sans camp ?', text: ['Tu voyages seul depuis un moment. Les factions recrutent, chacune à sa manière : une affiliation ouvre des contrats, des alliés et un grade.'], choices: [C('Voir les factions qui recrutent', () => parkOpen(joinMenu), { ic: '🏴', cls: 'cta' }), C('Continuer vers les contrats', done, { cls: 'back' })] });
   const f = F[pc.faction]; const nxt = MERIT_STEPS[pc.grade + 1]; const en = (typeof enemiesOf === 'function' ? enemiesOf(pc.faction) : []).slice(0, 2).map(x => F[x] ? F[x].name : x);
-  const lines = [`${esc(leaderName(pc.faction))} te demande des nouvelles. Grade : <b>${esc(gradeName())}</b> ${'★'.repeat(pc.grade)}${nxt ? ` · mérite ${pc.merit}/${nxt}` : ''}.`, en.length ? `Fronts ouverts : ${esc(en.join(', '))}.` : '', pc.grade >= 1 ? 'Le conseil se réunit : tu peux y peser sur les décisions.' : 'Recrue : encore sans voix au conseil.'].filter(Boolean);
+  const lines = [`${esc(leaderName(pc.faction))} te demande des nouvelles. Grade : <b>${esc(gradeName())}</b> ${rankStr(pc.grade)}${nxt ? ` · mérite ${pc.merit}/${nxt}` : ''}.`, en.length ? `Fronts ouverts : ${esc(en.join(', '))}.` : '', pc.grade >= 1 ? 'Le conseil se réunit : tu peux y peser sur les décisions.' : 'Recrue : encore sans voix au conseil.'].filter(Boolean);
   show({ kicker: '🏴 POINT DE FACTION', title: f.name, text: lines, choices: [C('Ouvrir le tableau de faction', () => { addRep(pc.faction, 2, { spill: false }); parkOpen(factionMenu); }, { ic: '🏴', cls: 'cta', sub: 'Conseil, relations, grade, escouade. +2 réputation.' }), C('Continuer vers les contrats', done, { cls: 'back' })] });
 }
 
@@ -3291,10 +3294,10 @@ function finishMission(o, quality, lines, extraFx) {
 }
 function promote(L0) {
   const pc = G.pc; pc.grade++; const f = F[pc.faction]; const s0 = wantedStars(); addHeat(0); pc.heat = Math.max(pc.heat, minHeat()); const s1 = wantedStars();
-  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.25)); splash({ title: 'PROMOTION', sub: `${gradeName()} ${'★'.repeat(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
+  recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.25)); splash({ title: 'PROMOTION', sub: `${gradeName()} ${rankStr(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
   const L = [...(L0 || [])]; if (s1 > s0) L.push({ t: `Plus tu es gradé, plus on te cherche : prime ${starStr(s1)} — ${WANTED_TXT[s1]}.`, c: 'badc' });
   const dec = ['aucune décision', 'tu votes dans les décisions de ta faction', 'tu peux proposer des opérations', 'tu décides des opérations locales', 'tu pèses sur les grandes décisions', 'tu décides de tout'][pc.grade];
-  show({ kicker: 'PROMOTION', title: `${gradeName()} ${'★'.repeat(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });
+  show({ kicker: 'PROMOTION', title: `${gradeName()} ${rankStr(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });
 }
 
 // ───────── Complications après un succès ─────────
@@ -4227,7 +4230,7 @@ function factionMenu() {
   L.push(C('← Retour', actionsMenu));
   const left = capActs(L, 'faction', /Relations|Quitter|Fonder|Retour/i);
   const nm = lead === 'pc' ? 'toi' : lead && CH[lead] ? CH[lead].name : 'personne (vacant)';
-  show({ extra: lead && lead !== 'pc' && CH[lead] ? portrait(lead, 110) : null, kicker: `Fondée en ${f.founded} · ${left}/${ACT_MAX.faction} actions ici`, title: f.name, text: [`Objectif : ${esc(f.goal)}`, `Chef : <b>${esc(nm)}</b> · ton grade : ${esc(gradeName())} ${'★'.repeat(pc.grade)} · mérite ${pc.merit}${nxt ? ' / ' + nxt : ''}.`, `<span class="mut">Puissance ${(W.fac[pc.faction] || { power: 10 }).power}/100 · trésorerie ${fmt((W.fac[pc.faction] || { money: 0 }).money)} ¢ · ${DATA.chars.filter(c => c.faction === pc.faction && W.npc[c.id].alive).length} membres vivants · QG : ${esc(stateName(f.hq))}${ownedStates().length ? ' · tes territoires : ' + ownedStates().map(s => esc(s.name)).join(', ') : ''}.</span>`], choices: L });
+  show({ extra: lead && lead !== 'pc' && CH[lead] ? portrait(lead, 110) : null, kicker: `Fondée en ${f.founded} · ${left}/${ACT_MAX.faction} actions ici`, title: f.name, text: [`Objectif : ${esc(f.goal)}`, `Chef : <b>${esc(nm)}</b> · ton grade : ${esc(gradeName())} ${rankStr(pc.grade)} · mérite ${pc.merit}${nxt ? ' / ' + nxt : ''}.`, `<span class="mut">Puissance ${(W.fac[pc.faction] || { power: 10 }).power}/100 · trésorerie ${fmt((W.fac[pc.faction] || { money: 0 }).money)} ¢ · ${DATA.chars.filter(c => c.faction === pc.faction && W.npc[c.id].alive).length} membres vivants · QG : ${esc(stateName(f.hq))}${ownedStates().length ? ' · tes territoires : ' + ownedStates().map(s => esc(s.name)).join(', ') : ''}.</span>`], choices: L });
 }
 // ───────── Rejoindre une faction ─────────
 function joinMenu() {
@@ -4782,7 +4785,7 @@ function titleScreen() {
   G = null; const sc = hasSave(); const hero = sc ? lastHero() : null; const wide = innerWidth >= 860;
   const btn = (n, t, sub, f, go) => h('button', { class: 'tbtn' + (go ? ' go' : ''), style: `--i:${n}`, onclick: () => { sfx('click'); f(); } }, h('span', { class: 'tn' }, String(n).padStart(2, '0')), h('span', { class: 'tt' }, h('b', {}, t), sub ? h('small', {}, sub) : null), h('span', { class: 'ta' }, '›'));
   const city = pick(DATA.states).id;
-  const side = h('div', { class: 'tside' }, hero && hero.sp ? h('div', { class: 'tfloat' }, h('div', { class: 'tring' }), sprFit(hero.sp, wide ? 320 : 150, 'tspr'), h('div', { class: 'tcap' }, h('b', {}, hero.name), h('span', {}, `${hero.faction} · ${'★'.repeat(hero.grade)}`))) : h('div', { class: 'tfloat emblem' }, h('div', { class: 'tring' }), atomSVG()));
+  const side = h('div', { class: 'tside' }, hero && hero.sp ? h('div', { class: 'tfloat' }, h('div', { class: 'tring' }), sprFit(hero.sp, wide ? 320 : 150, 'tspr'), h('div', { class: 'tcap' }, h('b', {}, hero.name), h('span', {}, `${hero.faction} · ${rankStr(hero.grade)}`))) : h('div', { class: 'tfloat emblem' }, h('div', { class: 'tring' }), atomSVG()));
   const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Règles', 'But, jets, grades, primes', rulesScreen), btn(sc ? 5 : 4, 'À propos', 'Sources et libertés prises', aboutScreen));
   UI.scene = { bare: true, extra: h('div', { class: 'title2' }, h('div', { class: 'tbg' }, envBanner(city, 340, 'night')), h('div', { class: 'tgrid' }),
     h('div', { class: 'tmain' }, h('div', { class: 'tleft' }, h('div', { class: 'tkick' }, 'CRATÈS · 2071'), h('h1', { class: 'tlogo' }, h('img', { src: LOGO_TITLE, alt: 'NEW ERA', draggable: 'false' })), h('p', { class: 'tlore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Trouve les 16 pierres antiques.'), menu), side),

@@ -41,9 +41,9 @@ function fallbackPowers(c) {
   return out;
 }
 function gradeFromChar(c) {
+  // Les étoiles = puissance, pas position : tout le monde commence Recrue, sauf le chef (le plus puissant de sa faction).
   if (Object.values(F).some(f => f.leaders.includes(c.id))) return 5;
-  if (c.stars) return Math.min(c.stars, c.faction === 'fa' ? 4 : 4);
-  return c.ratio >= 100 ? 4 : c.ratio >= 40 ? 3 : c.ratio >= 10 ? 2 : 1;
+  return 0;
 }
 function ageNum(s) { const m = String(s).match(/(\d+)-(\d+)/); return m ? Math.round((+m[1] + +m[2]) / 2) : 28; }
 function ptypeOf(types) { const t = types.filter(x => x !== 'aucun'); return !t.length ? 'aucun' : t.length > 1 ? 'hybride' : t[0]; }
@@ -119,18 +119,18 @@ function startGame(spec) {
 function startKit(pc) {
   const w = { brawler: 'matraque', juggernaut: 'matraque', protector: 'matraque', flanker: 'lame', ranger: 'tube', assist: 'tube', engineer: 'outils', performer: null }[pc.style];
   const strong = { brawler: 'gantelets', juggernaut: 'gantelets', protector: 'gantelets', ranger: 'plasma', engineer: 'plasma', assist: 'plasma', flanker: 'tube', performer: null }[pc.style];
-  const wp = pc.grade >= 3 ? strong : w; if (wp && ITEMS[wp].t === 'arme') { giveItem(wp); pc.eq.arme = wp; } else if (w && ITEMS[w].t === 'gadget') giveItem(w);
-  if (pc.grade >= 1) { giveItem('gilet'); pc.eq.armure = 'gilet'; } if (pc.grade >= 3) { giveItem('nano'); pc.eq.armure = 'nano'; }
-  if (pc.grade >= 2 && !hasItemOf(pc, 'drone')) giveItem('drone');
+  const lv = Math.max(pc.grade, pc.pstars || 0); const wp = lv >= 3 ? strong : w; if (wp && ITEMS[wp].t === 'arme') { giveItem(wp); pc.eq.arme = wp; } else if (w && ITEMS[w].t === 'gadget') giveItem(w);
+  if (lv >= 1) { giveItem('gilet'); pc.eq.armure = 'gilet'; } if (lv >= 3) { giveItem('nano'); pc.eq.armure = 'nano'; }
+  if (lv >= 2 && !hasItemOf(pc, 'drone')) giveItem('drone');
 }
 function hasItemOf(pc, id) { return (pc.inv[id] || 0) > 0; }
 function charToSpec(c) {
   const grade = gradeFromChar(c); const st = c.style || ['brawler', 'ranger', 'assist', 'flanker'][hashStr(c.id) % 4];
   const cc = Object.assign({}, c, { style: st });
   const powers = c.powers.length ? c.powers.slice() : fallbackPowers(c);
-  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).filter(x => x.stars <= 3).slice(0, Math.max(0, Math.floor((grade - 2) / 2))).map(x => x.id);
+  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).filter(x => x.stars <= 3).slice(0, Math.max(0, Math.floor((Math.max(grade, c.stars || 0) - 2) / 2))).map(x => x.id);
   return {
-    pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 800, 1200, 1800, 2600][grade], charId: c.id, xp: grade * 60 },
+    pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, pstars: c.stars || 0, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 800, 1200, 1800, 2600][Math.min(5, Math.max(grade, c.stars || 0))], charId: c.id, xp: Math.max(grade, c.stars || 0) * 60 },
     recruits: mates,
   };
 }

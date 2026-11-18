@@ -209,3 +209,6 @@ const FA_UNITS = {
   harpie: 'Harpie (droïde aérien)', sirene: 'Sirène (droïde sous-marin)', griffon: 'Griffon (drone anti-aérien)', hydre: 'Hydre (drone IEM)', cerbere: 'Cerbère (drone sensitif)',
   chimere: 'Chimère (drone-tourelle)', cyclope: 'Cyclope (mecha de renfort)', atlas: 'Atlas (Super-Mecha)', prometh: 'Prométhée (Super-Mecha)', epimeth: 'Épiméthée (Super-Mecha)', menet: 'Ménétios (Super-Mecha)',
 };
+
+// Le rang (grade) s'affiche en chevrons ▲ ; les étoiles ★ ne désignent que la puissance.
+const rankStr = g => g > 0 ? '▲'.repeat(g) : '△';
