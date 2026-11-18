@@ -1,6 +1,6 @@
 // ───────── Prise en main guidée (une seule fois) et ambiance de couleur par ville ─────────
 const TUTO = {
-  contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Poursuivre l’intrigue ».'],
+  contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Se faire petit ».'],
   trame: ['Voici un événement de la trame.', 'Choisis une option : un dé décide. Le pourcentage indique tes chances.'],
   combat: ['Chaque ennemi annonce son geste.', 'Joue la carte qui le contre : Garde contre Frappe, Attaque contre Feinte, Ruse contre Garde. La main change à chaque round.'],
   ville: ['Tu es en ville.', 'Tu as une seule action ici (repos, marché, recruter, s’entraîner), puis tu repars. La station voisine est toujours gratuite.'],

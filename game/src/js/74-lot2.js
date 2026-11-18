@@ -114,7 +114,7 @@ function baseMenu() {
   const pc = G.pc; const hq = hqOf(); const b = pc.base = pc.base || { city: hq, lvl: 1 }; if (hq) b.city = hq; const L = [];
   L.push(C('Se reposer (gratuit)', () => { advance(1); if (G.status !== 'play') return; pc.hp = pc.hpMax; pc.en = pc.enMax; pc.party.forEach(a => { a.inj = 0; a.hp = a.hpMax; }); if (b.lvl >= 3) addHeat(-10); show({ kicker: 'PLANQUE', title: 'Une vraie nuit', text: ['Tu dors en sécurité. Ton équipe aussi.' + (b.lvl >= 3 ? ' Ta cache te fait oublier : prime −10.' : '')], choices: [C('Continuer', hub)] }); }, { ic: '🛏', cls: 'safe' }));
   if (b.lvl < 3) { const cost = b.lvl === 1 ? 500 : 900; L.push(C(`Améliorer (${cost} ¢)`, () => { pc.money -= cost; b.lvl++; toast('Planque niveau ' + b.lvl); baseMenu(); }, { ic: '🔧', req: { money: cost }, sub: b.lvl === 1 ? 'Niveau 2 : coffre sûr (pas de pillage en défaite).' : 'Niveau 3 : cache, la prime baisse à chaque repos.' })); }
-  L.push(C('← Retour', cityMenu, { cls: 'back' }));
+  L.push(C('← Retour', cityBack, { cls: 'back' }));
   show({ kicker: hq ? 'QG' : 'PLANQUE', title: `${hq ? F[pc.faction].name : 'Ta planque'} · ${capName(b.city)}`, text: [`Niveau ${b.lvl}/3. ${b.lvl >= 2 ? 'Coffre sûr. ' : ''}${b.lvl >= 3 ? 'Cache active. ' : ''}${hq ? 'Tu diriges la faction : le QG est ta planque.' : ''}`], choices: L, tiles: true });
 }
 // ── Atelier de faction (dans la capitale de ta faction) ──
@@ -124,7 +124,7 @@ function atelierTile(L) { if (feat('atelier') && atelierHere()) L.unshift(C('Ate
 function atelierMenu() {
   const pc = G.pc; const disc = hasRole('ingenieur') ? 0.7 : 1; const L = [];
   RECIPES.forEach(([id, n, cost, lab]) => { const p = Math.round(cost * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1)); const q = n * (id === 'kit' && hasRole('medecin') ? 2 : 1); L.push(C(`${lab}${id === 'kit' && hasRole('medecin') ? ' (×2 médecin)' : ''} — ${p} ¢`, () => { pc.money -= p; giveItem(id, q); toast(`Fabriqué : ${ITEMS[id].n} ×${q}`); atelierMenu(); }, { req: { money: p }, sub: ITEMS[id].desc })); });
-  L.push(C('← Retour', cityMenu, { cls: 'back' })); show({ kicker: 'ATELIER', title: `Atelier de ${F[pc.faction].name}`, text: [`Tu as <b>${fmt(pc.money)} ¢</b>. ${hasRole('ingenieur') ? 'Ingénieur : −30 %.' : ''}`], choices: L });
+  L.push(C('← Retour', cityBack, { cls: 'back' })); show({ kicker: 'ATELIER', title: `Atelier de ${F[pc.faction].name}`, text: [`Tu as <b>${fmt(pc.money)} ¢</b>. ${hasRole('ingenieur') ? 'Ingénieur : −30 %.' : ''}`], choices: L });
 }
 // ── Escouades de faction (sans ressources) ──
 const SQUADS = [['reco', 'Reconnaissance', 'Elle cherche des pistes sur les pierres antiques.'], ['secu', 'Sécuriser un territoire', 'Elle tente de faire basculer une région neutre ou ennemie.'], ['prop', 'Propagande', 'Elle apaise les civils : réputation et contrats.'], ['neut', 'Frapper un ennemi', 'Elle affaiblit une faction ennemie.']];
