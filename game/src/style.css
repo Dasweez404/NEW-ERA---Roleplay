@@ -671,3 +671,5 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 @keyframes lungeR{0%{transform:none}30%{transform:translateX(78px) scale(1.14)}100%{transform:none}}
 @keyframes lungeL{0%{transform:none}30%{transform:translateX(-78px) scale(1.14)}100%{transform:none}}
 .cme.atk{animation-duration:.65s}.cfoe.atk{animation-duration:.65s}.cfoe.hurt{animation-duration:.6s}
+
+.intent{display:flex;gap:10px;align-items:center;margin:6px 0;padding:6px 10px;border:1px solid rgba(255,61,127,.5);background:linear-gradient(90deg,rgba(255,61,127,.14),transparent);animation:intp .5s}.intent .iic{font-size:1.5rem}.intent b{color:#ff7aa8}@keyframes intp{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}

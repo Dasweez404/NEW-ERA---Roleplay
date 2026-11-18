@@ -1,10 +1,10 @@
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < 2) return null;
+  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; const sc0 = stoneCount(); if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < (sc0 >= 6 ? 0 : sc0 >= 3 ? 1 : 2)) return null; // plus tu as de pierres, plus les pistes affluent
   { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 3 + Math.floor(stoneCount() / 3)) return null; }
   const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
   const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
-  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = chance(0.6) ? 2 : 1; } else if (deep.length) { s = pick(deep); lv = Math.min(3, lvOf(s.id) + (chance(0.4) ? 2 : 1)); } else return null;
+  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = chance(0.6 + 0.04 * sc0) ? 2 : 1; } else if (deep.length) { s = pick(deep); lv = Math.min(3, lvOf(s.id) + (chance(0.4 + 0.05 * sc0) ? 2 : 1)); } else return null;
   W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; fl.clueWk = G.wk; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
   logEntry(`Indice ${lv}/3 : pierre de ${s.name}.`);
   if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (des 💎 creux marquent les États possibles : ouvre la carte quand tu choisis ta destination).`;

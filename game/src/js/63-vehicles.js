@@ -41,7 +41,7 @@ function vehicleDest(vid) {
   show({ kicker: ITEMS[vid].n, title: 'Destination', text: [`Depuis ${esc(capName(G.loc))}. ${ITEMS[vid].desc}`], extra: h('div', {}, box, info), choices: L });
 }
 function vehicleGo(vid, to, wk, fuel, r) {
-  const pc = G.pc; const v = ITEMS[vid].v; pc.money -= fuel; const from = G.loc;
+  const pc = G.pc; const v = ITEMS[vid].v; pc.money -= fuel; const from = G.loc; pc.flags.mode = vid;
   const a = OT_ST[stationOf(from)], b0 = OT_ST[stationOf(to)]; const dx = b0[0] - a[0]; const b = Math.abs(dx) > 900 ? [b0[0] - Math.sign(dx) * 1800, b0[1]] : b0; const mid = [(a[0] + b[0]) / 2 + (b[1] - a[1]) * 0.08, (a[1] + b[1]) / 2 - (b[0] - a[0]) * 0.08];
   const fake = { steps: [{ from: stationOf(from), to: stationOf(to), line: 0 }], custom: [[a[0], a[1]], mid, [b[0], b[1]]], vehicle: v.ic };
   const ctl = !v.legal && chance(clamp(detectChance() + 0.12, 0.1, 0.8));

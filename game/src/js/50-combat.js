@@ -158,7 +158,7 @@ function threat() {
 // Les ennemis suivent ton niveau : un perso gradé affronte des adversaires à sa mesure (on reste « petit »)
 function scaleFoes(cfg) {
   if (cfg.noScale || !G || !G.pc) return; const lv = pcLevel(); if (lv < 4) return;
-  cfg.foes.forEach(f => { if (!f.auto || f.cid) return; const want = clamp(lv + pick([-1, 0, 0, 0, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
+  cfg.foes.forEach(f => { if (!f.auto || f.cid) return; const want = clamp(lv + pick([0, 0, 1, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
   if (lv >= 5 && cfg.foes.length < 3 && chance(0.3)) { const base = cfg.foes.find(f => f.auto); if (base) cfg.foes.push(mkFoe(base.tid, Math.max(1, base.tier - 2), null, {})); }
 }
 

@@ -683,6 +683,8 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 @keyframes lungeR{0%{transform:none}30%{transform:translateX(78px) scale(1.14)}100%{transform:none}}
 @keyframes lungeL{0%{transform:none}30%{transform:translateX(-78px) scale(1.14)}100%{transform:none}}
 .cme.atk{animation-duration:.65s}.cfoe.atk{animation-duration:.65s}.cfoe.hurt{animation-duration:.6s}
+
+.intent{display:flex;gap:10px;align-items:center;margin:6px 0;padding:6px 10px;border:1px solid rgba(255,61,127,.5);background:linear-gradient(90deg,rgba(255,61,127,.14),transparent);animation:intp .5s}.intent .iic{font-size:1.5rem}.intent b{color:#ff7aa8}@keyframes intp{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -2241,7 +2243,7 @@ function threat() {
 // Les ennemis suivent ton niveau : un perso gradé affronte des adversaires à sa mesure (on reste « petit »)
 function scaleFoes(cfg) {
   if (cfg.noScale || !G || !G.pc) return; const lv = pcLevel(); if (lv < 4) return;
-  cfg.foes.forEach(f => { if (!f.auto || f.cid) return; const want = clamp(lv + pick([-1, 0, 0, 0, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
+  cfg.foes.forEach(f => { if (!f.auto || f.cid) return; const want = clamp(lv + pick([0, 0, 1, 1]), 1, 8); if ((f.tier || 1) < want) { const nf = mkFoe(f.tid, want, f.name, f.cid ? { cid: f.cid } : {}); Object.assign(f, nf); } });
   if (lv >= 5 && cfg.foes.length < 3 && chance(0.3)) { const base = cfg.foes.find(f => f.auto); if (base) cfg.foes.push(mkFoe(base.tid, Math.max(1, base.tier - 2), null, {})); }
 }
 
@@ -2302,9 +2304,25 @@ function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return;
 function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise' ? 'corps' : a; }
 const hitBonus = () => (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
-const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1)); };
+const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)); };
 const pwMax = () => Math.floor((CB.N + 1) / 3); // pouvoir : 1 round sur 3, 2 sur 5
 const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
+
+// ── Intentions ennemies : on voit ce que l'adversaire prépare, et on choisit le geste qui le contre ──
+const INTENTS = {
+  charge: { ic: '💥', n: 'Charge', tip: 'Gros coup en approche : esquive ou encaisse', mul: 1.4, counter: m => !!m.dodge || (m.sev != null && m.sev <= 0.6 && m.cat !== 'pw') },
+  garde: { ic: '🛡', n: 'Garde haute', tip: 'Il se couvre : vise la faille, ne fonce pas', mul: 1, counter: m => m.cat === 'pw' || (m.tags || []).some(t => ['scout', 'social', 'tech', 'ranged', 'control'].includes(t)), penal: m => m.cat === 'mv' && m.id === 'a' && (m.tags || []).includes('combat') && !(m.tags || []).includes('scout') },
+  rafale: { ic: '🌪', n: 'Rafale', tip: 'Coups rapides : couvre-toi ou coordonne-toi', mul: 1.15, counter: m => (m.tags || []).some(t => ['defense', 'ally'].includes(t)) || !!m.dodge },
+};
+function nextIntent() {
+  const hostile = aliveFoes(); if (!hostile.length) return CB.intent = null;
+  const heavy = hostile.some(f => f.m || (f.tier || 1) >= 4); const keys = Object.keys(INTENTS).filter(k => k !== (CB.intent && CB.intent.k));
+  const w = { charge: heavy ? 3 : 2, garde: 2, rafale: hostile.length >= 2 ? 3 : 1 }; const bag = []; keys.forEach(k => { for (let i = 0; i < w[k]; i++) bag.push(k); });
+  CB.intent = { k: pick(bag) }; return CB.intent;
+}
+const intentOf = () => (CB && CB.intent) ? INTENTS[CB.intent.k] : null;
+function intentBonus(m) { const it = intentOf(); if (!it || !m || !m.attr) return 0; if (it.counter(m)) return 4; if (it.penal && it.penal(m)) return -2; return 0; }
+const isCounter = m => { const it = intentOf(); return !!(it && m && m.attr && it.counter(m)); };
 
 // ── Les 3 gestes, définis par ta catégorie ──
 const CAT_DESC = {
@@ -2344,7 +2362,7 @@ function powerMove() {
   if (ok(fin)) return fin; fin.lock = 'Énergie insuffisante'; fin.sub = 'Pas assez d’énergie'; return fin;
 }
 function moves() { return [...catMoves().map(m => Object.assign({ kind: 'hit', cat: 'mv' }, m, { attr: m.attr() })), powerMove()]; }
-function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + (CB.nextBonus || 0)]; }
+function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + (CB.nextBonus || 0) + intentBonus(m)]; }
 
 // ── Lancement ──
 function roundsFor2(cfg, foes, gap) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || 1)); let n = 4; if (foes.length === 1 && gap <= -1) n = 3; if (foes.length >= 3 || t >= 5 || gap >= 2) n = 5; return n; }
@@ -2363,7 +2381,7 @@ function startCombat(cfg) {
   beginDuel();
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
-function beginDuel() { if (!CB) return; CB.preview = false; coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); } renderCombat(); }
+function beginDuel() { if (!CB) return; CB.preview = false; nextIntent(); coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); } renderCombat(); }
 // Adversaires à ta portée : on peut régler le combat hors-champ, sans jouer les rounds
 function autoResolve() {
   if (!CB) return; const pc = G.pc; const r = Math.random(); CB.over = true;
@@ -2396,13 +2414,15 @@ function play(m) {
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + Math.round(a.hpMax * 0.25)); }); res = 'draw'; }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); res = 'draw'; sev = 0.4; }
   else {
-    r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb); CB.lastR = r; const crit = r.crit || (PK('crit') && r.r >= 19);
+    const cnt = isCounter(m); r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); CB.lastR = r; const crit = r.crit || (PK('crit') && r.r >= 19);
     if (r.ok) { res = 'win'; if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken(); if (m.weak) CB.weak = m.weak; if (m.en) pc.en = Math.min(pc.enMax, pc.en + m.en); if (crit) { CB.nextBonus += 2; clog('Coup remarquable : +2 au prochain jet.', 'good'); } }
     else { res = 'loss'; if (r.fumble) sev *= 1.5; if (m.dodge && chance(m.dodge)) { res = 'draw'; sev = 0; clog('Tu esquives tout !', 'good'); pop('pc', 'ESQUIVE', 'ok'); } else if (m.kind === 'awaken') clog('L’Éveil ne vient pas.', 'log-miss'); if (PK('thorns') && chance(Math.min(0.6, PK('thorns') * 0.12))) { res = 'draw'; sev = 0.3; clog('Ta riposte contrebalance : round nul.', 'good'); } }
   }
   if (res === 'win' && hasAnti('shock') && !CB.shockUsed) { CB.shockUsed = true; CB.nextBonus += 2; clog('Onde de choc : +2 au prochain jet.', 'good'); }
   if (res === 'win') { CB.W++; vfx(r && r.crit ? 'CRITIQUE !' : 'ROUND GAGNÉ', 'good'); sfx('hit'); clog(pick(['Tu prends l’avantage.', 'Ton geste fait mouche.', 'Ils reculent d’un pas.']), 'good'); if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - PK('weaken') * 2); }); clog('Tes ennemis faiblissent.', 'warnc'); } if (PK('stun') && chance(PK('stun') / 100)) { CB.nextBonus += 2; clog('Sidérés, ils vacillent : +2 au prochain round.', 'warnc'); } if (PK('drain')) { const g = Math.min(PK('drain') * 2, pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } } }
   else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(pick(['Ils lisent ton geste et ripostent.', 'Ton geste échoue.', 'Tu perds le rythme.']), 'log-miss'); }
+  if (res === 'loss' && r) { const it = intentOf(); if (it && !(isCounter(m))) { sev *= it.mul; if (it.mul > 1.2) clog(`${it.ic} ${it.n} : tu prends de plein fouet.`, 'log-dmg'); } else if (it && isCounter(m)) sev *= 0.75; }
+  if (r && r.ok && isCounter(m)) { CB.combo = (CB.combo || 0) + 1; clog(`${intentOf().ic} Bien lu : tu contres ${intentOf().n}.`, 'good'); if (CB.combo >= 2) { CB.nextBonus += 2; CB.combo = 0; clog('Enchaînement : +2 au prochain jet.', 'good'); } } else if (r) CB.combo = 0;
   if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
   CB.hist.push(res === 'win' ? 'w' : res === 'loss' ? 'l' : 'd');
   CB.fx = res === 'win' ? { pc: (m.cat === 'pw' || m.kind === 'sig') ? 'power' : 'atk', foe: 'hurt' } : res === 'loss' ? { pc: 'hurt', foe: 'atk' } : { pc: 'power' };
@@ -2411,7 +2431,7 @@ function play(m) {
   if (hasAnti('restore')) { if (pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + 1); if (CB.round % 2 === 0) pc.en = Math.min(pc.enMax, pc.en + 1); }
   if (CB.weak > 0) CB.weak--;
   syncFoes();
-  CB.round++;
+  CB.round++; nextIntent();
   if (pc.hp <= 0) return loseCombat(false);
   if (CB.Lz >= CB.N) return conclude();
   if (CB.W >= needW()) return conclude();
@@ -2467,6 +2487,7 @@ function teamStrip() {
   const spark = fx.pc === 'atk' ? h('i', { class: 'spark r' }, '💥') : fx.pc === 'power' ? h('i', { class: 'spark r pw' }, '✦') : fx.foe === 'atk' ? h('i', { class: 'spark l' }, '💢') : null;
   return h('div', { class: 'cstage' }, left, spark, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '🗡' : ''), right);
 }
+function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, 'Il prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
   const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
@@ -2488,11 +2509,11 @@ function renderCombat() {
       if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
     }, 60);
   };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, teamStrip(), h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, teamStrip(), h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, intentChip(), goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
   const pc = G.pc; const L = [];
-  moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: m.kind === 'sig' || m.kind === 'heal' ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
+  moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: (isCounter(m) ? '✔ Contre ce qu’il prépare · ' : '') + m.sub, odds: m.kind === 'sig' || m.kind === 'heal' ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
   const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
   if (heal && !CB.noItems && pc.hp < pc.hpMax * 0.55) L.push(C(`Se soigner (${ITEMS[heal].n})`, () => play({ kind: 'item', item: heal, sev: 0.4 }), { ic: '💊', sub: 'Round nul', cls: 'back' }));
   const pw = moves()[moves().length - 1]; if (hasItem('capsule') && !CB.noItems && (pc.en < pc.enMax * 0.4 || (pw && pw.lock))) L.push(C('Utiliser une Capsule OGEN', () => { takeItem('capsule'); pc.en = Math.min(pc.enMax, pc.en + 8); clog('Capsule OGEN : +8 énergie.', 'good'); sfx('win'); renderCombat(); }, { ic: '⚡', sub: 'Recharge 8 énergie · ne prend pas de round', cls: 'back' }));
@@ -2536,11 +2557,20 @@ function pendingEvents() {
 const EVENT_FN = {};
 
 // ───────── Voyager ─────────
+// Moyen de déplacement par défaut : le dernier véhicule utilisé (changement d'un tap, sans quitter l'écran)
+const curVeh = () => { const m = G.pc.flags.mode; return (m && ITEMS[m] && hasItem(m)) ? m : null; };
+function cycleMode() { const L = [null, ...myVehicles()]; const i = L.indexOf(curVeh()); G.pc.flags.mode = L[(i + 1) % L.length]; sfx('click'); travelMenu(); }
 function travelMenu(pre) {
-  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates(); const freeSet = new Set(neighbors(here).filter(n => !closureOf(n)));
+  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates(); const vid = curVeh(); const vreach = vid ? new Set(ids.filter(i => vehicleOk(vid, here, i))) : null; const freeSet = new Set(neighbors(here).filter(n => !closureOf(n)));
   const info = h('div', { class: 'travelinfo' }, h('div', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
   const ownerName = to => { const o = G.world.terr[to]; return o === 'pc' ? 'ta faction' : F[o] ? F[o].name : (o || '—'); };
   const select = to => {
+    if (vid) {
+      const v = ITEMS[vid].v; const r = vehicleOk(vid, here, to); if (!r) { toast(`${ITEMS[vid].n} : hors de portée (touche ${v.ic} pour changer de moyen)`); return; }
+      const wk = Math.max(1, Math.ceil(r.hops / v.spd)); const fuel = 10 + r.hops * 6;
+      if (sel === to) { if (G.pc.money < fuel) { toast('Carburant insuffisant (' + fuel + ' ¢)'); return; } return vehicleGo(vid, to, wk, fuel, r); }
+      sel = to; sfx('click'); box.setRoute(r); info.innerHTML = ''; info.append(h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, `${capName(here)} → ${capName(to)}`), h('span', { class: 'tvm' }, h('span', { class: G.pc.money < fuel ? 'badc' : 'acc' }, `${fuel} ¢`), ` · ${wk} sem.`)), h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${v.ic} ${ITEMS[vid].n}`), h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, v.legal ? 'légal' : 'ILLÉGAL')), h('div', { class: 'acc small' }, `▶ Touche encore ${capName(to)} pour partir`)); return;
+    }
     const cl = closureOf(to); if (cl) { sel = to; sfx('click'); info.innerHTML = ''; info.append(h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, capName(to)), h('span', { class: 'tvm badc' }, cl.kind === 'lockdown' ? 'Ville confinée' : 'Station fermée')), h('div', { class: 'leadwhy' }, closureLine(cl)), h('div', { class: 'mut small' }, (cl.kind === 'lockdown' ? 'Aucun train ni véhicule ne peut y entrer' : 'Plus aucune rame ne s’y arrête ; un véhicule peut encore t’y conduire') + ` — jusqu’à la semaine ${cl.until}.`)); return; }
     let r = otRoute(here, to); if (!r) return; if (freeSet.has(to)) r = Object.assign({}, r, { cost: 0 }); const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
@@ -2553,15 +2583,15 @@ function travelMenu(pre) {
   };
   const prio = new Set([...reco.keys(), ...leadMap().keys()]); stoneHints().forEach((v, k) => { if (v === 'full') prio.add(k); }); const pxy = id => OT_ST[stationOf(id)] || [0, 0]; const hxy = pxy(here);
   const focusIds = [here, ...[...prio].filter(x => x !== here && S[x]).sort((a, b) => Math.hypot(pxy(a)[0] - hxy[0], pxy(a)[1] - hxy[1]) - Math.hypot(pxy(b)[0] - hxy[0], pxy(b)[1] - hxy[1])).slice(0, 3)];
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap(), focus: focusIds });
+  box = mapBox({ here, pick: vreach || new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap(), focus: focusIds });
   const W0 = G.world; const clues = DATA.stones.filter(s => !G.pc.stones[s.id] && (W0.stoneLv[s.id] || W0.stoneClue[s.id]));
   const clueRow = clues.length ? h('div', { class: 'stleads' }, clues.map(s => { const lv = W0.stoneLv[s.id] || 1; const loc = W0.stoneLoc[s.id];
     return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
-  const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
+  const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: cycleMode, title: 'Changer de moyen de déplacement' }, vid ? ITEMS[vid].v.ic + ' ' + ITEMS[vid].n : (myVehicles().length ? '🚆 Orbitrail · changer' : '🚆 Orbitrail')));
   if (pre) setTimeout(() => select(pre), 30);
   const recap = UI.recap; UI.recap = null;
   const quickIds = [...new Set([...focusIds.slice(1), ...neighbors(here)])].filter(x => S[x] && !closureOf(x)).slice(0, 3);
-  const quick = quickIds.map(id => { let r = otRoute(here, id); if (!r) return null; if (freeSet.has(id)) r = Object.assign({}, r, { cost: 0 }); const wk = 1 + Math.floor((r.hops - 1) / 4); const why = (reco.get(id) || [])[0] || (leadMap().has(id) ? leadTitle(leadMap().get(id)) : freeSet.has(id) ? 'Station voisine' : '');
+  const quick = vid ? [] : quickIds.map(id => { let r = otRoute(here, id); if (!r) return null; if (freeSet.has(id)) r = Object.assign({}, r, { cost: 0 }); const wk = 1 + Math.floor((r.hops - 1) / 4); const why = (reco.get(id) || [])[0] || (leadMap().has(id) ? leadTitle(leadMap().get(id)) : freeSet.has(id) ? 'Station voisine' : '');
     return C(`${capName(id)}`, () => { if (G.pc.money < r.cost) return toast('Pas assez de crédits (' + r.cost + ' ¢)'); travelGo(id, r, wk); }, { ic: '🚆', sub: `${why ? why + ' · ' : ''}${r.cost ? r.cost + ' ¢' : 'gratuit'} · ${wk} sem.`, cls: 'safe' }); }).filter(Boolean);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
   coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, recap ? h('div', { class: 'recapbar' }, h('div', { class: 'recap-h' }, `BILAN · ${capName(recap.loc)}${recap.wks ? ' · ' + recap.wks + ' sem.' : ''}`), fxHTML(recap.chips.length ? recap.chips : [{ t: 'Rien de notable', c: '' }])) : null, h('div', { class: 'qgos' }, quick.map(c => h('button', { class: 'qgo', onclick: () => { sfx('click'); c.go(); } }, h('b', {}, '🚆 ' + c.label), h('small', {}, c.sub)))), clueRow, box, info), choices: back });
@@ -2800,7 +2830,7 @@ function dealCard() {
   const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
   pool.push({ w: 34, f: missionCard });
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
-  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 10, f: clueCard });
+  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 10 + 3 * stoneCount(), f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5 && pc.flags.restDest !== pc.flags.dest) pool.push({ w: 80, f: restCard }); // une seule fois par destination
   pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
@@ -2959,7 +2989,7 @@ function vehicleDest(vid) {
   show({ kicker: ITEMS[vid].n, title: 'Destination', text: [`Depuis ${esc(capName(G.loc))}. ${ITEMS[vid].desc}`], extra: h('div', {}, box, info), choices: L });
 }
 function vehicleGo(vid, to, wk, fuel, r) {
-  const pc = G.pc; const v = ITEMS[vid].v; pc.money -= fuel; const from = G.loc;
+  const pc = G.pc; const v = ITEMS[vid].v; pc.money -= fuel; const from = G.loc; pc.flags.mode = vid;
   const a = OT_ST[stationOf(from)], b0 = OT_ST[stationOf(to)]; const dx = b0[0] - a[0]; const b = Math.abs(dx) > 900 ? [b0[0] - Math.sign(dx) * 1800, b0[1]] : b0; const mid = [(a[0] + b[0]) / 2 + (b[1] - a[1]) * 0.08, (a[1] + b[1]) / 2 - (b[0] - a[0]) * 0.08];
   const fake = { steps: [{ from: stationOf(from), to: stationOf(to), line: 0 }], custom: [[a[0], a[1]], mid, [b[0], b[1]]], vehicle: v.ic };
   const ctl = !v.legal && chance(clamp(detectChance() + 0.12, 0.1, 0.8));
@@ -4197,11 +4227,11 @@ function arenaInvite() {
 
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < 2) return null;
+  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; const sc0 = stoneCount(); if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < (sc0 >= 6 ? 0 : sc0 >= 3 ? 1 : 2)) return null; // plus tu as de pierres, plus les pistes affluent
   { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 3 + Math.floor(stoneCount() / 3)) return null; }
   const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
   const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
-  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = chance(0.6) ? 2 : 1; } else if (deep.length) { s = pick(deep); lv = Math.min(3, lvOf(s.id) + (chance(0.4) ? 2 : 1)); } else return null;
+  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = chance(0.6 + 0.04 * sc0) ? 2 : 1; } else if (deep.length) { s = pick(deep); lv = Math.min(3, lvOf(s.id) + (chance(0.4 + 0.05 * sc0) ? 2 : 1)); } else return null;
   W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; fl.clueWk = G.wk; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
   logEntry(`Indice ${lv}/3 : pierre de ${s.name}.`);
   if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (des 💎 creux marquent les États possibles : ouvre la carte quand tu choisis ta destination).`;

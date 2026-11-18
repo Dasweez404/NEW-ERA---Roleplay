@@ -31,11 +31,20 @@ function pendingEvents() {
 const EVENT_FN = {};
 
 // ───────── Voyager ─────────
+// Moyen de déplacement par défaut : le dernier véhicule utilisé (changement d'un tap, sans quitter l'écran)
+const curVeh = () => { const m = G.pc.flags.mode; return (m && ITEMS[m] && hasItem(m)) ? m : null; };
+function cycleMode() { const L = [null, ...myVehicles()]; const i = L.indexOf(curVeh()); G.pc.flags.mode = L[(i + 1) % L.length]; sfx('click'); travelMenu(); }
 function travelMenu(pre) {
-  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates(); const freeSet = new Set(neighbors(here).filter(n => !closureOf(n)));
+  const here = G.loc; const ids = DATA.states.map(s => s.id).filter(i => i !== here); let sel = null; let box; const reco = recoStates(); const vid = curVeh(); const vreach = vid ? new Set(ids.filter(i => vehicleOk(vid, here, i))) : null; const freeSet = new Set(neighbors(here).filter(n => !closureOf(n)));
   const info = h('div', { class: 'travelinfo' }, h('div', { class: 'mut' }, 'Touche une destination, puis touche-la encore pour partir.'));
   const ownerName = to => { const o = G.world.terr[to]; return o === 'pc' ? 'ta faction' : F[o] ? F[o].name : (o || '—'); };
   const select = to => {
+    if (vid) {
+      const v = ITEMS[vid].v; const r = vehicleOk(vid, here, to); if (!r) { toast(`${ITEMS[vid].n} : hors de portée (touche ${v.ic} pour changer de moyen)`); return; }
+      const wk = Math.max(1, Math.ceil(r.hops / v.spd)); const fuel = 10 + r.hops * 6;
+      if (sel === to) { if (G.pc.money < fuel) { toast('Carburant insuffisant (' + fuel + ' ¢)'); return; } return vehicleGo(vid, to, wk, fuel, r); }
+      sel = to; sfx('click'); box.setRoute(r); info.innerHTML = ''; info.append(h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, `${capName(here)} → ${capName(to)}`), h('span', { class: 'tvm' }, h('span', { class: G.pc.money < fuel ? 'badc' : 'acc' }, `${fuel} ¢`), ` · ${wk} sem.`)), h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${v.ic} ${ITEMS[vid].n}`), h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, v.legal ? 'légal' : 'ILLÉGAL')), h('div', { class: 'acc small' }, `▶ Touche encore ${capName(to)} pour partir`)); return;
+    }
     const cl = closureOf(to); if (cl) { sel = to; sfx('click'); info.innerHTML = ''; info.append(h('div', { class: 'tvrow' }, h('b', { class: 'tvd' }, capName(to)), h('span', { class: 'tvm badc' }, cl.kind === 'lockdown' ? 'Ville confinée' : 'Station fermée')), h('div', { class: 'leadwhy' }, closureLine(cl)), h('div', { class: 'mut small' }, (cl.kind === 'lockdown' ? 'Aucun train ni véhicule ne peut y entrer' : 'Plus aucune rame ne s’y arrête ; un véhicule peut encore t’y conduire') + ` — jusqu’à la semaine ${cl.until}.`)); return; }
     let r = otRoute(here, to); if (!r) return; if (freeSet.has(to)) r = Object.assign({}, r, { cost: 0 }); const weeks = 1 + Math.floor((r.hops - 1) / 4);
     if (sel === to) { if (G.pc.money < r.cost) { toast('Pas assez de crédits (' + r.cost + ' ¢)'); return; } return travelGo(to, r, weeks); }
@@ -48,15 +57,15 @@ function travelMenu(pre) {
   };
   const prio = new Set([...reco.keys(), ...leadMap().keys()]); stoneHints().forEach((v, k) => { if (v === 'full') prio.add(k); }); const pxy = id => OT_ST[stationOf(id)] || [0, 0]; const hxy = pxy(here);
   const focusIds = [here, ...[...prio].filter(x => x !== here && S[x]).sort((a, b) => Math.hypot(pxy(a)[0] - hxy[0], pxy(a)[1] - hxy[1]) - Math.hypot(pxy(b)[0] - hxy[0], pxy(b)[1] - hxy[1])).slice(0, 3)];
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap(), focus: focusIds });
+  box = mapBox({ here, pick: vreach || new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap(), focus: focusIds });
   const W0 = G.world; const clues = DATA.stones.filter(s => !G.pc.stones[s.id] && (W0.stoneLv[s.id] || W0.stoneClue[s.id]));
   const clueRow = clues.length ? h('div', { class: 'stleads' }, clues.map(s => { const lv = W0.stoneLv[s.id] || 1; const loc = W0.stoneLoc[s.id];
     return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
-  const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
+  const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: cycleMode, title: 'Changer de moyen de déplacement' }, vid ? ITEMS[vid].v.ic + ' ' + ITEMS[vid].n : (myVehicles().length ? '🚆 Orbitrail · changer' : '🚆 Orbitrail')));
   if (pre) setTimeout(() => select(pre), 30);
   const recap = UI.recap; UI.recap = null;
   const quickIds = [...new Set([...focusIds.slice(1), ...neighbors(here)])].filter(x => S[x] && !closureOf(x)).slice(0, 3);
-  const quick = quickIds.map(id => { let r = otRoute(here, id); if (!r) return null; if (freeSet.has(id)) r = Object.assign({}, r, { cost: 0 }); const wk = 1 + Math.floor((r.hops - 1) / 4); const why = (reco.get(id) || [])[0] || (leadMap().has(id) ? leadTitle(leadMap().get(id)) : freeSet.has(id) ? 'Station voisine' : '');
+  const quick = vid ? [] : quickIds.map(id => { let r = otRoute(here, id); if (!r) return null; if (freeSet.has(id)) r = Object.assign({}, r, { cost: 0 }); const wk = 1 + Math.floor((r.hops - 1) / 4); const why = (reco.get(id) || [])[0] || (leadMap().has(id) ? leadTitle(leadMap().get(id)) : freeSet.has(id) ? 'Station voisine' : '');
     return C(`${capName(id)}`, () => { if (G.pc.money < r.cost) return toast('Pas assez de crédits (' + r.cost + ' ¢)'); travelGo(id, r, wk); }, { ic: '🚆', sub: `${why ? why + ' · ' : ''}${r.cost ? r.cost + ' ¢' : 'gratuit'} · ${wk} sem.`, cls: 'safe' }); }).filter(Boolean);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
   coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, recap ? h('div', { class: 'recapbar' }, h('div', { class: 'recap-h' }, `BILAN · ${capName(recap.loc)}${recap.wks ? ' · ' + recap.wks + ' sem.' : ''}`), fxHTML(recap.chips.length ? recap.chips : [{ t: 'Rien de notable', c: '' }])) : null, h('div', { class: 'qgos' }, quick.map(c => h('button', { class: 'qgo', onclick: () => { sfx('click'); c.go(); } }, h('b', {}, '🚆 ' + c.label), h('small', {}, c.sub)))), clueRow, box, info), choices: back });
