@@ -23,12 +23,17 @@ function mkFoe(tid, tier, name, extra = {}) {
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
   // Les factions ennemies se battent en groupe : un homme de plus assez souvent, et jamais seuls quand elles ont les moyens
-  if (fid !== 'civils') { if (n >= 2 && tier >= 2 && chance(0.4)) n++; else if (n === 1 && chance(0.4)) n++; }
-  n = Math.min(4, n);
+  if (fid !== 'civils' && G && G.pc) {
+    // Plus tu as de pierres, plus on t'envoie de hauts gradés ; plus tu es recherché, plus ils viennent nombreux
+    const sc = typeof stoneCount === 'function' ? stoneCount() : 0, ws = typeof wantedStars === 'function' ? wantedStars() : 0;
+    tier = Math.min(5, tier + Math.min(2, Math.floor(sc / 3))); n += Math.floor(ws / 2) + (ws >= 4 ? 1 : 0);
+  }
+  if (fid !== 'civils') { if (n >= 2 && tier >= 2 && chance(0.6)) { n++; if (tier >= 4 && chance(0.4)) n++; } else if (n === 1 && tier >= 2 && chance(0.5)) n++; }
+  const n0 = Math.min(n, 2); n = Math.min(4, n);
   const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
   const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(1, tier) && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
   for (let i = 0; i < n; i++) {
-    if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, tier)); }
+    if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, i >= n0 ? Math.max(1, tier - 1) : tier)); }
     else { const c = mem[i] || null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
   }
   if (pool && n >= 2 && G.world && G.world.npc && F[fid] && chance(0.4)) {

@@ -98,7 +98,7 @@ function templeExpedition(id) {
 EVENT_FN.stoneRaid = function () {
   const pc = G.pc; const n = stoneCount(); if (!n) return hub();
   const sid = pick(Object.keys(pc.stones)); const tier = clamp(Math.ceil(n / 3) + 1, 2, 5); const att = n >= 6 && G.world.era !== 'newera' ? 'fa' : pick(Object.keys(F).filter(f => isAnti(f) && f !== pc.faction && relation(pc.faction, f) <= 0));
-  const foes = foesFor(att, tier, 2 + (n > 6 ? 1 : 0));
+  const foes = foesFor(att, tier, 3 + (n > 6 ? 1 : 0));
   show({ kicker: 'Menace', title: `On convoite ta pierre de ${STONE[sid].name}`, text: [`${esc(F[att].name)} a retrouvé ta trace. Une équipe approche de ta planque pour te voler la pierre de ${esc(STONE[sid].name)}.`], choices: [
     C('Défendre la pierre', () => startCombat({ title: `Raid de ${F[att].name}`, foes, lethal: lethalOf(att), onWin: L => show({ title: 'Repoussés', text: ['Ils s’enfuient. La pierre reste à toi.'], fx: [...L, ...fx({ xp: 20, rep: { [att]: -5 } })], choices: [C('Continuer', hub)] }), onLose: () => { loseStone(sid, att); defeatOutcome(lethalOf(att) === 'death' ? 'robbed' : lethalOf(att), `Ils t’arrachent la pierre de ${STONE[sid].name}.`); } })),
     C('Cacher la pierre et brouiller les pistes', () => { const r = check('intellect', dcOf(tier), ['stealth', 'tech']); if (r.ok) show({ title: 'Bien joué', text: ['Les voleurs retournent ta planque pour rien.', checkLine(r)], choices: [C('Continuer', hub)] }); else { loseStone(sid, att); show({ title: 'Trop tard', text: [`Ils trouvent la pierre de ${esc(STONE[sid].name)} et filent avec.`, checkLine(r)], choices: [C('Continuer', hub)] }); } }, { odds: ['intellect', dcOf(tier), ['stealth', 'tech']] }),

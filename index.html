@@ -677,6 +677,12 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .fperk{display:flex;gap:10px;align-items:center;margin:0 0 8px;padding:8px 10px;border:1px solid rgba(252,238,9,.35);background:linear-gradient(90deg,rgba(252,238,9,.10),transparent)}.fperk .fpi{font-size:1.6rem;filter:drop-shadow(0 0 8px rgba(252,238,9,.4))}.fperk b{color:var(--acc)}
 
 .lvact{display:flex;gap:10px;justify-content:center;margin:12px 0 4px;flex-wrap:wrap}
+
+/* ennemis tournés vers le joueur + mouvements plus marqués */
+.cfoe img{transform:scaleX(-1)}
+@keyframes lungeR{0%{transform:none}30%{transform:translateX(78px) scale(1.14)}100%{transform:none}}
+@keyframes lungeL{0%{transform:none}30%{transform:translateX(-78px) scale(1.14)}100%{transform:none}}
+.cme.atk{animation-duration:.65s}.cfoe.atk{animation-duration:.65s}.cfoe.hurt{animation-duration:.6s}
 </style>
 </head>
 <body>
@@ -2100,12 +2106,17 @@ function mkFoe(tid, tier, name, extra = {}) {
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
   // Les factions ennemies se battent en groupe : un homme de plus assez souvent, et jamais seuls quand elles ont les moyens
-  if (fid !== 'civils') { if (n >= 2 && tier >= 2 && chance(0.4)) n++; else if (n === 1 && chance(0.4)) n++; }
-  n = Math.min(4, n);
+  if (fid !== 'civils' && G && G.pc) {
+    // Plus tu as de pierres, plus on t'envoie de hauts gradés ; plus tu es recherché, plus ils viennent nombreux
+    const sc = typeof stoneCount === 'function' ? stoneCount() : 0, ws = typeof wantedStars === 'function' ? wantedStars() : 0;
+    tier = Math.min(5, tier + Math.min(2, Math.floor(sc / 3))); n += Math.floor(ws / 2) + (ws >= 4 ? 1 : 0);
+  }
+  if (fid !== 'civils') { if (n >= 2 && tier >= 2 && chance(0.6)) { n++; if (tier >= 4 && chance(0.4)) n++; } else if (n === 1 && tier >= 2 && chance(0.5)) n++; }
+  const n0 = Math.min(n, 2); n = Math.min(4, n);
   const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
   const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(1, tier) && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
   for (let i = 0; i < n; i++) {
-    if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, tier)); }
+    if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, i >= n0 ? Math.max(1, tier - 1) : tier)); }
     else { const c = mem[i] || null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
   }
   if (pool && n >= 2 && G.world && G.world.npc && F[fid] && chance(0.4)) {
@@ -2449,7 +2460,7 @@ function teamStrip() {
   const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
   const foes = CB.foes.map((f, i) => [f, i]).filter(([f]) => f.cid && hasSpr(f.cid));
   if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
-  const fx = CB.fx || {}; const first = !CB.entered; CB.entered = true;
+  const fx = CB.fx || {}; CB.fx = null; const first = !CB.entered; CB.entered = true;
   const fp = fx.pc ? ' ' + fx.pc : '', ff = fx.foe ? ' ' + fx.foe : '';
   const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : '') + (fx.pc === 'atk' || fx.pc === 'power' ? ' assist' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : '') + fp, 'data-k': 'pc' }, sprFit(me, 72, 'portrait'), fx.pc === 'power' ? h('i', { class: 'aura' }) : null) : null);
   const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ff), style: `animation-delay:${i * 110}ms` }, sprFit(f.cid, 72, 'portrait'))));
@@ -2467,7 +2478,7 @@ function renderCombat() {
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
   const goal = h('div', { class: 'small mut' }, `Gagne ${need} round${need > 1 ? 's' : ''} sur ${CB.N} pour les battre · ${CB.W} gagné${CB.W > 1 ? 's' : ''}, ${CB.Lz} perdu${CB.Lz > 1 ? 's' : ''}`);
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false; CB.fx = null;
+  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
     requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), 80));
     setTimeout(() => {
@@ -3075,7 +3086,7 @@ function frontCard() {
   const win = (txt, extra) => L => show({ kicker: 'FRONT', title: 'Victoire sur ' + ef.name, text: [txt], fx: [...L, ...fx(Object.assign({ merit: 4 + t, money: 60 + 40 * t, rep: { [pc.faction]: 5, [e]: -10 }, heat: 3 }, extra || {}))], choices: [C('Continuer', hub)] });
   const swing = (dp, steal) => { W.fac[e].power = clamp(W.fac[e].power - dp, 6, 100); W.fac[pc.faction].power = clamp(W.fac[pc.faction].power + 3, 6, 100); const lt = terrOf(e); if (steal && lt.length) { const st = pick(lt); W.terr[st] = pc.faction; warLog(`${mf.name} reprend ${S[st].name} à ${ef.name} grâce à ${pc.name}.`); } };
   show({ kicker: 'GUERRE', title: `${mf.name} contre ${ef.name}`, text: [`La tension a explosé. ${esc(ef.name)} attaque les nôtres sur ${esc(capName(G.loc))} : les patrouilles tombent, les rues se vident. On attend de toi un geste.`, 'Ne rien faire, c’est laisser les tiens mourir.'], choices: [
-    C(`Monter à l’assaut de ${ef.name}`, () => startCombat({ title: 'Escarmouche : ' + ef.name, foes: foesFor(e, t, rint(2, 3)), lethal: 'capture', intro: `${ef.name} se déploie. Pas de quartier.`, onWin: L => { swing(8, true); win('Leur ligne cède. Ton camp avance, et on chante ton nom.')(L); }, onFlee: () => show({ title: 'Repli', text: ['Tu laisses les tiens tenir seuls. On s’en souviendra.'], fx: fx({ rep: { [pc.faction]: -6 } }), choices: [C('Continuer', hub)] }) }), { ic: '⚔', cls: 'risk', sub: 'Combat · bonne récompense, prime en hausse' }),
+    C(`Monter à l’assaut de ${ef.name}`, () => startCombat({ title: 'Escarmouche : ' + ef.name, foes: foesFor(e, t, rint(3, 4)), lethal: 'capture', intro: `${ef.name} se déploie. Pas de quartier.`, onWin: L => { swing(8, true); win('Leur ligne cède. Ton camp avance, et on chante ton nom.')(L); }, onFlee: () => show({ title: 'Repli', text: ['Tu laisses les tiens tenir seuls. On s’en souviendra.'], fx: fx({ rep: { [pc.faction]: -6 } }), choices: [C('Continuer', hub)] }) }), { ic: '⚔', cls: 'risk', sub: 'Combat · bonne récompense, prime en hausse' }),
     C('Infiltrer leur camp et saboter', () => { const r = check('agilite', 12 + 3 * t, ['stealth']); advance(1); if (G.status !== 'play') return; if (r.ok) { swing(6, false); show({ kicker: 'FRONT', title: 'Sabotage réussi', text: [`Dépôts en flammes, armes inutilisables : ${esc(ef.name)} vacille.`, checkLine(r)], fx: fx({ merit: 3 + t, rep: { [pc.faction]: 4, [e]: -8 }, xp: 15 }), choices: [C('Continuer', hub)] }); } else startCombat({ title: 'Repéré par ' + ef.name, foes: foesFor(e, t, 2), lethal: 'capture', intro: 'Une alarme. Ils te sautent dessus.', onWin: win('Tu t’en sors de justesse et fais payer ta découverte.') }); }, { ic: '🕶', odds: ['agilite', 12 + 3 * t, ['stealth']], sub: 'Discret, mais un échec te met au combat' }),
     C('Rester en retrait', () => { W.fac[pc.faction].power = clamp(W.fac[pc.faction].power - 3, 6, 100); show({ kicker: 'FRONT', title: 'Tu détournes les yeux', text: ['Les tiens encaissent seuls. Certains te regardent différemment.'], fx: fx({ rep: { [pc.faction]: -5 }, merit: -2 }), choices: [C('Continuer', hub)] }); }, { cls: 'back' })] });
 }
@@ -3083,7 +3094,7 @@ function ambushCard(fromTerr) {
   const pc = G.pc; pc.flags.ambushDone = true; const cand = Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && ((pc.rep[f] || 0) <= -10 || relation(pc.faction, f) <= -2));
   const e = fromTerr || (cand.length ? pick(cand) : null); if (!e) return missionCard(); const ef = F[e]; const t = wTier();
   show({ kicker: 'EMBUSCADE', title: `${ef.name} t’attend`, text: [`Des silhouettes se détachent des ombres près de ${esc(capName(G.loc))}. L’emblème de ${esc(ef.name)}. Ils te cherchaient${relation(pc.faction, e) <= -2 ? ' : tu portes les couleurs de leurs ennemis' : ''}.`], choices: [
-    C('Se battre', () => startCombat({ title: 'Embuscade : ' + ef.name, foes: foesFor(e, t, rint(2, 3)), lethal: 'capture', intro: 'Pas le temps de parler.', onWin: L => show({ kicker: 'EMBUSCADE', title: 'Ils reculent', text: ['Les survivants disparaissent. Mais leur faction n’oubliera pas.'], fx: [...L, ...fx({ xp: 10 + 5 * t, rep: { [e]: -6 }, merit: 2 })], choices: [C('Continuer', hub)] }), onFlee: () => hub() }), { ic: '⚔', cls: 'risk' }),
+    C('Se battre', () => startCombat({ title: 'Embuscade : ' + ef.name, foes: foesFor(e, t, rint(3, 4)), lethal: 'capture', intro: 'Pas le temps de parler.', onWin: L => show({ kicker: 'EMBUSCADE', title: 'Ils reculent', text: ['Les survivants disparaissent. Mais leur faction n’oubliera pas.'], fx: [...L, ...fx({ xp: 10 + 5 * t, rep: { [e]: -6 }, merit: 2 })], choices: [C('Continuer', hub)] }), onFlee: () => hub() }), { ic: '⚔', cls: 'risk' }),
     C('Tenter de filer', () => { const r = check('agilite', 12 + 2 * t, ['mobility', 'stealth']); if (r.ok) G.pc.flags.escW = G.wk, show({ kicker: 'EMBUSCADE', title: 'Tu leur échappes', text: ['Tu disparais dans la foule.', checkLine(r)], choices: [C('Continuer', hub)] }); else startCombat({ title: 'Cernés', foes: foesFor(e, t, 3), lethal: 'capture', intro: 'Ils te rattrapent, plus nombreux.', onWin: L => show({ title: 'Tu tiens bon', text: ['Tu survis, à bout de souffle.'], fx: L, choices: [C('Continuer', hub)] }) }); }, { ic: '💨', odds: ['agilite', 12 + 2 * t, ['mobility', 'stealth']] }),
     C('Négocier', () => { const r = check('charisme', 13 + 2 * t, ['social']); if (r.ok) show({ kicker: 'EMBUSCADE', title: 'Un accord bancal', text: ['Tu leur parles de partager le terrain. Ils baissent les armes… pour cette fois.', checkLine(r)], fx: fx({ rep: { [e]: 3 } }), choices: [C('Continuer', hub)] }); else startCombat({ title: 'Négociation ratée', foes: foesFor(e, t, 2), lethal: 'capture', intro: 'On ne te laisse pas finir ta phrase.', onWin: L => show({ title: 'Tu t’en sors', text: ['Tu as eu de la chance.'], fx: L, choices: [C('Continuer', hub)] }) }); }, { ic: '🗣', odds: ['charisme', 13 + 2 * t, ['social']] })] });
 }
@@ -3148,7 +3159,57 @@ const SHOP_CATS = [['arme', '⚔', 'Armes', 'Mains nues, lames, armes à distanc
 const SHOP = { cat: 'arme', steal: false };
 const isBlackItem = id => !SHOP_LEGAL.includes(id) && SHOP_BLACK.includes(id);
 const shopPrice = id => { const it = ITEMS[id]; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100) * (isBlackItem(id) ? 1 : (feat('rep') ? cityPerk().price : 1)); return Math.round(it.price * (isBlackItem(id) ? 1.35 : 1) * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1)); };
-const shopIds = () => [...new Set([...SHOP_LEGAL, ...SHOP_BLACK])].filter(id => ITEMS[id]);
+// ───────── Nouveaux articles ─────────
+Object.assign(ITEMS, {
+  sabre: { n: 'Sabre de dojo', t: 'arme', dmg: 2, price: 110, desc: 'Léger et précis, entretenu avec soin.', tags: ['combat'] },
+  fouet: { n: 'Fouet électrique', t: 'arme', dmg: 3, price: 230, desc: 'Allonge et décharge : idéal pour entraver.', tags: ['combat'] },
+  lancepierre: { n: 'Lance-pierre renforcé', t: 'arme', dmg: 1, price: 40, desc: 'Discret, à distance, pas cher.', tags: ['ranged', 'stealth'], ranged: true },
+  arc: { n: 'Arc composite', t: 'arme', dmg: 3, price: 190, desc: 'Silencieux, précis, aucune capsule requise.', tags: ['ranged', 'stealth'], ranged: true },
+  harpon: { n: 'Fusil harpon', t: 'arme', dmg: 4, price: 330, desc: 'Fait pour la pêche, mortel sur terre.', tags: ['ranged'], ranged: true },
+  marteau: { n: 'Masse de forgeron', t: 'arme', dmg: 4, price: 250, desc: 'Lourde. Très lourde. Terriblement efficace.', tags: ['combat'] },
+  katana: { n: 'Katana de collection', t: 'arme', dmg: 4, price: 380, desc: 'Un objet de musée, tranchant comme au premier jour.', tags: ['combat'] },
+  pompe: { n: 'Fusil à pompe', t: 'arme', dmg: 5, price: 520, desc: 'Un tir, un impact. Rechargement long.', tags: ['ranged'], ranged: true, black: true },
+  tronco: { n: 'Tronçonneuse de bûcheron', t: 'arme', dmg: 5, price: 450, desc: 'Bruyante, effrayante, efficace.', tags: ['combat'], black: true },
+  veste: { n: 'Veste en kevlar urbaine', t: 'armure', def: 2, price: 220, desc: 'Discrète sous un manteau.', tags: [] },
+  cape: { n: 'Cape camouflage', t: 'armure', def: 1, price: 140, desc: 'Se fond dans la foule et la nuit.', tags: ['stealth'] },
+  plastron: { n: 'Plastron de motocross', t: 'armure', def: 2, price: 190, desc: 'Absorbe les chocs sans entraver.', tags: ['mobility'] },
+  plaques: { n: 'Armure de plaques d’ARENA', t: 'armure', def: 4, price: 560, desc: 'Lourde et voyante, très efficace.', tags: ['defense'] },
+  exo: { n: 'Exosquelette léger', t: 'armure', def: 4, price: 760, desc: 'Des servos aux jambes et aux bras.', tags: ['mobility', 'defense'] },
+  sandwich: { n: 'Repas chaud', t: 'conso', price: 30, desc: 'Soigne 15 PV.', use: 'hp15', stack: true },
+  thermos: { n: 'Thermos de soupe', t: 'conso', price: 45, desc: 'Soigne 15 PV.', use: 'hp15', stack: true },
+  pastille: { n: 'Pastilles énergétiques', t: 'conso', price: 40, desc: 'Recharge 8 énergie.', use: 'en8', stack: true },
+  sirop: { n: 'Sirop d’ogénite', t: 'conso', price: 70, desc: 'Recharge 8 énergie.', use: 'en8', stack: true },
+  compresse: { n: 'Compresse cicatrisante', t: 'conso', price: 60, desc: 'Soigne 15 PV.', use: 'hp15', stack: true },
+  perfusion: { n: 'Perfusion d’urgence', t: 'conso', price: 260, desc: 'Soigne 40 PV et relève les alliés à terre.', use: 'hp40', stack: true },
+  gouttes: { n: 'Gouttes de concentration', t: 'conso', price: 110, desc: '+3 à tous les jets du prochain combat ou test.', use: 'stim', stack: true },
+  micro: { n: 'Micro directionnel', t: 'gadget', price: 140, desc: '+2 aux jets de repérage.', tags: ['scout'] },
+  gants: { n: 'Gants silencieux', t: 'gadget', price: 160, desc: '+2 aux jets de furtivité.', tags: ['stealth'] },
+  cartes: { n: 'Cartes anciennes', t: 'gadget', price: 200, desc: '+2 pour trouver des vestiges et des pierres antiques.', tags: ['relic'] },
+  maquillage: { n: 'Kit de maquillage', t: 'gadget', price: 120, desc: '+2 aux jets de déguisement.', tags: ['disguise'] },
+  multi: { n: 'Multi-outil', t: 'gadget', price: 170, desc: '+2 aux jets de technique.', tags: ['tech'] },
+  pitons: { n: 'Pitons d’escalade', t: 'gadget', price: 100, desc: '+2 aux jets de mobilité.', tags: ['mobility'] },
+  poudre: { n: 'Poudre de soins', t: 'gadget', price: 140, desc: '+2 aux jets de soins.', tags: ['heal'] },
+  talisman: { n: 'Talisman d’ogénite', t: 'gadget', price: 240, desc: '+2 aux jets de contrôle de ton pouvoir.', tags: ['control'] },
+  megaphone: { n: 'Mégaphone', t: 'gadget', price: 110, desc: '+2 aux jets d’équipe.', tags: ['ally'] },
+  porte: { n: 'Gourmette porte-bonheur', t: 'gadget', price: 150, desc: '+2 aux jets sociaux.', tags: ['social'] },
+  pocket: { n: 'Brouilleur de poche', t: 'gadget', price: 210, desc: '+2 aux jets de piratage.', tags: ['hack'], black: true },
+  boucl: { n: 'Bouclier pliant', t: 'gadget', price: 180, desc: '+2 aux jets de défense.', tags: ['defense'] },
+});
+SHOP_LEGAL.push('sabre', 'fouet', 'lancepierre', 'arc', 'harpon', 'marteau', 'katana', 'veste', 'cape', 'plastron', 'plaques', 'exo', 'sandwich', 'thermos', 'pastille', 'sirop', 'compresse', 'perfusion', 'gouttes', 'micro', 'gants', 'cartes', 'maquillage', 'multi', 'pitons', 'poudre', 'talisman', 'megaphone', 'porte', 'boucl');
+SHOP_BLACK.push('pompe', 'tronco', 'pocket');
+// Chaque marché a son stock (aléatoire), renouvelé quand on y revient après un mois
+const ESSENTIAL = ['cafe', 'bandage', 'kit', 'capsule'];
+function cityStock() {
+  const W = G.world; W.shops = W.shops || {}; const loc = G.loc; let st = W.shops[loc];
+  if (!st || G.wk - st.wk >= 4) {
+    const all = [...new Set([...SHOP_LEGAL, ...SHOP_BLACK])].filter(id => ITEMS[id]); const ids = [];
+    all.forEach(id => { const t = ITEMS[id].t; if (ESSENTIAL.includes(id) || Math.random() < (t === 'vehicule' ? 0.4 : 0.5)) ids.push(id); });
+    SHOP_CATS.forEach(([c]) => { const have = ids.filter(id => ITEMS[id].t === c); const rest = shuffle(all.filter(id => ITEMS[id].t === c && !ids.includes(id))); for (let i = have.length; i < 3 && rest.length; i++) ids.push(rest.pop()); });
+    const fresh = !!st; st = W.shops[loc] = { wk: G.wk, ids, fresh }; if (fresh) setTimeout(() => toast('🛒 Nouveaux articles sur le marché'), 200);
+  }
+  return st.ids;
+}
+const shopIds = () => cityStock().filter(id => ITEMS[id]);
 const blackOkNow = () => { const pc = G.pc; return (pc.rep.noir || 0) >= 10 || ['galleon', 'check', 'arena', 'slummer', 'rapinas', 'manacorp', 'gamma', 'necropunks', 'committed'].includes(pc.faction) || pc.faction === 'fallen'; };
 function itemStat(it) { return it.t === 'arme' ? `+${it.dmg} dég.${it.ranged ? ' · dist.' : ''}` : it.t === 'armure' ? `+${it.def} déf.` : it.t === 'vehicule' ? `${it.v.legal ? '' : 'illégal'}${it.v.armed ? ' armé' : ''}`.trim() : ''; }
 function shopMenu() {
@@ -4234,7 +4295,7 @@ function templeExpedition(id) {
 EVENT_FN.stoneRaid = function () {
   const pc = G.pc; const n = stoneCount(); if (!n) return hub();
   const sid = pick(Object.keys(pc.stones)); const tier = clamp(Math.ceil(n / 3) + 1, 2, 5); const att = n >= 6 && G.world.era !== 'newera' ? 'fa' : pick(Object.keys(F).filter(f => isAnti(f) && f !== pc.faction && relation(pc.faction, f) <= 0));
-  const foes = foesFor(att, tier, 2 + (n > 6 ? 1 : 0));
+  const foes = foesFor(att, tier, 3 + (n > 6 ? 1 : 0));
   show({ kicker: 'Menace', title: `On convoite ta pierre de ${STONE[sid].name}`, text: [`${esc(F[att].name)} a retrouvé ta trace. Une équipe approche de ta planque pour te voler la pierre de ${esc(STONE[sid].name)}.`], choices: [
     C('Défendre la pierre', () => startCombat({ title: `Raid de ${F[att].name}`, foes, lethal: lethalOf(att), onWin: L => show({ title: 'Repoussés', text: ['Ils s’enfuient. La pierre reste à toi.'], fx: [...L, ...fx({ xp: 20, rep: { [att]: -5 } })], choices: [C('Continuer', hub)] }), onLose: () => { loseStone(sid, att); defeatOutcome(lethalOf(att) === 'death' ? 'robbed' : lethalOf(att), `Ils t’arrachent la pierre de ${STONE[sid].name}.`); } })),
     C('Cacher la pierre et brouiller les pistes', () => { const r = check('intellect', dcOf(tier), ['stealth', 'tech']); if (r.ok) show({ title: 'Bien joué', text: ['Les voleurs retournent ta planque pour rien.', checkLine(r)], choices: [C('Continuer', hub)] }); else { loseStone(sid, att); show({ title: 'Trop tard', text: [`Ils trouvent la pierre de ${esc(STONE[sid].name)} et filent avec.`, checkLine(r)], choices: [C('Continuer', hub)] }); } }, { odds: ['intellect', dcOf(tier), ['stealth', 'tech']] }),

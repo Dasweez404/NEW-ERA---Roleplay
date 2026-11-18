@@ -173,7 +173,7 @@ function teamStrip() {
   const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
   const foes = CB.foes.map((f, i) => [f, i]).filter(([f]) => f.cid && hasSpr(f.cid));
   if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
-  const fx = CB.fx || {}; const first = !CB.entered; CB.entered = true;
+  const fx = CB.fx || {}; CB.fx = null; const first = !CB.entered; CB.entered = true;
   const fp = fx.pc ? ' ' + fx.pc : '', ff = fx.foe ? ' ' + fx.foe : '';
   const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : '') + (fx.pc === 'atk' || fx.pc === 'power' ? ' assist' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : '') + fp, 'data-k': 'pc' }, sprFit(me, 72, 'portrait'), fx.pc === 'power' ? h('i', { class: 'aura' }) : null) : null);
   const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ff), style: `animation-delay:${i * 110}ms` }, sprFit(f.cid, 72, 'portrait'))));
@@ -191,7 +191,7 @@ function renderCombat() {
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
   const goal = h('div', { class: 'small mut' }, `Gagne ${need} round${need > 1 ? 's' : ''} sur ${CB.N} pour les battre · ${CB.W} gagné${CB.W > 1 ? 's' : ''}, ${CB.Lz} perdu${CB.Lz > 1 ? 's' : ''}`);
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false; CB.fx = null;
+  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
     requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), 80));
     setTimeout(() => {

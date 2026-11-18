@@ -39,7 +39,57 @@ const SHOP_CATS = [['arme', '⚔', 'Armes', 'Mains nues, lames, armes à distanc
 const SHOP = { cat: 'arme', steal: false };
 const isBlackItem = id => !SHOP_LEGAL.includes(id) && SHOP_BLACK.includes(id);
 const shopPrice = id => { const it = ITEMS[id]; const disc = (hasRole('logisticien') ? 0.9 : 1) * (1 - PK('fix') / 100) * (isBlackItem(id) ? 1 : (feat('rep') ? cityPerk().price : 1)); return Math.round(it.price * (isBlackItem(id) ? 1.35 : 1) * disc * (id === 'faux' && hasRole('costumier') ? 0.7 : 1)); };
-const shopIds = () => [...new Set([...SHOP_LEGAL, ...SHOP_BLACK])].filter(id => ITEMS[id]);
+// ───────── Nouveaux articles ─────────
+Object.assign(ITEMS, {
+  sabre: { n: 'Sabre de dojo', t: 'arme', dmg: 2, price: 110, desc: 'Léger et précis, entretenu avec soin.', tags: ['combat'] },
+  fouet: { n: 'Fouet électrique', t: 'arme', dmg: 3, price: 230, desc: 'Allonge et décharge : idéal pour entraver.', tags: ['combat'] },
+  lancepierre: { n: 'Lance-pierre renforcé', t: 'arme', dmg: 1, price: 40, desc: 'Discret, à distance, pas cher.', tags: ['ranged', 'stealth'], ranged: true },
+  arc: { n: 'Arc composite', t: 'arme', dmg: 3, price: 190, desc: 'Silencieux, précis, aucune capsule requise.', tags: ['ranged', 'stealth'], ranged: true },
+  harpon: { n: 'Fusil harpon', t: 'arme', dmg: 4, price: 330, desc: 'Fait pour la pêche, mortel sur terre.', tags: ['ranged'], ranged: true },
+  marteau: { n: 'Masse de forgeron', t: 'arme', dmg: 4, price: 250, desc: 'Lourde. Très lourde. Terriblement efficace.', tags: ['combat'] },
+  katana: { n: 'Katana de collection', t: 'arme', dmg: 4, price: 380, desc: 'Un objet de musée, tranchant comme au premier jour.', tags: ['combat'] },
+  pompe: { n: 'Fusil à pompe', t: 'arme', dmg: 5, price: 520, desc: 'Un tir, un impact. Rechargement long.', tags: ['ranged'], ranged: true, black: true },
+  tronco: { n: 'Tronçonneuse de bûcheron', t: 'arme', dmg: 5, price: 450, desc: 'Bruyante, effrayante, efficace.', tags: ['combat'], black: true },
+  veste: { n: 'Veste en kevlar urbaine', t: 'armure', def: 2, price: 220, desc: 'Discrète sous un manteau.', tags: [] },
+  cape: { n: 'Cape camouflage', t: 'armure', def: 1, price: 140, desc: 'Se fond dans la foule et la nuit.', tags: ['stealth'] },
+  plastron: { n: 'Plastron de motocross', t: 'armure', def: 2, price: 190, desc: 'Absorbe les chocs sans entraver.', tags: ['mobility'] },
+  plaques: { n: 'Armure de plaques d’ARENA', t: 'armure', def: 4, price: 560, desc: 'Lourde et voyante, très efficace.', tags: ['defense'] },
+  exo: { n: 'Exosquelette léger', t: 'armure', def: 4, price: 760, desc: 'Des servos aux jambes et aux bras.', tags: ['mobility', 'defense'] },
+  sandwich: { n: 'Repas chaud', t: 'conso', price: 30, desc: 'Soigne 15 PV.', use: 'hp15', stack: true },
+  thermos: { n: 'Thermos de soupe', t: 'conso', price: 45, desc: 'Soigne 15 PV.', use: 'hp15', stack: true },
+  pastille: { n: 'Pastilles énergétiques', t: 'conso', price: 40, desc: 'Recharge 8 énergie.', use: 'en8', stack: true },
+  sirop: { n: 'Sirop d’ogénite', t: 'conso', price: 70, desc: 'Recharge 8 énergie.', use: 'en8', stack: true },
+  compresse: { n: 'Compresse cicatrisante', t: 'conso', price: 60, desc: 'Soigne 15 PV.', use: 'hp15', stack: true },
+  perfusion: { n: 'Perfusion d’urgence', t: 'conso', price: 260, desc: 'Soigne 40 PV et relève les alliés à terre.', use: 'hp40', stack: true },
+  gouttes: { n: 'Gouttes de concentration', t: 'conso', price: 110, desc: '+3 à tous les jets du prochain combat ou test.', use: 'stim', stack: true },
+  micro: { n: 'Micro directionnel', t: 'gadget', price: 140, desc: '+2 aux jets de repérage.', tags: ['scout'] },
+  gants: { n: 'Gants silencieux', t: 'gadget', price: 160, desc: '+2 aux jets de furtivité.', tags: ['stealth'] },
+  cartes: { n: 'Cartes anciennes', t: 'gadget', price: 200, desc: '+2 pour trouver des vestiges et des pierres antiques.', tags: ['relic'] },
+  maquillage: { n: 'Kit de maquillage', t: 'gadget', price: 120, desc: '+2 aux jets de déguisement.', tags: ['disguise'] },
+  multi: { n: 'Multi-outil', t: 'gadget', price: 170, desc: '+2 aux jets de technique.', tags: ['tech'] },
+  pitons: { n: 'Pitons d’escalade', t: 'gadget', price: 100, desc: '+2 aux jets de mobilité.', tags: ['mobility'] },
+  poudre: { n: 'Poudre de soins', t: 'gadget', price: 140, desc: '+2 aux jets de soins.', tags: ['heal'] },
+  talisman: { n: 'Talisman d’ogénite', t: 'gadget', price: 240, desc: '+2 aux jets de contrôle de ton pouvoir.', tags: ['control'] },
+  megaphone: { n: 'Mégaphone', t: 'gadget', price: 110, desc: '+2 aux jets d’équipe.', tags: ['ally'] },
+  porte: { n: 'Gourmette porte-bonheur', t: 'gadget', price: 150, desc: '+2 aux jets sociaux.', tags: ['social'] },
+  pocket: { n: 'Brouilleur de poche', t: 'gadget', price: 210, desc: '+2 aux jets de piratage.', tags: ['hack'], black: true },
+  boucl: { n: 'Bouclier pliant', t: 'gadget', price: 180, desc: '+2 aux jets de défense.', tags: ['defense'] },
+});
+SHOP_LEGAL.push('sabre', 'fouet', 'lancepierre', 'arc', 'harpon', 'marteau', 'katana', 'veste', 'cape', 'plastron', 'plaques', 'exo', 'sandwich', 'thermos', 'pastille', 'sirop', 'compresse', 'perfusion', 'gouttes', 'micro', 'gants', 'cartes', 'maquillage', 'multi', 'pitons', 'poudre', 'talisman', 'megaphone', 'porte', 'boucl');
+SHOP_BLACK.push('pompe', 'tronco', 'pocket');
+// Chaque marché a son stock (aléatoire), renouvelé quand on y revient après un mois
+const ESSENTIAL = ['cafe', 'bandage', 'kit', 'capsule'];
+function cityStock() {
+  const W = G.world; W.shops = W.shops || {}; const loc = G.loc; let st = W.shops[loc];
+  if (!st || G.wk - st.wk >= 4) {
+    const all = [...new Set([...SHOP_LEGAL, ...SHOP_BLACK])].filter(id => ITEMS[id]); const ids = [];
+    all.forEach(id => { const t = ITEMS[id].t; if (ESSENTIAL.includes(id) || Math.random() < (t === 'vehicule' ? 0.4 : 0.5)) ids.push(id); });
+    SHOP_CATS.forEach(([c]) => { const have = ids.filter(id => ITEMS[id].t === c); const rest = shuffle(all.filter(id => ITEMS[id].t === c && !ids.includes(id))); for (let i = have.length; i < 3 && rest.length; i++) ids.push(rest.pop()); });
+    const fresh = !!st; st = W.shops[loc] = { wk: G.wk, ids, fresh }; if (fresh) setTimeout(() => toast('🛒 Nouveaux articles sur le marché'), 200);
+  }
+  return st.ids;
+}
+const shopIds = () => cityStock().filter(id => ITEMS[id]);
 const blackOkNow = () => { const pc = G.pc; return (pc.rep.noir || 0) >= 10 || ['galleon', 'check', 'arena', 'slummer', 'rapinas', 'manacorp', 'gamma', 'necropunks', 'committed'].includes(pc.faction) || pc.faction === 'fallen'; };
 function itemStat(it) { return it.t === 'arme' ? `+${it.dmg} dég.${it.ranged ? ' · dist.' : ''}` : it.t === 'armure' ? `+${it.def} déf.` : it.t === 'vehicule' ? `${it.v.legal ? '' : 'illégal'}${it.v.armed ? ' armé' : ''}`.trim() : ''; }
 function shopMenu() {
