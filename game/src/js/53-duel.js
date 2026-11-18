@@ -61,6 +61,7 @@ function startCombat(cfg) {
   CB = { cfg, foes: cfg.foes, N: 4, round: 1, W: 0, Lz: 0, hist: [], log: [], pops: [], tier: Math.max(...cfg.foes.map(f => f.tier || Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, weak: 0, sig: {}, tgt: 0 };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
   CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap);
+  if (hasAnti('buff')) CB.hitBuff += 1; if (hasAnti('rebound')) CB.shield += 6; if (hasAnti('shield')) CB.shield += 8; if (hasAnti('dash')) CB.dodge += 1;
   clog(cfg.intro || 'Le combat commence !');
   if (cfg.noPreview) return beginDuel();
   if (CB.thr.gap <= -2) return sweepAway();
@@ -92,12 +93,14 @@ function play(m) {
     if (r.ok) { res = 'win'; if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken(); if (m.weak) CB.weak = m.weak; if (m.en) pc.en = Math.min(pc.enMax, pc.en + m.en); if (crit) { CB.nextBonus += 2; clog('Coup remarquable : +2 au prochain jet.', 'good'); } }
     else { res = 'loss'; if (r.fumble) sev *= 1.5; if (m.dodge && chance(m.dodge)) { res = 'draw'; sev = 0; clog('Tu esquives tout !', 'good'); pop('pc', 'ESQUIVE', 'ok'); } else if (m.kind === 'awaken') clog('L’Éveil ne vient pas.', 'log-miss'); if (PK('thorns') && chance(Math.min(0.6, PK('thorns') * 0.12))) { res = 'draw'; sev = 0.3; clog('Ta riposte contrebalance : round nul.', 'good'); } }
   }
+  if (res === 'win' && hasAnti('shock') && !CB.shockUsed) { CB.shockUsed = true; CB.nextBonus += 2; clog('Onde de choc : +2 au prochain jet.', 'good'); }
   if (res === 'win') { CB.W++; vfx(r && r.crit ? 'CRITIQUE !' : 'ROUND GAGNÉ', 'good'); sfx('hit'); clog(pick(['Tu prends l’avantage.', 'Ton geste fait mouche.', 'Ils reculent d’un pas.']), 'good'); if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - PK('weaken') * 2); }); clog('Tes ennemis faiblissent.', 'warnc'); } if (PK('stun') && chance(PK('stun') / 100)) { CB.nextBonus += 2; clog('Sidérés, ils vacillent : +2 au prochain round.', 'warnc'); } if (PK('drain')) { const g = Math.min(PK('drain') * 2, pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } } }
   else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(pick(['Ils lisent ton geste et ripostent.', 'Ton geste échoue.', 'Tu perds le rythme.']), 'log-miss'); }
   if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
   CB.hist.push(res === 'win' ? 'w' : res === 'loss' ? 'l' : 'd');
   pc.en = Math.min(pc.enMax, pc.en + PK('energy')); if (PK('regen') && pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + PK('regen'));
   if (PK('allyheal')) pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
+  if (hasAnti('restore')) { if (pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + 1); if (CB.round % 2 === 0) pc.en = Math.min(pc.enMax, pc.en + 1); }
   if (CB.weak > 0) CB.weak--;
   syncFoes();
   CB.round++;
@@ -117,7 +120,7 @@ function hurtPc(sev) {
   if (CB.dodge > 0 && sev >= 0.5) { CB.dodge--; pop('pc', 'ESQUIVE', 'ok'); clog('Tu esquives la riposte !', 'good'); return; }
   const friends = pc.party.filter(a => a.inj <= 0); const cover = 0.10 * teamK(friends.length) + 0.05 * Math.max(0, 1 - teamK(friends.length) * 1.5); let tot = 0;
   hostile.forEach(f => {
-    let d = foeHit(f) * 0.95 * sev * (pc.hp < pc.hpMax * 0.4 ? 1.1 : 1) * (CB.weak > 0 ? 0.75 : 1) * (1 - cover) - PK('def') - Math.floor(pcArm() / 3) - (hasRole('gardien') ? 1 : 0);
+    let d = foeHit(f) * 0.95 * sev * (pc.hp < pc.hpMax * 0.4 ? 1.1 : 1) * (CB.weak > 0 ? 0.75 : 1) * (1 - cover) - PK('def') - (hasAnti('foresight') ? 1 : 0) - Math.floor(pcArm() / 3) - (hasRole('gardien') ? 1 : 0);
     d = Math.max(1, Math.round(d));
     if (friends.length && chance(0.03 + 0.05 * teamK(friends.length))) { const a = pick(friends); a.hp -= d; clog(`${fname(f)} blesse ${CH[a.id].name} (${d}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     tot += d;
@@ -174,6 +177,7 @@ function combatChoices() {
   if (heal && !CB.noItems && pc.hp < pc.hpMax * 0.55) L.push(C(`Se soigner (${ITEMS[heal].n})`, () => play({ kind: 'item', item: heal, sev: 0.4 }), { ic: '💊', sub: 'Round nul', cls: 'back' }));
   const pw = moves()[moves().length - 1]; if (hasItem('capsule') && !CB.noItems && (pc.en < pc.enMax * 0.4 || (pw && pw.lock))) L.push(C('Utiliser une Capsule OGEN', () => { takeItem('capsule'); pc.en = Math.min(pc.enMax, pc.en + 8); clog('Capsule OGEN : +8 énergie.', 'good'); sfx('win'); renderCombat(); }, { ic: '⚡', sub: 'Recharge 8 énergie · ne prend pas de round', cls: 'back' }));
   if (hasItem('stimulant') && !CB.noItems && !CB.stimUsed && CB.round === 1) L.push(C('Utiliser un stimulant', () => { takeItem('stimulant'); CB.stimUsed = true; CB.hitBuff += 3; clog('Stimulant : +3 à tous tes jets.', 'good'); sfx('win'); renderCombat(); }, { ic: '💉', sub: '+3 à tous les jets de ce combat · ne prend pas de round', cls: 'back' }));
+  if (pc.en >= 2 && !CB.over && CB.pushRd !== CB.round) L.push(C('Forcer le prochain geste', () => { pc.en -= 2; CB.nextBonus += 3; CB.pushRd = CB.round; clog('Tu puises dans tes réserves : +3 au prochain jet.', 'good'); sfx('win'); renderCombat(); }, { ic: '⚡', sub: '+3 au jet · 2⚡ · ne prend pas de round', cls: 'back' }));
   if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
   else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
   return L;

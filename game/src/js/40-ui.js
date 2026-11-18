@@ -42,8 +42,8 @@ function fxHTML(L) {
   if (!L || !L.length) return null; let xp = 0; const rest = [];
   L.forEach(l => { const m = /^\+(\d+)\s*XP/i.exec(l.t || ''); if (m) xp += +m[1]; else rest.push(l); });
   const prio = l => l.c === 'bilan' ? -1 : (/¢|XP|Niveau sup/i.test(l.t || '') || l.c === 'badc') ? 0 : /PV|MÉRITE|mérite|PRIME|objet/i.test(l.t || '') ? 1 : 2;
-  const items = (xp ? [{ t: `+${xp} XP`, c: 'good' }] : []).concat(rest).map((l, i) => [l, i]).sort((x, y) => prio(x[0]) - prio(y[0]) || x[1] - y[1]).map(x => x[0]);
-  const MAX = 3; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, l.t);
+  const items = (xp ? [{ t: `+${xp} ✨`, c: 'good' }] : []).concat(rest).map((l, i) => [l, i]).sort((x, y) => prio(x[0]) - prio(y[0]) || x[1] - y[1]).map(x => x[0]);
+  const MAX = 3; const chip = (l, i) => h('span', { class: 'chip rv ' + (l.c || ''), style: `--i:${i + 3}` }, emo(l.t));
   const box = h('div', { class: 'chips' }, items.slice(0, MAX).map(chip));
   if (items.length > MAX) { const more = items.slice(MAX); box.append(h('button', { class: 'chip morechip', onclick: e => { e.currentTarget.remove(); more.forEach((l, i) => box.append(chip(l, i))); } }, `+${more.length}`)); }
   return box;
@@ -55,6 +55,7 @@ function carryEl(c) {
 }
 function show(sc) {
   if (G && G.status !== 'play' && !sc.final) return;
+  if (sc.tiles == null && sc.choices && !sc.final) { const cs = sc.choices.filter(Boolean).filter(c => !/^(←|Annuler|Renoncer|Retour)/.test(c.label || '')); if (cs.length >= 3 && cs.every(c => c.ic && String(c.label).length <= 44)) sc.tiles = true; }
   // un simple « Continuer » après un résultat : il passe en bandeau sur la carte suivante (pas d'écran en plus)
   if (G && G.pc && G.status === 'play' && typeof CB !== 'undefined' && !CB && !sc.final && !sc.noCarry && (sc.chain || sc.title === 'Réussi' || sc.title === 'Raté') && sc.choices && sc.choices.length === 1 && sc.choices[0] && sc.choices[0].label === 'Continuer' && sc.choices[0].go === hub && G.pc.flags.stage === 'story' && !(G.pc.pts > 0)) {
     const txt = [].concat(sc.text || []).filter(t => typeof t === 'string' && t && !t.startsWith('🎲'))[0] || '';
@@ -70,9 +71,12 @@ function show(sc) {
   else if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
   UI.scene = sc; render(false); window.scrollTo({ top: 0 }); if (typeof sceneSfx === 'function') sceneSfx(sc);
 }
+// Unités en émojis pour réduire le texte (affichage uniquement)
+const EMO = [[/(\d)\s?¢/g, '$1 🪙'], [/¢/g, '🪙'], [/\bXP\b/g, '✨'], [/\bPV\b/g, '❤'], [/\bénergie\b/gi, '⚡'], [/\bmérite\b/gi, '🎖'], [/\bPuissance\b/g, '💥'], [/(\d+)\s*semaines?\b/g, '$1 🗓'], [/\bsem\./g, '🗓']];
+const emo = s => { if (typeof s !== 'string') return s; let r = s; for (const [a, b] of EMO) r = r.replace(a, b); return r; };
 function paragraphs(t) {
   return [].concat(t || []).filter(x => x !== '' && x != null).map((x, i) => {
-    if (typeof x !== 'string') return x;
+    if (typeof x !== 'string') return x; x = emo(x);
     if (x.length > 190 && !/[<>]/.test(x)) { const head = x.slice(0, 190); const cut = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '), head.lastIndexOf('… ')); if (cut > 60) { const p = h('p', { class: 'rv', style: `--i:${i}` }, x.slice(0, cut + 1)); const rest = h('span', { class: 'rest', hidden: true }, ' ' + x.slice(cut + 2)); const more = h('button', { class: 'morelink', onclick: e => { e.currentTarget.remove(); rest.hidden = false; } }, ' … suite'); p.append(more, rest); return p; } }
     return h('p', { class: 'rv', style: `--i:${i}`, html: x });
   });
@@ -95,7 +99,7 @@ function hudEl() {
       h('div', { class: 'stat hp' }, h('span', { class: 'lab ic' }, '♥'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
       h('div', { class: 'stat en' }, h('span', { class: 'lab ic' }, '⚡'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
-      h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
+      h('span', { class: 'pill cash', title: 'Crédits' }, '🪙 ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
       h('button', { class: 'pill obj', title: 'Objectifs', onclick: () => { sfx('click'); parkOpen(objectivesMenu); } }, '🎯 ' + objectives().length), h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
 }
 function menuPop() {
@@ -116,7 +120,7 @@ function choicesEl(list, tiles, tcls) {
     const cta = i === ctaIdx; const back = /^(←|Annuler|Renoncer|Refuser|Retour)/.test(c.label);
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); try { if (typeof tele === 'function') tele('pick', { l: String(c.label || '').slice(0, 40), p: c.pct }); } catch (e) { } c.go(); } } },
       !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null,
-      h('span', { class: 'body' }, h('span', { class: 'l' }, c.label), c.sub ? h('span', { class: 's' }, c.sub) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
+      h('span', { class: 'body' }, h('span', { class: 'l' }, emo(c.label)), c.sub ? h('span', { class: 's' }, emo(c.sub)) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
       c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%', c.att ? h('small', {}, c.att) : null) : null, cta ? h('span', { class: 'arrow' }, '›') : null);
   }));
 }
@@ -195,13 +199,13 @@ function fillSheet() {
 function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', {}, 'Faction'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', {}, 'Puissance'), `${pcPower().toFixed(1)} / 10`, h('b', {}, 'Style'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', {}, 'Rôles'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', {}, 'Moralité'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', {}, 'Traits'), traitNames().join(' · ')] : [])));
+  box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${'★'.repeat(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
   pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
   if (pc.ptype !== 'aucun') box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
-  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', {}, 'Prime'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()]] : [])));
+  box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', { title: 'Mérite' }, '🎖'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', { title: 'Prime' }, '🎯'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()]] : [])));
   box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais')));
   box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));

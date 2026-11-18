@@ -203,7 +203,7 @@ function betray(cid) {
 function trainMenu() {
   const pc = G.pc; const L = [];
   ATTRS.forEach(a => { const hv = (pc.half || {})[a.id] || 0; const [ic] = (typeof ATTR_LOOK !== 'undefined' && ATTR_LOOK[a.id]) || ['◆']; L.push(C(a.name, () => trainAttr(a.id), { ic, sub: `½ point · ${hv}/2 · actuel ${A(a.id)} · 100 ¢`, req: { money: 100, ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })); });
-  L.push(C('Formation aux techniques anti-geno (3 semaines, 500 ¢)', () => { pc.money -= 500; advance(3); if (G.status !== 'play') return; pc.flags.antigeno = true; show({ kicker: 'Formation', title: 'Techniques anti-geno', text: ['Buff, Rebound, Shield, Restore, Foresight, Shock, Dash : accessibles à toutes, enseignées à la F.A. — tu les maîtrises désormais (+2 dégâts, +1 défense en combat).'], choices: [C('Continuer', hub)] }); }, { req: { money: 500, notFlag: 'antigeno' } }));
+  L.push(C(`Techniques anti-géno (${antiKnown().length}/7)`, antiMenu, { ic: '🧬', sub: 'Une technique par séance · 300 🪙', req: { ok: () => antiKnown().length >= 7 ? 'Tu les maîtrises toutes' : null } }));
   const cap = roleCap();
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
   L.push(C('← Retour', cityBack));
@@ -277,3 +277,13 @@ function recapChips() {
 // « ← Retour » d'un sous-menu de ville : si tu n'as rien fait dedans, l'action t'est rendue.
 const cityMark = () => { const pc = G.pc; return [pc.money, Math.round(pc.hp), pc.en, G.wk, pc.roles.length, pc.party.length, Object.values(pc.inv).reduce((a, b) => a + b, 0), pc.xp].join('|'); };
 function cityBack() { const f = G.pc.flags; if (f.cityMark && f.cityMark === cityMark() && (f.cityActs || 0) <= 0) f.cityActs = 1; f.cityMark = null; cityMenu(); }
+
+// ───────── Techniques anti-géno : à apprendre une par une ─────────
+const ANTI_IC = { buff: ['💪', 'Force infatigable : +1 à tous tes jets de combat'], rebound: ['🔄', 'Dévie les projectiles : bouclier de 6 au départ'], shield: ['🛡', 'Corps de verre : bouclier de 8 au départ'], restore: ['💚', 'Régénération : +1 ❤ par round, +1 ⚡ un round sur deux'], foresight: ['👁', 'Anticipation : −1 dégât sur chaque coup reçu'], shock: ['⚡', 'Onde de choc : ton premier round gagné donne +2 au suivant'], dash: ['💨', 'Esquive aérienne : tu évites la première riposte'] };
+const antiKnown = () => Object.keys(G.pc.flags.anti || {}).filter(k => G.pc.flags.anti[k]);
+const hasAnti = id => !!(G.pc.flags.anti && G.pc.flags.anti[id]);
+function antiMenu() {
+  const pc = G.pc; const L = Object.keys(ANTI_IC).map(id => { const known = hasAnti(id); const [ic, d] = ANTI_IC[id];
+    return C(`${known ? '✔ ' : ''}${ANTI[id].n}`, () => { if (known) return; pc.money -= 300; advance(1); if (G.status !== 'play') return; pc.flags.anti = pc.flags.anti || {}; pc.flags.anti[id] = true; logEntry(`Technique anti-géno : ${ANTI[id].n}.`); toast(`${ic} ${ANTI[id].n} apprise`); sfx('win'); cityMenu(); }, { ic, sub: d, cls: known ? 'safe' : '', req: known ? { ok: () => 'Déjà apprise' } : { money: 300 } }); });
+  L.push(C('← Retour', cityBack)); show({ kicker: 'Techniques anti-géno', title: `${antiKnown().length}/7 maîtrisées`, text: ['Enseignées à la F.A., accessibles à toutes. Une seule par séance.'], choices: L, tiles: true });
+}

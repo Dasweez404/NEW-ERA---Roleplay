@@ -115,7 +115,7 @@ function advance(weeks) {
   for (let i = 0; i < weeks; i++) {
     G.wk++;
     const pc = G.pc;
-    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + 1);
+    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + (G.wk % 2 ? 1 : 0));
     pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
     if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;
