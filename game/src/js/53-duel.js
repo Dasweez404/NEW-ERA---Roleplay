@@ -168,6 +168,8 @@ function renderCombat() {
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus * 10} % prochaine carte` : '', CB.weak ? 'ennemis affaiblis' : '', CB.drone ? '🤖 drone' : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-3).map(l => h('div', { class: l.c }, l.t)));
+  const TRI = [['atk', '🛡 Garde', '🗡 Frappe'], ['fnt', '⚔ Attaque', '🌀 Feinte'], ['grd', '🌀 Ruse', '🛡 Garde']]; const tt = target();
+  const triad = h('div', { class: 'triad' }, TRI.map(([k, a, b]) => h('span', { class: 'tri' + (tt && tt.intent === k ? ' on' : '') }, a, h('i', {}, '›'), b)));
   const t = target(); const hint = t ? h('div', { class: 'sit' }, `${fname(t)} ${(INTENT[t.intent] || INTENT.stn).n}.`) : null;
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
@@ -179,7 +181,7 @@ function renderCombat() {
       if (dmgF) { sfx('hit'); buzz(20); } if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
     }, 60);
   };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, st ? h('div', { class: 'small acc' }, st) : null, hint, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, st ? h('div', { class: 'small acc' }, st) : null, hint, triad, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
   const pc = G.pc; const L = [];

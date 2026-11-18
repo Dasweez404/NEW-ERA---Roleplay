@@ -590,6 +590,8 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .recapbar{border:1px solid #2a2a44;background:#10101f;padding:6px 10px;margin:0 0 8px}.recap-h{font:700 .66rem var(--fb);letter-spacing:.12em;color:#8a90c0;margin-bottom:2px}
 
 .qgos{display:grid;gap:6px;margin:0 0 8px}.qgo{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;background:#0f1d18;border:1px solid #35f0a0;color:#e9ebff;padding:8px 12px;cursor:pointer;font:600 .95rem var(--fb);transition:transform .15s,box-shadow .15s}.qgo:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(53,240,160,.2)}.qgo small{font-weight:500;color:#9fd8c0;font-size:.74rem}
+
+.triad{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}.tri{display:inline-flex;align-items:center;gap:4px;font:600 .68rem var(--fb);color:#8a90c0;border:1px solid #2a2a44;background:#0e0e1c;padding:2px 7px;border-radius:999px}.tri i{font-style:normal;color:#5a6090}.tri.on{color:#fcee09;border-color:#fcee09;background:rgba(252,238,9,.08)}
 </style>
 <div id="app"></div>
 <script>
@@ -2337,6 +2339,8 @@ function renderCombat() {
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus * 10} % prochaine carte` : '', CB.weak ? 'ennemis affaiblis' : '', CB.drone ? '🤖 drone' : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
   const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-3).map(l => h('div', { class: l.c }, l.t)));
+  const TRI = [['atk', '🛡 Garde', '🗡 Frappe'], ['fnt', '⚔ Attaque', '🌀 Feinte'], ['grd', '🌀 Ruse', '🛡 Garde']]; const tt = target();
+  const triad = h('div', { class: 'triad' }, TRI.map(([k, a, b]) => h('span', { class: 'tri' + (tt && tt.intent === k ? ' on' : '') }, a, h('i', {}, '›'), b)));
   const t = target(); const hint = t ? h('div', { class: 'sit' }, `${fname(t)} ${(INTENT[t.intent] || INTENT.stn).n}.`) : null;
   const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
   const hook = () => {
@@ -2348,7 +2352,7 @@ function renderCombat() {
       if (dmgF) { sfx('hit'); buzz(20); } if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
     }, 60);
   };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, st ? h('div', { class: 'small acc' }, st) : null, hint, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, st ? h('div', { class: 'small acc' }, st) : null, hint, triad, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
   const pc = G.pc; const L = [];
