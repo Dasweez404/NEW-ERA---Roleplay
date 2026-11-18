@@ -96,7 +96,7 @@ function beginDuel() { if (!CB) return; CB.preview = false; nextIntent(); coach(
 // Adversaires à ta portée : on peut régler le combat hors-champ, sans jouer les rounds
 function autoResolve() {
   if (!CB) return; const pc = G.pc; const r = Math.random(); CB.over = true;
-  const loss = Math.round(pc.hpMax * rr(0.03, 0.09)); pc.hp = Math.max(1, pc.hp - loss);
+  const loss = Math.round(pc.hpMax * rr(0.05, 0.13)); pc.hp = Math.max(1, pc.hp - loss);
   if (r < 0.84) { CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.bilan = `⚡ Réglé hors-champ · −${loss} ❤`; return finishCombat('win'); }
   if (r < 0.97) { CB.partial = true; CB.bilan = `⚡ Réglé hors-champ · ils fuient · −${loss} ❤`; return finishCombat('win'); }
   CB.bilan = ''; toast(`Ça tourne mal : tu te replies (−${loss} ❤)`); return CB.cfg.canFlee === false ? loseCombat(false) : finishCombat('flee');
@@ -160,7 +160,7 @@ function hurtPc(sev) {
   const friends = pc.party.filter(a => a.inj <= 0); const cover = 0.10 * teamK(friends.length) + 0.05 * Math.max(0, 1 - teamK(friends.length) * 1.5); let tot = 0;
   hostile.forEach(f => {
     let d = foeHit(f) * 0.95 * sev * (pc.hp < pc.hpMax * 0.4 ? 1.1 : 1) * (CB.weak > 0 ? 0.75 : 1) * (1 - cover) - PK('def') - (hasAnti('foresight') ? 1 : 0) - Math.floor(pcArm() / 3) - (hasRole('gardien') ? 1 : 0);
-    d = Math.max(1, Math.round(d));
+    d = Math.max(1 + Math.floor(pc.hpMax * 0.015 * (f.tier || 1) / 2), Math.round(d)); // les ennemis restent dangereux, même face à une grosse armure
     if (friends.length && chance(0.03 + 0.05 * teamK(friends.length))) { const a = pick(friends); a.hp -= d; clog(`${fname(f)} blesse ${CH[a.id].name} (${d}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     tot += d;
   });
@@ -174,7 +174,7 @@ function flee() {
   clog('Impossible de fuir : on te rattrape.', 'log-dmg'); CB.Lz++; CB.hist.push('l'); CB.preview = false; hurtPc(1); CB.round++;
   if (G.pc.hp <= 0) return loseCombat(false); if (CB.Lz >= CB.N || CB.round > CB.N) return conclude(); renderCombat();
 }
-function sweepAway() { G.pc.hp = Math.max(1, G.pc.hp - Math.round(G.pc.hpMax * 0.03)); CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.over = true; CB.bilan = '💨 Ils ne font pas le poids'; finishCombat('win'); }
+function sweepAway() { G.pc.hp = Math.max(1, G.pc.hp - Math.round(G.pc.hpMax * 0.05)); CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.over = true; CB.bilan = '💨 Ils ne font pas le poids'; finishCombat('win'); }
 function conclude() {
   const { W, Lz, N } = CB; const cfg = CB.cfg; const pc = G.pc; CB.over = true; const hist = CB.hist.map(x => x === 'w' ? '✔' : x === 'l' ? '✖' : '–').join(' ');
   const fate = cfg.lethal === 'death' ? 'tué' : cfg.lethal === 'capture' ? 'capturé' : 'hors de combat';

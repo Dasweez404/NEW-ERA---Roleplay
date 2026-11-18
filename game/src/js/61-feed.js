@@ -55,7 +55,7 @@ function dealCard() {
   { const n0 = pool.length; if (!calm) conflictPool(pool); for (let i = n0; i < pool.length; i++) pool[i].enc = true; } pool.push({ w: 16, f: deedCard }); { const n0 = pool.length; if (!calm) lot1Pool(pool); for (let i = n0; i < pool.length; i++) pool[i].enc = true; } lot2Pool(pool); storyPool(pool);
   if (pc.flags.stage === 'story') pool = pool.filter(e => ![missionCard, townCard, travelCard, vehicleCard].includes(e.f));
   if ((pc.flags.encN || 0) >= 1) { const calmPool = pool.filter(x => !x.enc); if (calmPool.length) pool = calmPool; } // une seule rencontre par destination
-  const e = wpick(pool, x => x.w); if (e.enc) pc.flags.encN = (pc.flags.encN || 0) + 1; e.f();
+  const e = wpick(pool, x => x.w * (x.enc && pcLevel() >= 5 ? 0.55 : 1)); if (e.enc) pc.flags.encN = (pc.flags.encN || 0) + 1; e.f();
 }
 function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
