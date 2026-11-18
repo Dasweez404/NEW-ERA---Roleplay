@@ -4,21 +4,24 @@ function hub() {
   const pc = G.pc, fl = pc.flags; UI.parked = null; ensureLeads(); saveGame(); recalc(); announceFeats();
   if (fl.cap) return capturedMenu();
   let pend = pendingEvents(); if (pend) return pend();
-  if (pc.pts > 0) return spendPoints();
+  if (ptsDue()) return spendPoints();
   const st = fl.stage || 'contrats';
   if (st === 'contrats') return contractCard();
   if (st === 'ville') return cityMenu();
   if (fl.stoneStep) { fl.stoneStep = false; const sq = stoneQuestHere(); if (sq) return stoneQuestCard(sq); }
   if (G.fresh) G.fresh = false;
-  else { advance(1); if (G.status !== 'play') return; if (fl.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); if (pc.pts > 0) return spendPoints(); }
+  else { advance(1); if (G.status !== 'play') return; if (fl.cap) return capturedMenu(); pend = pendingEvents(); if (pend) return pend(); if (ptsDue()) return spendPoints(); }
   if ((fl.storyLeft == null ? LEN().c : fl.storyLeft) <= 0) { const sq = stoneQuestHere(); if (sq && (G.world.stoneLv[sq.id] || 0) >= 3 && !fl.stoneOffered) { fl.stoneOffered = true; return stoneQuestCard(sq); } return enterCity(); }
   fl.storyLeft = (fl.storyLeft == null ? LEN().c : fl.storyLeft) - 1;
   coach('trame'); dealCard();
 }
 // Niveau gagné : on dépense le point tout de suite, devant toi.
 const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
+// Points à répartir : exigés seulement s'ils n'ont pas été remis à plus tard pour cette destination
+const ptsDue = () => { const pc = G.pc; if (pc.pts > 0 && ATTRS.every(a => pc.attrs[a.id] >= 12)) pc.pts = 0; return pc.pts > 0 && (pc.flags.ptsHold === undefined || pc.flags.ptsHold !== (pc.flags.dest || 0)); };
+function autoPoints() { const pc = G.pc; const pref = ['corps', 'agilite', 'intellect', 'charisme', 'maitrise'].filter(a => pc.attrs[a] !== undefined); let g = 0; while (pc.pts > 0 && g++ < 200) { const open = ATTRS.filter(a => pc.attrs[a.id] < 12); if (!open.length) { pc.pts = 0; break; } open.sort((a, b) => pc.attrs[a.id] - pc.attrs[b.id]); pc.attrs[open[0].id]++; pc.pts--; } recalc(); }
 function spendPoints(cont) {
-  const pc = G.pc; if (pc.pts <= 0) return cont ? cont() : hub();
+  const pc = G.pc; if (!ptsDue() && !(cont && cont.force)) return cont ? cont() : hub();
   const total = pc.pts; let done = false; if (UI.scene && !UI.scene.noLevel) UI.lvlPrev = UI.scene; // pour « Revenir en arrière » après le gain de niveau
   const gems = h('div', { class: 'lvgems' }); const head = h('div', { class: 'lvhead' }, h('div', { class: 'lvk' }, 'NIVEAU SUPÉRIEUR'), h('div', { class: 'lvn' }, h('span', { class: 'lvplus' }, '+'), h('span', { class: 'lvnum' }, String(pc.pts))), h('div', { class: 'lvsub' }, 'points à répartir'), gems);
   const drawGems = () => { gems.innerHTML = ''; for (let i = 0; i < total; i++) gems.append(h('i', { class: 'lvgem' + (i < pc.pts ? ' on' : '') })); head.querySelector('.lvnum').textContent = String(pc.pts); };
@@ -33,7 +36,7 @@ function spendPoints(cont) {
     draw(false); return card;
   }));
   drawGems(); sfx('crit'); burst(innerWidth / 2, 160, '#fcee09', 36);
-  show({ noLevel: true, compact: true, bare: false, kicker: '', title: '', text: [], extra: h('div', { class: 'lvl' }, head, cards), choices: [] });
+  show({ noLevel: true, compact: true, bare: false, kicker: '', title: '', text: [], extra: h('div', { class: 'lvl' }, head, cards, h('div', { class: 'lvact' }, h('button', { class: 'tab', onclick: () => { if (done) return; done = true; autoPoints(); sfx('crit'); flash('#fcee09'); toast('Points répartis'); cont ? cont() : hub(); } }, '⚡ Répartir automatiquement'), h('button', { class: 'tab', onclick: () => { if (done) return; done = true; pc.flags.ptsHold = pc.flags.dest || 0; toast('Points gardés pour plus tard (onglet Perso)'); cont ? cont() : hub(); } }, '⏳ Plus tard'))), choices: [] });
 }
 function dealCard() {
   const pc = G.pc, W = G.world; let pool = [];

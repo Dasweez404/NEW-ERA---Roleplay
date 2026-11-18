@@ -62,7 +62,7 @@ function show(sc) {
   if (UI.carry && typeof CB !== 'undefined' && !CB && !sc.final && !sc.bare) { sc.carry = UI.carry; UI.carry = null; }
   if (UI.scene && UI.scene.coachId) tutoMark(UI.scene.coachId);
   if (UI.nextCoach) { sc.coachId = UI.nextCoach; UI.nextCoach = null; }
-  if (G && G.pc && G.pc.pts > 0 && !sc.noLevel && !sc.final && typeof CB !== 'undefined' && !CB && sc.choices) sc.choices = sc.choices.map(c => (c && !c.lock && !/^←/.test(c.label || '')) ? Object.assign({}, c, { go: () => spendPoints(c.go) }) : c);
+  if (G && G.pc && ptsDue() && !sc.noLevel && !sc.final && typeof CB !== 'undefined' && !CB && sc.choices) sc.choices = sc.choices.map(c => (c && !c.lock && !/^←/.test(c.label || '')) ? Object.assign({}, c, { go: () => spendPoints(c.go) }) : c);
   const roll = UI.roll; UI.roll = null;
   if (roll && roll.r && roll.quick) { sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
   else if (roll && roll.r) { sc.roll = roll; sc.rolled = false; sc.text = [].concat(sc.text || []).map(t => typeof t === 'string' ? t.replace(/\s*🎲 d20 [^—]*— (réussite critique|échec critique|réussite|échec)/g, '').trim() : t).filter(t => !(typeof t === 'string' && (t === '' || t.startsWith('🎲')))); }
@@ -186,6 +186,7 @@ function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
   { const sp = pcSprite(); if (sp && hasSpr(sp)) box.append(h('div', { class: 'pcport' }, sprFit(sp, 120, 'portrait'), h('div', { class: 'pcname' }, h('b', {}, pc.name), h('span', { class: 'mut small' }, `${gradeName()} ${rankStr(pc.grade)}`)))); }
   box.append(h('button', { class: 'tab', style: 'margin:0 0 8px', onclick: () => parkOpen(factionMenu) }, pc.faction === 'civils' ? '🏴 Rejoindre une faction' : '🏴 Tableau de faction'));
+  if (pc.pts > 0) box.append(h('button', { class: 'tab on', style: 'margin:0 0 8px', onclick: () => { closeSheet && closeSheet(); spendPoints(Object.assign(() => hub(), { force: true })); } }, `✨ Répartir ${pc.pts} point${pc.pts > 1 ? 's' : ''}`));
   { const fp = factionPerk(); if (fp) box.append(h('div', { class: 'fperk' }, h('span', { class: 'fpi' }, fp[0]), h('div', {}, h('b', {}, fp[1]), h('div', { class: 'small mut' }, fp[2])))); }
   box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));

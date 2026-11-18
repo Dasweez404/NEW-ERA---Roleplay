@@ -663,3 +663,5 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 @media(prefers-reduced-motion:reduce){.cstage img,.spark{animation:none!important}}
 
 .fperk{display:flex;gap:10px;align-items:center;margin:0 0 8px;padding:8px 10px;border:1px solid rgba(252,238,9,.35);background:linear-gradient(90deg,rgba(252,238,9,.10),transparent)}.fperk .fpi{font-size:1.6rem;filter:drop-shadow(0 0 8px rgba(252,238,9,.4))}.fperk b{color:var(--acc)}
+
+.lvact{display:flex;gap:10px;justify-content:center;margin:12px 0 4px;flex-wrap:wrap}
