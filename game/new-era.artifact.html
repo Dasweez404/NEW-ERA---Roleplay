@@ -2046,9 +2046,9 @@ function dedupeFoes(foes) {
 }
 let CB = null;
 const POWER_FX = {
-  combat: { n: 'Frappe de pouvoir', cost: 4, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 3, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 3, d: 'Absorbe des dégâts' },
-  heal: { n: 'Régénération', cost: 4, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 3, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 3, d: 'Prochaine frappe critique' },
-  hack: { n: 'Piratage', cost: 3, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 2, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 2, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 3, d: 'Déploie un drone qui frappe chaque tour' },
+  combat: { n: 'Frappe de pouvoir', cost: 5, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 4, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 4, d: 'Absorbe des dégâts' },
+  heal: { n: 'Régénération', cost: 5, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 4, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 4, d: 'Prochaine frappe critique' },
+  hack: { n: 'Piratage', cost: 4, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 3, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 3, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 4, d: 'Déploie un drone qui frappe chaque tour' },
 };
 const ANTI = {
   buff: { n: 'Buff', d: 'Force infatigable (+4 dégâts, 3 tours)' }, rebound: { n: 'Rebound', d: 'Dévie les projectiles : bouclier 8 et riposte' }, shield: { n: 'Shield', d: 'Corps protégé d’un bouclier de verre (8)' },
@@ -2196,6 +2196,7 @@ function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise'
 const hitBonus = () => (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
 const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1)); };
+const pwMax = () => Math.floor((CB.N + 1) / 3); // pouvoir : 1 round sur 3, 2 sur 5
 const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
 
 // ── Les 3 gestes, définis par ta catégorie ──
@@ -2219,13 +2220,14 @@ const CATS = {
 };
 function catMoves() { return CATS[STYLES[G.pc.style].grp] || CATS['Offensif']; }
 function powerMove() {
-  const pc = G.pc; const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
+  const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
   const base = { ic: '✦', cat: 'pw', sev: 1.0 };
   if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
+  if (spent) return Object.assign({}, base, { id: 'spent', kind: 'tech', label: 'Pouvoir', sub: `Déjà utilisé (${CB.pwUsed}/${pwMax()} ce combat)`, lock: 'Utilisé', cost: 0 });
   if (tags.includes('heal') && pc.hp < pc.hpMax * 0.5 && pc.en >= POWER_FX.heal.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'heal', kind: 'heal', ic: '💚', label: `${powName('heal')} : te régénérer`, sub: `Tu récupères ~25 % de PV · ${POWER_FX.heal.cost}⚡ · round nul`, cost: POWER_FX.heal.cost, sev: 0.4 });
-  const sg = pc.ptype !== 'aucun' ? sigMove() : null; if (ok(sg)) return Object.assign({}, base, sg, { label: sg.label.replace('Signature : ', 'Pouvoir : '), sub: `Round gagné d’office · ${sg.cost}⚡` });
-  if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'power', kind: 'hit', label: `Pouvoir : ${powName('combat')}`, sub: `+4 au jet · ${POWER_FX.combat.cost}⚡`, attr: 'maitrise', tags: ['combat'], bonus: 4, cost: POWER_FX.combat.cost });
-  const st = STYLES[pc.style]; const fin = Object.assign({}, base, { id: 'tech', kind: 'tech', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost}⚡`, attr: primAttr(), tags: ['combat'], bonus: 3, cost: st.tech.cost });
+  const sg = pc.ptype !== 'aucun' ? sigMove() : null; if (ok(sg)) return Object.assign({}, base, sg, { label: sg.label.replace('Signature : ', 'Pouvoir : '), sub: `Round gagné d’office · ${sg.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, cost: sg.cost + 1 });
+  if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'power', kind: 'hit', label: `Pouvoir : ${powName('combat')}`, sub: `+4 au jet · ${POWER_FX.combat.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: 'maitrise', tags: ['combat'], bonus: 4, cost: POWER_FX.combat.cost });
+  const st = STYLES[pc.style]; const fin = Object.assign({}, base, { id: 'tech', kind: 'tech', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: primAttr(), tags: ['combat'], bonus: 3, cost: st.tech.cost + 1 });
   if (ok(fin)) return fin; fin.lock = 'Énergie insuffisante'; fin.sub = 'Pas assez d’énergie'; return fin;
 }
 function moves() { return [...catMoves().map(m => Object.assign({ kind: 'hit', cat: 'mv' }, m, { attr: m.attr() })), powerMove()]; }
@@ -2260,6 +2262,7 @@ function renderPreview() {
 function play(m) {
   if (!CB || CB.over) return; CB.log = []; CB.pops = []; CB.preview = false; const pc = G.pc;
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
+  if (m.cat === 'pw' && m.kind !== 'awaken') CB.pwUsed = (CB.pwUsed || 0) + 1;
   let res = 'loss', sev = m.sev == null ? 1 : m.sev; const nb = CB.nextBonus; CB.nextBonus = 0; let r = null;
   if (m.kind === 'sig') { sigDo(m); res = 'win'; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + Math.round(a.hpMax * 0.25)); }); res = 'draw'; }

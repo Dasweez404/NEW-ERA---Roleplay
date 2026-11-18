@@ -62,9 +62,9 @@ function dedupeFoes(foes) {
 }
 let CB = null;
 const POWER_FX = {
-  combat: { n: 'Frappe de pouvoir', cost: 4, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 3, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 3, d: 'Absorbe des dégâts' },
-  heal: { n: 'Régénération', cost: 4, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 3, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 3, d: 'Prochaine frappe critique' },
-  hack: { n: 'Piratage', cost: 3, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 2, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 2, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 3, d: 'Déploie un drone qui frappe chaque tour' },
+  combat: { n: 'Frappe de pouvoir', cost: 5, d: 'Dégâts élevés' }, control: { n: 'Entraver', cost: 4, d: 'Étourdit la cible 1–2 tours' }, defense: { n: 'Bouclier', cost: 4, d: 'Absorbe des dégâts' },
+  heal: { n: 'Régénération', cost: 5, d: 'Soigne toi (et ton groupe)' }, mobility: { n: 'Esquive surnaturelle', cost: 4, d: 'Évite la prochaine attaque' }, stealth: { n: 'Disparaître', cost: 4, d: 'Prochaine frappe critique' },
+  hack: { n: 'Piratage', cost: 4, d: 'Neutralise une machine' }, scout: { n: 'Analyse', cost: 3, d: '+3 pour toucher pendant le combat' }, social: { n: 'Intimider', cost: 3, d: 'Affaiblit l’attaque ennemie' }, tech: { n: 'Bricolage', cost: 4, d: 'Déploie un drone qui frappe chaque tour' },
 };
 const ANTI = {
   buff: { n: 'Buff', d: 'Force infatigable (+4 dégâts, 3 tours)' }, rebound: { n: 'Rebound', d: 'Dévie les projectiles : bouclier 8 et riposte' }, shield: { n: 'Shield', d: 'Corps protégé d’un bouclier de verre (8)' },
