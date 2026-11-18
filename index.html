@@ -4748,14 +4748,14 @@ function teleReport() {
   const pk = {}; E.filter(e => e.k === 'pick').forEach(e => { pk[e.l] = (pk[e.l] || 0) + 1; }); const tp = Object.entries(pk).sort((a, b) => b[1] - a[1]).slice(0, 5); if (tp.length) L.push('Choix les plus pris : ' + tp.map(([k, v]) => `« ${k} » ×${v}`).join(' · '));
   return L;
 }
-function teleExport() { const blob = new Blob([JSON.stringify({ game: 'NEW ERA', v: 'journal-1', ev: TELE.ev }, null, 0)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'new-era-journal.json'; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 function teleCopy() { const txt = teleReport().join('\n') + '\n\n' + JSON.stringify(TELE.ev.slice(-1500)); try { navigator.clipboard.writeText(txt).then(() => toast('Rapport copié'), () => toast('Copie impossible : utilise Exporter')); } catch (e) { toast('Copie impossible : utilise Exporter'); } }
 function teleScreen() {
   teleSave(); const rep = teleReport();
   const L = [C(TELE.on ? '⏸  Pause de l’enregistrement' : '⏺  Reprendre l’enregistrement', () => { TELE.on = !TELE.on; try { localStorage.setItem(TELE_ON, TELE.on ? '1' : '0'); } catch (e) { } teleScreen(); }),
-    C('📋  Copier le rapport', teleCopy), C('💾  Exporter le journal (fichier)', teleExport),
+    C('📋  Copier le rapport', teleCopy), 
     C('🗑  Effacer le journal', () => { TELE.ev = []; TELE.dirty = true; teleSave(); teleScreen(); }, { cls: 'danger' }), C('← Retour', () => resumeScene())];
-  show({ kicker: 'Journal de partie', title: TELE.on ? '⏺ Enregistrement actif' : '⏸ En pause', text: ['<span class="mut">Tout reste sur cet appareil. Exporte ou copie le rapport pour l’étudier ou me le transmettre.</span>', ...rep.map(x => esc(x))], choices: L });
+  const ta = h('textarea', { readonly: 'readonly', rows: 6, style: 'width:100%;background:#05050c;color:#9aa0c8;border:1px solid #2a2a44;font:11px monospace;margin-top:8px', onclick: e => e.target.select() }); ta.value = rep.join('\n') + '\n\n' + JSON.stringify(TELE.ev.slice(-1500));
+  show({ kicker: 'Journal de partie', title: TELE.on ? '⏺ Enregistrement actif' : '⏸ En pause', extra: h('div', {}, h('div', { class: 'small mut' }, 'Si « Copier » ne marche pas : touche la zone ci-dessous, sélectionne tout et copie.'), ta), text: ['<span class="mut">Tout reste sur cet appareil. Exporte ou copie le rapport pour l’étudier ou me le transmettre.</span>', ...rep.map(x => esc(x))], choices: L });
 }
 
 // ───────── Écran titre, création de personnage, fin de partie ─────────
