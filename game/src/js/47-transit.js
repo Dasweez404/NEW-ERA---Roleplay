@@ -61,9 +61,13 @@ function transit(r, from, to, done) {
     else if (state === 'move') {
       if (pause > 0) { pause -= dt; }
       else {
-        const nxt = G_.stops[visited + 1]; const dist = nxt ? Math.abs(nxt.at - s) : 0; const prevd = G_.stops[visited] ? Math.abs(s - G_.stops[visited].at) : 999;
+        const nxt = G_.stops[visited + 1]; const lastI = G_.stops.length - 1;
+        // on ne ralentit et on ne s'arrête qu'au départ, à l'arrivée et aux changements de ligne
+        const halt = i => i <= 0 || i >= lastI || !r.steps[i] || !r.steps[i - 1] || r.steps[i - 1].line !== r.steps[i].line;
+        let nh = visited + 1; while (nh < lastI && !halt(nh)) nh++; let ph = visited; while (ph > 0 && !halt(ph)) ph--;
+        const dist = G_.stops[nh] ? Math.abs(G_.stops[nh].at - s) : 0; const prevd = G_.stops[ph] ? Math.abs(s - G_.stops[ph].at) : 999;
         const sp = baseSpeed * (0.28 + 0.72 * Math.min(1, Math.min(dist, prevd) / 110)); s = Math.min(total, s + sp * dt);
-        if (nxt && s >= nxt.at - 0.5) { s = nxt.at; visited++; const st = G_.stops[visited]; sfx('tick'); buzz(12); pause = visited >= G_.stops.length - 1 ? 0 : (st.minor ? 0.12 : 0.28); setCap(st); bar.firstChild.style.width = (visited / (G_.stops.length - 1) * 100) + '%'; if (visited >= G_.stops.length - 1) { state = 'arrive'; t0 = now; } }
+        if (nxt && s >= nxt.at - 0.5) { s = nxt.at; visited++; const st = G_.stops[visited]; sfx('tick'); buzz(12); pause = (visited >= G_.stops.length - 1 || !(r.steps[visited] && r.steps[visited - 1] && r.steps[visited - 1].line !== r.steps[visited].line)) ? 0 : 0.45; setCap(st); bar.firstChild.style.width = (visited / (G_.stops.length - 1) * 100) + '%'; if (visited >= G_.stops.length - 1) { state = 'arrive'; t0 = now; } }
       }
       const p = posAt(s); const tx = p.x, ty = p.y; const jumped = p.jump && Math.hypot(tx - cx, ty - cy) > 400; if (jumped) { cx = tx; cy = ty; flash('#27f0ff'); } else { cx += (tx - cx) * Math.min(1, dt * 6); cy += (ty - cy) * Math.min(1, dt * 6); }
     }
