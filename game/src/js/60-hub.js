@@ -201,23 +201,24 @@ function trainMenu() {
   const pc = G.pc; const L = [];
   ATTRS.forEach(a => { const hv = (pc.half || {})[a.id] || 0; const [ic] = (typeof ATTR_LOOK !== 'undefined' && ATTR_LOOK[a.id]) || ['◆']; L.push(C(a.name, () => trainAttr(a.id), { ic, sub: `½ point · ${hv}/2 · actuel ${A(a.id)} · 100 ¢`, req: { money: 100, ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })); });
   L.push(C('Formation aux techniques anti-geno (3 semaines, 500 ¢)', () => { pc.money -= 500; advance(3); if (G.status !== 'play') return; pc.flags.antigeno = true; show({ kicker: 'Formation', title: 'Techniques anti-geno', text: ['Buff, Rebound, Shield, Restore, Foresight, Shock, Dash : accessibles à toutes, enseignées à la F.A. — tu les maîtrises désormais (+2 dégâts, +1 défense en combat).'], choices: [C('Continuer', hub)] }); }, { req: { money: 500, notFlag: 'antigeno' } }));
-  const cap = 1 + Math.floor(pc.grade / 2);
+  const cap = roleCap();
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
   L.push(C('← Retour', cityMenu));
   const left = capActs(L, 'train', /rôle/i);
   show({ kicker: 'Progression', title: 'S’entraîner', text: [`<span class="mut">XP ${pc.xp} · ${left ? 'une séance possible' : 'séance déjà faite'} dans cette ville</span>`], choices: L, tiles: true });
 }
+const roleCap = () => 2 + Math.floor(G.pc.grade / 2);
 function roleMenu() {
-  const pc = G.pc; const cap = 1 + Math.floor(pc.grade / 2); const L = [];
+  const pc = G.pc; const cap = roleCap(); const L = [];
   Object.entries(ROLES).forEach(([id, r]) => {
     const has = pc.roles.includes(id); const rq = { attr: {}, ok: () => (!has && pc.roles.length >= cap) ? `Tu ne peux pas avoir plus de ${cap} rôle(s) à ton grade` : null };
     if (r.req.attr) rq.attr[r.req.attr[0]] = r.req.attr[1]; if (r.req.grade) rq.grade = r.req.grade;
     const okStyle = !r.req.style || r.req.style.includes(pc.style);
     const lockStyle = okStyle ? null : `Style requis : ${r.req.style.map(s => STYLES[s].name).join(' / ')}`;
-    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); roleMenu(); }, { sub: `${r.desc} ${r.perk}${has ? '' : ' — formation 150 ¢'}`, req: has ? null : Object.assign(rq, { money: 150 }) });
+    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); roleMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, { money: 150 }) });
     if (lockStyle && !has) ch.lock = ch.lock || lockStyle; L.push(ch);
   });
-  L.push(C('← Retour', trainMenu)); show({ kicker: 'Rôles', title: 'Choisir un rôle', text: ['Un rôle change tes missions : options exclusives, bonus aux jets, recrutement et coûts.'], choices: L });
+  L.push(C('← Retour', trainMenu)); show({ kicker: 'Rôles', title: `Choisir un rôle (${pc.roles.length}/${cap})`, text: ['Un rôle donne +2 aux jets de son domaine et ouvre des contrats dédiés. Touche un rôle acquis pour l’abandonner.'], choices: L, tiles: true });
 }
 
 // ───────── Retraite ─────────

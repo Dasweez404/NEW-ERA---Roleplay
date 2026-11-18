@@ -35,3 +35,6 @@
   const RX = { hacker: 'archives drone', costumier: 'spectacle', combattant: 'sentinelle cirque', eclaireur: 'meteorite pistage glyphes', ingenieur: 'drone cargaison', medecin: 'quarantaine rescape refuge', logisticien: 'cargaison refuge', gardien: 'sentinelle sommet rescape', leader: 'sommet spectacle', strategiste: 'sentinelle rame', artilleur: 'drone rame' };
   for (const [r, s] of Object.entries(RX)) if (ROLE_ARCH[r]) ROLE_ARCH[r] = ROLE_ARCH[r].concat(s.split(' '));
 })();
+
+// Rôles ajoutés : leurs contrats
+Object.assign(ROLE_ARCH, { infiltre: ['infiltration', 'archives', 'barrage', 'pistage'], pilote: ['course', 'vehicule', 'rame', 'barrage'], diplomate: ['sommet', 'mediation', 'recrutement', 'quarantaine'], dompteur: ['cirque', 'cryptide', 'sentinelle'] });

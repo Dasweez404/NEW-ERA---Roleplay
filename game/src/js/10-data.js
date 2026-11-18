@@ -38,6 +38,7 @@ const STYLES = {
 };
 
 // Rôles (liste de l'utilisateur ; « costumier » était en double → une seule entrée)
+const ROLE_IC = { eclaireur: '🔭', combattant: '⚔', artilleur: '🎯', leader: '📣', medecin: '🩺', ingenieur: '🔧', costumier: '🎭', hacker: '💻', gardien: '🛡', logisticien: '📦', strategiste: '♟', infiltre: '🥷', pilote: '🏎', diplomate: '🕊', dompteur: '🐺' };
 const ROLES = {
   eclaireur: { name: 'Éclaireur', tag: 'scout', desc: 'Repère les dangers et ouvre la voie.', req: { attr: ['agilite', 5] }, perk: 'Repérage : bonus aux enquêtes et aux embuscades évitées.' },
   combattant: { name: 'Combattant', tag: 'combat', desc: 'En première ligne.', req: { attr: ['corps', 5] }, perk: 'Bonus de dégâts et de toucher.' },
@@ -49,6 +50,10 @@ const ROLES = {
   hacker: { name: 'Hacker', tag: 'hack', desc: 'Réseaux, droïdes, caméras.', req: { attr: ['intellect', 6] }, perk: 'Piratage, désactivation de robots.' },
   gardien: { name: 'Gardien', tag: 'defense', desc: 'Protège un lieu, une personne, une position.', req: { attr: ['corps', 5], style: ['juggernaut', 'protector', 'brawler'] }, perk: 'Défense de territoire, escortes.' },
   logisticien: { name: 'Logisticien', tag: 'logi', desc: 'Ravitaillement, budgets, transports.', req: { attr: ['intellect', 5] }, perk: 'Coûts réduits, recrues moins chères.' },
+  infiltre: { name: 'Infiltré', tag: 'stealth', desc: 'Passe partout sans laisser de trace.', req: { attr: ['agilite', 6] }, perk: 'Discrétion : bonus aux infiltrations et aux évasions.' },
+  pilote: { name: 'Pilote', tag: 'mobility', desc: 'Roule, vole, fuit vite.', req: { attr: ['agilite', 5] }, perk: 'Courses, poursuites et trajets plus faciles.' },
+  diplomate: { name: 'Diplomate', tag: 'social', desc: 'Désamorce, négocie, convainc.', req: { attr: ['charisme', 6], grade: 1 }, perk: 'Bonus de négociation et de médiation.' },
+  dompteur: { name: 'Dompteur', tag: 'control', desc: 'Apaise les créatures et les foules.', req: { attr: ['maitrise', 5] }, perk: 'Bonus face aux bêtes et aux situations à contrôler.' },
   strategiste: { name: 'Stratégiste', tag: 'strat', desc: 'Plans, batailles, alliances.', req: { attr: ['intellect', 7], grade: 1 }, perk: 'Bonus en bataille et en décisions de faction.' },
 };
 

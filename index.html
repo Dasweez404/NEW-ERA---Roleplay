@@ -686,6 +686,7 @@ const STYLES = {
 };
 
 // Rôles (liste de l'utilisateur ; « costumier » était en double → une seule entrée)
+const ROLE_IC = { eclaireur: '🔭', combattant: '⚔', artilleur: '🎯', leader: '📣', medecin: '🩺', ingenieur: '🔧', costumier: '🎭', hacker: '💻', gardien: '🛡', logisticien: '📦', strategiste: '♟', infiltre: '🥷', pilote: '🏎', diplomate: '🕊', dompteur: '🐺' };
 const ROLES = {
   eclaireur: { name: 'Éclaireur', tag: 'scout', desc: 'Repère les dangers et ouvre la voie.', req: { attr: ['agilite', 5] }, perk: 'Repérage : bonus aux enquêtes et aux embuscades évitées.' },
   combattant: { name: 'Combattant', tag: 'combat', desc: 'En première ligne.', req: { attr: ['corps', 5] }, perk: 'Bonus de dégâts et de toucher.' },
@@ -697,6 +698,10 @@ const ROLES = {
   hacker: { name: 'Hacker', tag: 'hack', desc: 'Réseaux, droïdes, caméras.', req: { attr: ['intellect', 6] }, perk: 'Piratage, désactivation de robots.' },
   gardien: { name: 'Gardien', tag: 'defense', desc: 'Protège un lieu, une personne, une position.', req: { attr: ['corps', 5], style: ['juggernaut', 'protector', 'brawler'] }, perk: 'Défense de territoire, escortes.' },
   logisticien: { name: 'Logisticien', tag: 'logi', desc: 'Ravitaillement, budgets, transports.', req: { attr: ['intellect', 5] }, perk: 'Coûts réduits, recrues moins chères.' },
+  infiltre: { name: 'Infiltré', tag: 'stealth', desc: 'Passe partout sans laisser de trace.', req: { attr: ['agilite', 6] }, perk: 'Discrétion : bonus aux infiltrations et aux évasions.' },
+  pilote: { name: 'Pilote', tag: 'mobility', desc: 'Roule, vole, fuit vite.', req: { attr: ['agilite', 5] }, perk: 'Courses, poursuites et trajets plus faciles.' },
+  diplomate: { name: 'Diplomate', tag: 'social', desc: 'Désamorce, négocie, convainc.', req: { attr: ['charisme', 6], grade: 1 }, perk: 'Bonus de négociation et de médiation.' },
+  dompteur: { name: 'Dompteur', tag: 'control', desc: 'Apaise les créatures et les foules.', req: { attr: ['maitrise', 5] }, perk: 'Bonus face aux bêtes et aux situations à contrôler.' },
   strategiste: { name: 'Stratégiste', tag: 'strat', desc: 'Plans, batailles, alliances.', req: { attr: ['intellect', 7], grade: 1 }, perk: 'Bonus en bataille et en décisions de faction.' },
 };
 
@@ -1391,7 +1396,7 @@ function tabPerso() {
   if (pc.ptype !== 'aucun') box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); box.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
   box.append(h('div', { class: 'kv', style: 'margin-top:8px' }, h('b', {}, 'Mérite'), nxt != null ? `${pc.merit} / ${nxt}` : `${pc.merit}`, ...(wantedStars() ? [h('b', {}, 'Prime'), starStr(wantedStars()) + ' ' + WANTED_TXT[wantedStars()]] : [])));
-  box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais', h('b', {}, 'Identité'), pc.faction === 'fa' ? 'Officier de la F.A.' : (pc.ptype === 'zoologique' || pc.ptype === 'aucun') ? 'Identité civile possible' : 'Porteur fiché')));
+  box.append(h('details', { class: 'small mut' }, h('summary', {}, 'Plus d’infos'), h('div', { class: 'kv' }, h('b', {}, 'Origine'), `${stateName(pc.origin)} (${capName(pc.origin)})`, h('b', {}, 'Âge'), `${pc.age} ans`, h('b', {}, 'XP'), `${pc.xp}`, h('b', {}, 'Éveil'), pc.awakened ? `${pc.awakened} fois` : 'jamais')));
   box.append(h('button', { class: 'tab', style: 'margin-top:10px', onclick: () => parkOpen(retireConfirm) }, '🌴 Prendre ma retraite'));
   if (pc.implant) box.append(h('div', { class: 'badc small' }, '⚠ Implant explosif actif — doit être remplacé par une prime avant le ' + dateStr(pc.implant.deadline)));
   return box;
@@ -2571,23 +2576,24 @@ function trainMenu() {
   const pc = G.pc; const L = [];
   ATTRS.forEach(a => { const hv = (pc.half || {})[a.id] || 0; const [ic] = (typeof ATTR_LOOK !== 'undefined' && ATTR_LOOK[a.id]) || ['◆']; L.push(C(a.name, () => trainAttr(a.id), { ic, sub: `½ point · ${hv}/2 · actuel ${A(a.id)} · 100 ¢`, req: { money: 100, ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })); });
   L.push(C('Formation aux techniques anti-geno (3 semaines, 500 ¢)', () => { pc.money -= 500; advance(3); if (G.status !== 'play') return; pc.flags.antigeno = true; show({ kicker: 'Formation', title: 'Techniques anti-geno', text: ['Buff, Rebound, Shield, Restore, Foresight, Shock, Dash : accessibles à toutes, enseignées à la F.A. — tu les maîtrises désormais (+2 dégâts, +1 défense en combat).'], choices: [C('Continuer', hub)] }); }, { req: { money: 500, notFlag: 'antigeno' } }));
-  const cap = 1 + Math.floor(pc.grade / 2);
+  const cap = roleCap();
   L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
   L.push(C('← Retour', cityMenu));
   const left = capActs(L, 'train', /rôle/i);
   show({ kicker: 'Progression', title: 'S’entraîner', text: [`<span class="mut">XP ${pc.xp} · ${left ? 'une séance possible' : 'séance déjà faite'} dans cette ville</span>`], choices: L, tiles: true });
 }
+const roleCap = () => 2 + Math.floor(G.pc.grade / 2);
 function roleMenu() {
-  const pc = G.pc; const cap = 1 + Math.floor(pc.grade / 2); const L = [];
+  const pc = G.pc; const cap = roleCap(); const L = [];
   Object.entries(ROLES).forEach(([id, r]) => {
     const has = pc.roles.includes(id); const rq = { attr: {}, ok: () => (!has && pc.roles.length >= cap) ? `Tu ne peux pas avoir plus de ${cap} rôle(s) à ton grade` : null };
     if (r.req.attr) rq.attr[r.req.attr[0]] = r.req.attr[1]; if (r.req.grade) rq.grade = r.req.grade;
     const okStyle = !r.req.style || r.req.style.includes(pc.style);
     const lockStyle = okStyle ? null : `Style requis : ${r.req.style.map(s => STYLES[s].name).join(' / ')}`;
-    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); roleMenu(); }, { sub: `${r.desc} ${r.perk}${has ? '' : ' — formation 150 ¢'}`, req: has ? null : Object.assign(rq, { money: 150 }) });
+    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); roleMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, { money: 150 }) });
     if (lockStyle && !has) ch.lock = ch.lock || lockStyle; L.push(ch);
   });
-  L.push(C('← Retour', trainMenu)); show({ kicker: 'Rôles', title: 'Choisir un rôle', text: ['Un rôle change tes missions : options exclusives, bonus aux jets, recrutement et coûts.'], choices: L });
+  L.push(C('← Retour', trainMenu)); show({ kicker: 'Rôles', title: `Choisir un rôle (${pc.roles.length}/${cap})`, text: ['Un rôle donne +2 aux jets de son domaine et ouvre des contrats dédiés. Touche un rôle acquis pour l’abandonner.'], choices: L, tiles: true });
 }
 
 // ───────── Retraite ─────────
@@ -4498,6 +4504,9 @@ function closureMonth() {
   const RX = { hacker: 'archives drone', costumier: 'spectacle', combattant: 'sentinelle cirque', eclaireur: 'meteorite pistage glyphes', ingenieur: 'drone cargaison', medecin: 'quarantaine rescape refuge', logisticien: 'cargaison refuge', gardien: 'sentinelle sommet rescape', leader: 'sommet spectacle', strategiste: 'sentinelle rame', artilleur: 'drone rame' };
   for (const [r, s] of Object.entries(RX)) if (ROLE_ARCH[r]) ROLE_ARCH[r] = ROLE_ARCH[r].concat(s.split(' '));
 })();
+
+// Rôles ajoutés : leurs contrats
+Object.assign(ROLE_ARCH, { infiltre: ['infiltration', 'archives', 'barrage', 'pistage'], pilote: ['course', 'vehicule', 'rame', 'barrage'], diplomate: ['sommet', 'mediation', 'recrutement', 'quarantaine'], dompteur: ['cirque', 'cryptide', 'sentinelle'] });
 
 // ───────── Campagnes supplémentaires (arcs en 3 chapitres, issues selon tes réussites) ─────────
 Object.assign(CAMPS, {
