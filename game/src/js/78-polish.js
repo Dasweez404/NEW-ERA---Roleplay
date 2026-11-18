@@ -2,7 +2,7 @@
 const TUTO = {
   contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Se faire petit ».'],
   trame: ['Voici un événement de la trame.', 'Choisis une option : un dé décide. Le pourcentage indique tes chances.'],
-  combat: ['Chaque ennemi annonce son geste.', 'Joue la carte qui le contre : Garde contre Frappe, Attaque contre Feinte, Ruse contre Garde. La main change à chaque round.'],
+  combat: ['3 à 5 rounds, un choix par round.', 'Tes 3 gestes dépendent de ton style. Le % montre tes chances : gagne assez de rounds pour les battre, perds-en trop et tu encaisses.'],
   ville: ['Tu es en ville.', 'Tu as une seule action ici (repos, marché, recruter, s’entraîner), puis tu repars. La station voisine est toujours gratuite.'],
   voyage: ['Choisis ta destination.', 'Touche une ville sur la carte, puis touche-la encore pour partir. Le 💎 marque un indice sur une pierre.']
 };
