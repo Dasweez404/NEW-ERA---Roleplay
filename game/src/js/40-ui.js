@@ -274,7 +274,7 @@ function tabAide() {
 <p><b>Étoiles ★ = Puissance</b> (1 à 10 💥) ; le <b>rang ▲</b> est ta position (Recrue → Chef). Le chef d’une faction est son membre le plus puissant. Plus tu montes en rang, plus tu es recherché (<b>prime</b> ⭐ à ⭐⭐⭐⭐).</p>
 <p><b>Combat :</b> 3 à 5 rounds. À chaque round, un geste parmi 3, adapté à ta catégorie de style (Offensif, Défensif, Technique, Soutien) ; le % est affiché. Ton pouvoir n’est utilisable qu’1 round sur 3 (2 sur 5). Gagne assez de rounds pour les battre ; perds-en trop et tu encaisses.</p>
 <p><b>Énergie ⚡ :</b> pour les pouvoirs, « Forcer » (+3) et « Se concentrer » (+3). Elle revient lentement. Les consommables du sac sont proposés quand ils servent.</p>
-<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Elle est mise sur ta tête par tes ennemis, via le Marché Noir, et monte avec ton rang. Un échec peut te faire capturer… ou tuer.</p>
+<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Elle est posée par la Force d’Autorité (pour un officier de la F.A. : par les factions anti, via le Marché Noir) et monte avec ton rang. Un échec peut te faire capturer… ou tuer.</p>
 <p><b>Orbitrail :</b> 13 lignes, contrôles de la F.A. ; des stations peuvent fermer, des villes être confinées.</p>
 <p><b>Réputation :</b> aider une faction plaît à ses alliés, la trahir braque ses alliés.</p>
 <p class="mut">📊 Le menu ☰ ouvre le journal de partie (local) pour étudier l’équilibrage.</p>` });

@@ -979,8 +979,8 @@ function recalc() {
 }
 function minHeat() {
   const pc = G.pc; if (G.world && G.world.era === 'newera') return 0;
-  if (pc.faction === 'civils') return 0;
-  // la prime est mise sur ta tête par tes ennemis, via le Marché Noir : plus tu montes en rang, plus elle est haute
+  if (pc.faction !== 'fa' && !isAnti(pc.faction)) return 0;
+  // plus tu montes en rang, plus ta prime est haute : posée par la Force d'Autorité (membres de la F.A. : par les factions anti, via le Marché Noir)
   return (pc.faction === 'fa' ? [0, 0, 10, 35, 60, 85] : [0, 10, 35, 60, 85, 85])[pc.grade];
 }
 function wantedStars() { const h = G.pc.heat; return h >= 85 ? 4 : h >= 60 ? 3 : h >= 35 ? 2 : h >= 10 ? 1 : 0; }
@@ -1011,13 +1011,11 @@ function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) 
 function loadScores() { try { return JSON.parse(localStorage.getItem(SCORE_KEY) || '[]'); } catch (e) { return []; } }
 function pushScore(rec) { try { const s = loadScores(); s.push(rec); s.sort((a, b) => b.score - a.score); localStorage.setItem(SCORE_KEY, JSON.stringify(s.slice(0, 20))); } catch (e) { } }
 
-// Qui a mis ta tête à prix (au Marché Noir) ?
+// Qui a mis ta tête à prix ? La Force d'Autorité pour les autres factions ; pour un officier de la F.A., les factions anti via le Marché Noir.
 function bountyBy() {
-  const pc = G.pc; const names = f => F[f] ? F[f].name : f;
-  if (pc.faction === 'fa') { const an = Object.keys(F).filter(f => isAnti(f)).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0)).slice(0, 2); return an.map(names).join(' et ') + ' (via le Marché Noir)'; }
-  const en = [...new Set([...((F[pc.faction] && F[pc.faction].enemies) || []).filter(x => F[x]), ...Object.keys(F).filter(f => !['civils', 'noir', 'own', 'fallen'].includes(f) && f !== pc.faction && (pc.rep[f] || 0) <= -15)])];
-  if (isAnti(pc.faction) && !en.includes('fa')) en.unshift('fa');
-  return en.slice(0, 2).map(names).join(' et ') + ' (via le Marché Noir)';
+  const pc = G.pc;
+  if (pc.faction === 'fa') { const an = Object.keys(F).filter(f => isAnti(f)).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0)).slice(0, 2); return an.map(f => F[f].name).join(' et ') + ' (via le Marché Noir)'; }
+  return 'la Force d’Autorité';
 }
 
 // ───────── Cœur des règles : jets, effets, réputation, prime, temps, fin de partie ─────────
@@ -1455,7 +1453,7 @@ function tabAide() {
 <p><b>Étoiles ★ = Puissance</b> (1 à 10 💥) ; le <b>rang ▲</b> est ta position (Recrue → Chef). Le chef d’une faction est son membre le plus puissant. Plus tu montes en rang, plus tu es recherché (<b>prime</b> ⭐ à ⭐⭐⭐⭐).</p>
 <p><b>Combat :</b> 3 à 5 rounds. À chaque round, un geste parmi 3, adapté à ta catégorie de style (Offensif, Défensif, Technique, Soutien) ; le % est affiché. Ton pouvoir n’est utilisable qu’1 round sur 3 (2 sur 5). Gagne assez de rounds pour les battre ; perds-en trop et tu encaisses.</p>
 <p><b>Énergie ⚡ :</b> pour les pouvoirs, « Forcer » (+3) et « Se concentrer » (+3). Elle revient lentement. Les consommables du sac sont proposés quand ils servent.</p>
-<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Elle est mise sur ta tête par tes ennemis, via le Marché Noir, et monte avec ton rang. Un échec peut te faire capturer… ou tuer.</p>
+<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Elle est posée par la Force d’Autorité (pour un officier de la F.A. : par les factions anti, via le Marché Noir) et monte avec ton rang. Un échec peut te faire capturer… ou tuer.</p>
 <p><b>Orbitrail :</b> 13 lignes, contrôles de la F.A. ; des stations peuvent fermer, des villes être confinées.</p>
 <p><b>Réputation :</b> aider une faction plaît à ses alliés, la trahir braque ses alliés.</p>
 <p class="mut">📊 Le menu ☰ ouvre le journal de partie (local) pour étudier l’équilibrage.</p>` });
@@ -2628,7 +2626,7 @@ function dealCard() {
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
   if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 6, f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
-  if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
+  if (pc.hp < pc.hpMax * 0.5 && pc.flags.restDest !== pc.flags.dest) pool.push({ w: 80, f: restCard }); // une seule fois par destination
   pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
   pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
   if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
@@ -2659,6 +2657,7 @@ function clueCard() {
   show({ kicker: 'RUMEUR', title: 'Un indice sur les pierres', text: ['Un vieux conteur, une archive piratée, une fresque effacée… quelque chose parle des seize pierres muta.'], choices: [C('Creuser la piste', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; const l = r.ok ? stoneClueGain() : null; show({ kicker: 'PIERRES ANTIQUES', title: r.ok ? 'Une piste !' : 'Fausse piste', text: [r.ok ? (l ? esc(cap(l)) : 'Tu sais déjà tout ce qu’il y a à savoir.') : 'Rien de concluant, cette fois.'], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' }), C('Laisser tomber', hub, { cls: 'back' })] });
 }
 function restCard() {
+  G.pc.flags.restDest = G.pc.flags.dest;
   show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent et ton énergie est à plat. Pas question de dormir en pleine affaire : tu pourras te reposer en ville, une fois la trame terminée.'], choices: [C('Serrer les dents', () => dealCard(), { cls: 'risk', ic: '😤' })] });
 }
 function townCard() {

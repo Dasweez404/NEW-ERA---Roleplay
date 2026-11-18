@@ -42,7 +42,7 @@ function dealCard() {
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
   if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 6, f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
-  if (pc.hp < pc.hpMax * 0.5) pool.push({ w: 80, f: restCard });
+  if (pc.hp < pc.hpMax * 0.5 && pc.flags.restDest !== pc.flags.dest) pool.push({ w: 80, f: restCard }); // une seule fois par destination
   pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
   pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
   if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
@@ -73,6 +73,7 @@ function clueCard() {
   show({ kicker: 'RUMEUR', title: 'Un indice sur les pierres', text: ['Un vieux conteur, une archive piratée, une fresque effacée… quelque chose parle des seize pierres muta.'], choices: [C('Creuser la piste', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; const l = r.ok ? stoneClueGain() : null; show({ kicker: 'PIERRES ANTIQUES', title: r.ok ? 'Une piste !' : 'Fausse piste', text: [r.ok ? (l ? esc(cap(l)) : 'Tu sais déjà tout ce qu’il y a à savoir.') : 'Rien de concluant, cette fois.'], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' }), C('Laisser tomber', hub, { cls: 'back' })] });
 }
 function restCard() {
+  G.pc.flags.restDest = G.pc.flags.dest;
   show({ kicker: 'ÉTAT', title: 'Tu tiens à peine debout', text: ['Les blessures s’accumulent et ton énergie est à plat. Pas question de dormir en pleine affaire : tu pourras te reposer en ville, une fois la trame terminée.'], choices: [C('Serrer les dents', () => dealCard(), { cls: 'risk', ic: '😤' })] });
 }
 function townCard() {
