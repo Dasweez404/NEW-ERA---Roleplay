@@ -20,13 +20,16 @@ function actionsMenu() { resumeScene(); }
 function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 1; cityMenu(); }
 function cityMenu() {
   const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 1; const left = f.cityActs; const L = [];
-  if (left <= 0) return travelMenu();
+  if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; return recapCard(); } return travelMenu(); }
   if (left > 0) {
     const T = []; baseTile(T); atelierTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
     T.push(C('Marché', () => shopMenu(), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
     T.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
     T.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
+    const hpR = pc.hp / pc.hpMax, light = !weaponOf() || !armorOf();
+    const rec = hpR < 0.6 || pc.en < pc.enMax * 0.3 ? 'Se reposer' : (pc.money >= 250 && light) ? 'Marché' : (pc.party.length < Math.min(2, partyMax()) && pc.money >= 300) ? 'Recruter' : 'S’entraîner';
+    T.forEach(c => { if (c.label === rec) { c.sub = '★ Conseillé · ' + (c.sub || ''); c.cls = ((c.cls || '') + ' safe').trim(); } });
     T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
   }
   coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: 'Une action ici, puis tu repars', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
@@ -54,7 +57,9 @@ function travelMenu(pre) {
       h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, '🏴 ' + ownerName(to)), h('span', { class: 'pvc' }, `contrôle ${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' ✔ faux papiers' : ''}`), r.legs.length > 1 ? h('span', { class: 'pvc' }, `${r.legs.length - 1} corresp.`) : null, reco.has(to) ? h('span', { class: 'pvc rec' }, '★ ' + reco.get(to)[0]) : null, leadMap().has(to) ? h('span', { class: 'pvc lead' }, '🔴 ' + LEAD_KINDS[leadMap().get(to).kind].d) : null),
       h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap() });
+  const prio = new Set([...reco.keys(), ...leadMap().keys()]); stoneHints().forEach((v, k) => { if (v === 'full') prio.add(k); }); const pxy = id => OT_ST[stationOf(id)] || [0, 0]; const hxy = pxy(here);
+  const focusIds = [here, ...[...prio].filter(x => x !== here && S[x]).sort((a, b) => Math.hypot(pxy(a)[0] - hxy[0], pxy(a)[1] - hxy[1]) - Math.hypot(pxy(b)[0] - hxy[0], pxy(b)[1] - hxy[1])).slice(0, 3)];
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap(), focus: focusIds });
   const W0 = G.world; const clues = DATA.stones.filter(s => !G.pc.stones[s.id] && (W0.stoneLv[s.id] || W0.stoneClue[s.id]));
   const clueRow = clues.length ? h('div', { class: 'stleads' }, clues.map(s => { const lv = W0.stoneLv[s.id] || 1; const loc = W0.stoneLoc[s.id];
     return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
@@ -232,4 +237,32 @@ function startVanish() {
     if (attr === 'fight') return startCombat({ title: 'La dernière poursuite', foes: foesFor(chance(0.5) ? 'fa' : (enemiesOf(pc.faction)[0] || 'fa'), Math.min(5, tier), 2), lethal: 'capture', intro: 'Ils te rattrapent à la sortie de la ville.', onWin: L => { stepEnd(true, 'Tu t’en sors : ils ne te suivront plus.'); }, onFlee: () => stepEnd(false, 'Tu t’échappes, mais ils savent où tu vas.') });
     const r = check(attr, dc, tags); stepEnd(r.ok, (r.ok ? 'Ça passe. ' : 'Ça coince. ') + checkLine(r)); }, { odds: (attr === 'money' || attr === 'fight') ? null : [attr, dc, tags], ic: attr === 'money' ? '💰' : attr === 'fight' ? '⚔' : '🎲', req: attr === 'money' ? { money: tags } : undefined })) }); };
   next();
+}
+
+// ───────── Objectifs : tout ce qui t'attend, au même endroit ─────────
+function objectives() {
+  const pc = G.pc, W = G.world, f = pc.flags; const L = [];
+  if (pc.faction !== 'civils' && pc.grade < 5) { const nx = MERIT_STEPS[pc.grade + 1]; if (nx) L.push(pc.merit >= nx ? { ic: '🎖', t: 'Épreuve de grade', sub: 'Ton mérite est suffisant : elle t’attend à la prochaine arrivée.' } : { ic: '🎖', t: `Grade suivant : ${gradeNames(pc)[pc.grade + 1]}`, sub: `Mérite ${pc.merit}/${nx} — fais des contrats pour ta faction.` }); }
+  if (f.camp && CAMPS[f.camp.id]) L.push({ ic: '📖', t: `Campagne : ${CAMPS[f.camp.id].n}`, sub: `Chapitre ${f.camp.ch + 1}/${CAMPS[f.camp.id].ch.length} — la suite arrive dans la trame.` });
+  DATA.stones.filter(s => !pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).forEach(s => { const lv = W.stoneLv[s.id] || 1, loc = W.stoneLoc[s.id]; L.push(lv >= 2 ? { ic: '💎', t: `Pierre de ${s.name}`, sub: `Piste à ${capName(loc)} (${stateName(loc)}).`, go: () => travelMenu(loc) } : { ic: '💎', t: `Pierre de ${s.name}`, sub: `Rumeur : zone ${zoneOf(loc)}. Cherche d’autres indices.` }); });
+  leadMap().forEach((ld, st) => { L.push({ ic: '🔴', t: leadTitle(ld), sub: `Opportunité à ${capName(st)}.`, go: () => travelMenu(st) }); });
+  if (pc.implant) L.push({ ic: '💥', t: 'Implant explosif', sub: `Livre une prime avant le ${dateStr(pc.implant.deadline)}.` });
+  if (wantedStars() >= 2) L.push({ ic: '⭐', t: `Prime ${starStr(wantedStars())}`, sub: 'Fais-toi oublier : mois au vert, faux papiers, ou fais tomber ta prime.' });
+  return L;
+}
+function objectivesMenu() {
+  const L = objectives().map(o => C(o.t, o.go ? () => { UI.parked = null; o.go(); } : () => { }, { ic: o.ic, sub: o.sub, cls: o.go ? '' : '' }));
+  if (!L.length) L.push(Object.assign(C('Rien d’urgent', () => { }), { lock: 'Explore, fais des contrats : de nouveaux objectifs apparaîtront.' }));
+  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Objectifs', title: `${objectives().length} chose${objectives().length > 1 ? 's' : ''} à garder en tête`, text: [`<span class="mut">Pierres : ${stoneCount()}/16 · Destination n° ${G.pc.flags.dest || 1}</span>`], choices: L });
+}
+
+// ───────── Bilan avant de repartir (court) ─────────
+function recapCard() {
+  const pc = G.pc, s = pc.flags.snap; const d = (a, b) => a - b; const sg = n => (n > 0 ? '+' : '') + n;
+  const chips = []; const add = (ic, v, unit, bad) => { if (v) chips.push({ t: `${ic} ${sg(v)}${unit}`, c: (v > 0) !== !!bad ? 'good' : 'badc' }); };
+  add('₵', d(pc.money, s.money), ' ¢'); add('✦', d(pc.xp, s.xp), ' XP'); add('🎖', d(pc.merit, s.merit), ' mérite'); add('♥', d(pc.hp, s.hp), ' PV'); add('💎', d(stoneCount(), s.st), ' pierre');
+  const rv = Object.keys(pc.rep).map(k => [k, (pc.rep[k] || 0) - ((s.rep || {})[k] || 0)]).filter(x => x[1]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+  if (rv) chips.push({ t: `🤝 ${F[rv[0]] ? F[rv[0]].name : rv[0]} ${sg(rv[1])}`, c: rv[1] > 0 ? 'good' : 'badc' });
+  const wks = G.wk - s.wk;
+  show({ kicker: `BILAN · ${capName(s.loc).toUpperCase()}`, title: 'Avant de repartir', text: [wks ? `<span class="mut">${wks} semaine${wks > 1 ? 's' : ''} passée${wks > 1 ? 's' : ''} ici.</span>` : ''].filter(Boolean), fx: chips.length ? chips : [{ t: 'Rien de notable cette fois.', c: '' }], choices: [C('Choisir ma destination', () => travelMenu(), { ic: '🚆', cls: 'cta' })] });
 }

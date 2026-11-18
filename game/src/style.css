@@ -580,3 +580,5 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 
 .stleads{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.stlead{display:flex;gap:6px;align-items:center;background:#12121f;border:1px solid var(--c,#b026ff);color:#e9ebff;border-radius:999px;padding:4px 10px;font:600 .78rem var(--fb);cursor:pointer}.stlead b{color:var(--c,#d7a8ff)}.stlead i{font-style:normal;letter-spacing:1px;color:#b026ff}
 .stdia{filter:drop-shadow(0 0 6px #b026ff);animation:dpl 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes dpl{50%{transform:scale(1.18)}}
+
+.pill.obj{background:#1a1230;border-color:#b026ff;color:#e9ebff;cursor:pointer}

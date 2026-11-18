@@ -84,7 +84,7 @@ function hudEl() {
       h('div', { class: 'stat en' }, h('span', { class: 'lab ic' }, '⚡'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
       h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
-      h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
+      h('button', { class: 'pill obj', title: 'Objectifs', onclick: () => { sfx('click'); parkOpen(objectivesMenu); } }, '🎯 ' + objectives().length), h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
 }
 function menuPop() {
   const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
@@ -160,8 +160,9 @@ function stripEl() {
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
 // ───────── Panneau latéral (bureau) / tiroir + dock (mobile) ─────────
-const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions']];
-const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
+const TABS = [['perso', '🧍', 'Perso'], ['equipe', '🎒', 'Équipe'], ['factions', '🏴', 'Factions']];
+function tabEquipe() { const box = h('div'); box.append(h('h3', {}, 'Groupe'), tabGroupe(), h('h3', { style: 'margin-top:14px' }, 'Sac'), tabInv()); return box; }
+const TABFN = () => ({ perso: tabPerso, equipe: tabEquipe, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
   box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (k === 'factions') return parkOpen(factionMenu); if (k === 'pierres') return parkOpen(stoneMenu); UI.tab = k; render(true); } }, ic + ' ' + n))));
@@ -337,7 +338,9 @@ function mapBox(o = {}) {
   const focus = (sid, w) => { const st = OT_ST[stationOf(sid)]; vb.w = w; vb.h = vb.w * chh() / cw(); vb.x = st[0] - vb.w / 2; vb.y = st[1] - vb.h / 2; apply(); };
   const fit = () => { vb.w = 2000; vb.h = vb.w * chh() / cw(); vb.x = 0; vb.y = (975 - vb.h) / 2; apply(); };
   const zoomAt = (f, px, py) => { const nw = clamp(vb.w / f, 300, 2400); const rx = px == null ? .5 : px, ry = py == null ? .5 : py; const cx = vb.x + vb.w * rx, cy = vb.y + vb.h * ry; vb.w = nw; vb.h = nw * chh() / cw(); vb.x = cx - vb.w * rx; vb.y = cy - vb.h * ry; apply(); };
-  const home = () => o.here ? focus(o.here, innerWidth < 700 ? 700 : 1100) : fit();
+  const fitIds = ids => { const P = ids.map(i => OT_ST[stationOf(i)]).filter(Boolean); if (!P.length) return fit(); const pad = 170; const x0 = Math.min(...P.map(p => p[0])) - pad, x1 = Math.max(...P.map(p => p[0])) + pad, y0 = Math.min(...P.map(p => p[1])) - pad, y1 = Math.max(...P.map(p => p[1])) + pad;
+    let w = Math.max(x1 - x0, innerWidth < 700 ? 700 : 900); const ar = chh() / cw(); if ((y1 - y0) > w * ar) w = (y1 - y0) / ar; vb.w = w; vb.h = w * ar; vb.x = (x0 + x1) / 2 - vb.w / 2; vb.y = (y0 + y1) / 2 - vb.h / 2; apply(); };
+  const home = () => (o.focus && o.focus.length > 1) ? fitIds(o.focus) : o.here ? focus(o.here, innerWidth < 700 ? 700 : 1100) : fit();
   const ptrs = new Map(); let lastD = 0, startX = 0, startY = 0;
   svg.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false; startX = e.clientX; startY = e.clientY; lastD = 0; svg.style.cursor = 'grabbing'; });
   svg.addEventListener('pointermove', e => {

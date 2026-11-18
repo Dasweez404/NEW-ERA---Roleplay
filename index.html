@@ -592,6 +592,8 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 
 .stleads{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.stlead{display:flex;gap:6px;align-items:center;background:#12121f;border:1px solid var(--c,#b026ff);color:#e9ebff;border-radius:999px;padding:4px 10px;font:600 .78rem var(--fb);cursor:pointer}.stlead b{color:var(--c,#d7a8ff)}.stlead i{font-style:normal;letter-spacing:1px;color:#b026ff}
 .stdia{filter:drop-shadow(0 0 6px #b026ff);animation:dpl 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes dpl{50%{transform:scale(1.18)}}
+
+.pill.obj{background:#1a1230;border-color:#b026ff;color:#e9ebff;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1265,7 +1267,7 @@ function hudEl() {
       h('div', { class: 'stat en' }, h('span', { class: 'lab ic' }, '⚡'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
       h('span', { class: 'pill cash' }, '₵ ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
-      h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
+      h('button', { class: 'pill obj', title: 'Objectifs', onclick: () => { sfx('click'); parkOpen(objectivesMenu); } }, '🎯 ' + objectives().length), h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
 }
 function menuPop() {
   const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
@@ -1341,8 +1343,9 @@ function stripEl() {
 function runAfter() { const a = UI.after || []; UI.after = []; a.forEach(f => { try { f(); } catch (e) { } }); }
 
 // ───────── Panneau latéral (bureau) / tiroir + dock (mobile) ─────────
-const TABS = [['perso', '🧍', 'Perso'], ['inv', '🎒', 'Sac'], ['groupe', '👥', 'Groupe'], ['factions', '🏴', 'Factions']];
-const TABFN = () => ({ perso: tabPerso, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
+const TABS = [['perso', '🧍', 'Perso'], ['equipe', '🎒', 'Équipe'], ['factions', '🏴', 'Factions']];
+function tabEquipe() { const box = h('div'); box.append(h('h3', {}, 'Groupe'), tabGroupe(), h('h3', { style: 'margin-top:14px' }, 'Sac'), tabInv()); return box; }
+const TABFN = () => ({ perso: tabPerso, equipe: tabEquipe, inv: tabInv, groupe: tabGroupe, factions: tabFactions, pierres: tabPierres, carte: tabCarte, journal: tabJournal, aide: tabAide });
 function sideEl() {
   const box = h('div', { class: 'card side' });
   box.append(h('div', { class: 'tabs' }, TABS.map(([k, ic, n]) => h('button', { class: 'tab' + (UI.tab === k ? ' on' : ''), onclick: () => { sfx('click'); if (k === 'factions') return parkOpen(factionMenu); if (k === 'pierres') return parkOpen(stoneMenu); UI.tab = k; render(true); } }, ic + ' ' + n))));
@@ -1518,7 +1521,9 @@ function mapBox(o = {}) {
   const focus = (sid, w) => { const st = OT_ST[stationOf(sid)]; vb.w = w; vb.h = vb.w * chh() / cw(); vb.x = st[0] - vb.w / 2; vb.y = st[1] - vb.h / 2; apply(); };
   const fit = () => { vb.w = 2000; vb.h = vb.w * chh() / cw(); vb.x = 0; vb.y = (975 - vb.h) / 2; apply(); };
   const zoomAt = (f, px, py) => { const nw = clamp(vb.w / f, 300, 2400); const rx = px == null ? .5 : px, ry = py == null ? .5 : py; const cx = vb.x + vb.w * rx, cy = vb.y + vb.h * ry; vb.w = nw; vb.h = nw * chh() / cw(); vb.x = cx - vb.w * rx; vb.y = cy - vb.h * ry; apply(); };
-  const home = () => o.here ? focus(o.here, innerWidth < 700 ? 700 : 1100) : fit();
+  const fitIds = ids => { const P = ids.map(i => OT_ST[stationOf(i)]).filter(Boolean); if (!P.length) return fit(); const pad = 170; const x0 = Math.min(...P.map(p => p[0])) - pad, x1 = Math.max(...P.map(p => p[0])) + pad, y0 = Math.min(...P.map(p => p[1])) - pad, y1 = Math.max(...P.map(p => p[1])) + pad;
+    let w = Math.max(x1 - x0, innerWidth < 700 ? 700 : 900); const ar = chh() / cw(); if ((y1 - y0) > w * ar) w = (y1 - y0) / ar; vb.w = w; vb.h = w * ar; vb.x = (x0 + x1) / 2 - vb.w / 2; vb.y = (y0 + y1) / 2 - vb.h / 2; apply(); };
+  const home = () => (o.focus && o.focus.length > 1) ? fitIds(o.focus) : o.here ? focus(o.here, innerWidth < 700 ? 700 : 1100) : fit();
   const ptrs = new Map(); let lastD = 0, startX = 0, startY = 0;
   svg.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false; startX = e.clientX; startY = e.clientY; lastD = 0; svg.style.cursor = 'grabbing'; });
   svg.addEventListener('pointermove', e => {
@@ -2363,13 +2368,16 @@ function actionsMenu() { resumeScene(); }
 function enterCity() { const f = G.pc.flags; f.stage = 'ville'; const b = (typeof isBaseHere === 'function' && isBaseHere() ? 1 : 0) + (typeof atelierHere === 'function' && atelierHere() ? 1 : 0); f.cityActs = 1; cityMenu(); }
 function cityMenu() {
   const pc = G.pc, f = pc.flags; f.stage = 'ville'; if (f.cityActs == null) f.cityActs = 1; const left = f.cityActs; const L = [];
-  if (left <= 0) return travelMenu();
+  if (left <= 0) { if (!f.recapDone && f.snap) { f.recapDone = true; return recapCard(); } return travelMenu(); }
   if (left > 0) {
     const T = []; baseTile(T); atelierTile(T);
     T.push(C('Se reposer', restMenu, { ic: '🛏', sub: 'Soigner, recharger, se faire oublier.' }));
     T.push(C('Marché', () => shopMenu(), { ic: '🛒', sub: 'Armes, armures, gadgets, soins.' }));
     T.push(C('Recruter', recruitMenu, { ic: '🤝', sub: `Groupe : ${pc.party.length}/${partyMax()}` }));
     T.push(C('S’entraîner', trainMenu, { ic: '🎓', sub: 'Expérience, rôles, formation anti-geno.' }));
+    const hpR = pc.hp / pc.hpMax, light = !weaponOf() || !armorOf();
+    const rec = hpR < 0.6 || pc.en < pc.enMax * 0.3 ? 'Se reposer' : (pc.money >= 250 && light) ? 'Marché' : (pc.party.length < Math.min(2, partyMax()) && pc.money >= 300) ? 'Recruter' : 'S’entraîner';
+    T.forEach(c => { if (c.label === rec) { c.sub = '★ Conseillé · ' + (c.sub || ''); c.cls = ((c.cls || '') + ' safe').trim(); } });
     T.forEach(c => { const g = c.go; c.go = () => { f.cityActs--; g(); }; }); L.push(...T);
   }
   coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: 'Une action ici, puis tu repars', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
@@ -2397,7 +2405,9 @@ function travelMenu(pre) {
       h('div', { class: 'tvchips' }, h('span', { class: 'pvc' }, `${r.hops} arrêt${r.hops > 1 ? 's' : ''}`), h('span', { class: 'pvc' }, '🏴 ' + ownerName(to)), h('span', { class: 'pvc' }, `contrôle ${Math.round(detectChance() * 100)} %${pc_hasFaux() ? ' ✔ faux papiers' : ''}`), r.legs.length > 1 ? h('span', { class: 'pvc' }, `${r.legs.length - 1} corresp.`) : null, reco.has(to) ? h('span', { class: 'pvc rec' }, '★ ' + reco.get(to)[0]) : null, leadMap().has(to) ? h('span', { class: 'pvc lead' }, '🔴 ' + LEAD_KINDS[leadMap().get(to).kind].d) : null),
       h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
-  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap() });
+  const prio = new Set([...reco.keys(), ...leadMap().keys()]); stoneHints().forEach((v, k) => { if (v === 'full') prio.add(k); }); const pxy = id => OT_ST[stationOf(id)] || [0, 0]; const hxy = pxy(here);
+  const focusIds = [here, ...[...prio].filter(x => x !== here && S[x]).sort((a, b) => Math.hypot(pxy(a)[0] - hxy[0], pxy(a)[1] - hxy[1]) - Math.hypot(pxy(b)[0] - hxy[0], pxy(b)[1] - hxy[1])).slice(0, 3)];
+  box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap(), focus: focusIds });
   const W0 = G.world; const clues = DATA.stones.filter(s => !G.pc.stones[s.id] && (W0.stoneLv[s.id] || W0.stoneClue[s.id]));
   const clueRow = clues.length ? h('div', { class: 'stleads' }, clues.map(s => { const lv = W0.stoneLv[s.id] || 1; const loc = W0.stoneLoc[s.id];
     return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
@@ -2577,6 +2587,34 @@ function startVanish() {
   next();
 }
 
+// ───────── Objectifs : tout ce qui t'attend, au même endroit ─────────
+function objectives() {
+  const pc = G.pc, W = G.world, f = pc.flags; const L = [];
+  if (pc.faction !== 'civils' && pc.grade < 5) { const nx = MERIT_STEPS[pc.grade + 1]; if (nx) L.push(pc.merit >= nx ? { ic: '🎖', t: 'Épreuve de grade', sub: 'Ton mérite est suffisant : elle t’attend à la prochaine arrivée.' } : { ic: '🎖', t: `Grade suivant : ${gradeNames(pc)[pc.grade + 1]}`, sub: `Mérite ${pc.merit}/${nx} — fais des contrats pour ta faction.` }); }
+  if (f.camp && CAMPS[f.camp.id]) L.push({ ic: '📖', t: `Campagne : ${CAMPS[f.camp.id].n}`, sub: `Chapitre ${f.camp.ch + 1}/${CAMPS[f.camp.id].ch.length} — la suite arrive dans la trame.` });
+  DATA.stones.filter(s => !pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).forEach(s => { const lv = W.stoneLv[s.id] || 1, loc = W.stoneLoc[s.id]; L.push(lv >= 2 ? { ic: '💎', t: `Pierre de ${s.name}`, sub: `Piste à ${capName(loc)} (${stateName(loc)}).`, go: () => travelMenu(loc) } : { ic: '💎', t: `Pierre de ${s.name}`, sub: `Rumeur : zone ${zoneOf(loc)}. Cherche d’autres indices.` }); });
+  leadMap().forEach((ld, st) => { L.push({ ic: '🔴', t: leadTitle(ld), sub: `Opportunité à ${capName(st)}.`, go: () => travelMenu(st) }); });
+  if (pc.implant) L.push({ ic: '💥', t: 'Implant explosif', sub: `Livre une prime avant le ${dateStr(pc.implant.deadline)}.` });
+  if (wantedStars() >= 2) L.push({ ic: '⭐', t: `Prime ${starStr(wantedStars())}`, sub: 'Fais-toi oublier : mois au vert, faux papiers, ou fais tomber ta prime.' });
+  return L;
+}
+function objectivesMenu() {
+  const L = objectives().map(o => C(o.t, o.go ? () => { UI.parked = null; o.go(); } : () => { }, { ic: o.ic, sub: o.sub, cls: o.go ? '' : '' }));
+  if (!L.length) L.push(Object.assign(C('Rien d’urgent', () => { }), { lock: 'Explore, fais des contrats : de nouveaux objectifs apparaîtront.' }));
+  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Objectifs', title: `${objectives().length} chose${objectives().length > 1 ? 's' : ''} à garder en tête`, text: [`<span class="mut">Pierres : ${stoneCount()}/16 · Destination n° ${G.pc.flags.dest || 1}</span>`], choices: L });
+}
+
+// ───────── Bilan avant de repartir (court) ─────────
+function recapCard() {
+  const pc = G.pc, s = pc.flags.snap; const d = (a, b) => a - b; const sg = n => (n > 0 ? '+' : '') + n;
+  const chips = []; const add = (ic, v, unit, bad) => { if (v) chips.push({ t: `${ic} ${sg(v)}${unit}`, c: (v > 0) !== !!bad ? 'good' : 'badc' }); };
+  add('₵', d(pc.money, s.money), ' ¢'); add('✦', d(pc.xp, s.xp), ' XP'); add('🎖', d(pc.merit, s.merit), ' mérite'); add('♥', d(pc.hp, s.hp), ' PV'); add('💎', d(stoneCount(), s.st), ' pierre');
+  const rv = Object.keys(pc.rep).map(k => [k, (pc.rep[k] || 0) - ((s.rep || {})[k] || 0)]).filter(x => x[1]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+  if (rv) chips.push({ t: `🤝 ${F[rv[0]] ? F[rv[0]].name : rv[0]} ${sg(rv[1])}`, c: rv[1] > 0 ? 'good' : 'badc' });
+  const wks = G.wk - s.wk;
+  show({ kicker: `BILAN · ${capName(s.loc).toUpperCase()}`, title: 'Avant de repartir', text: [wks ? `<span class="mut">${wks} semaine${wks > 1 ? 's' : ''} passée${wks > 1 ? 's' : ''} ici.</span>` : ''].filter(Boolean), fx: chips.length ? chips : [{ t: 'Rien de notable cette fois.', c: '' }], choices: [C('Choisir ma destination', () => travelMenu(), { ic: '🚆', cls: 'cta' })] });
+}
+
 // ───────── Le fil de l'histoire : une carte, deux ou trois choix, un dé, la suite (style Destiny Eleven) ─────────
 function hub() {
   if (G.status !== 'play') return;
@@ -2635,7 +2673,7 @@ function dealCard() {
 function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; pc.flags.dest = (pc.flags.dest || 0) + 1; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; pc.flags.dest = (pc.flags.dest || 0) + 1; pc.flags.recapDone = false; pc.flags.snap = { money: pc.money, xp: pc.xp, merit: pc.merit, hp: pc.hp, wk: G.wk, st: stoneCount(), rep: Object.assign({}, pc.rep), loc: G.loc }; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   { const po = offers.find(o => o.promo), key = G.wk + ':' + G.loc; if (po && pc.flags.promoAsked !== key) { pc.flags.promoAsked = key; const a = ARCH[po.arch]; const lead = typeof leaderName === 'function' ? leaderName(pc.faction) : 'Ta faction'; return show({ kicker: '🎖 ÉPREUVE DE GRADE', title: 'Ta faction te met à l’épreuve', text: [`Ton mérite est suffisant. ${esc(lead)} t’attendait : pour monter en grade, il faut d’abord faire tes preuves.`, ctxText(a.intro, po), `<span class="mut">${esc(a.n)} · ${stars(po.tier)} · grade à la clé</span>`], choices: [C('Relever l’épreuve', () => missionApproach(po), { cls: 'cta', ic: '🎖' })] }); } }
   if (pc.flags.dest >= 5 && pc.flags.dest % 5 === 0 && pc.flags.factionAt !== pc.flags.dest) { pc.flags.factionAt = pc.flags.dest; return factionPoint(); }
   ensureLeads(); { const ld = (G.world.leads || {})[G.loc]; if (ld && ld.exp >= G.wk) L.push(C(`${LEAD_KINDS[ld.kind].ic} ${leadTitle(ld)}`, () => leadAct(ld), { cls: 'risk', sub: '🔴 Opportunité · ' + LEAD_KINDS[ld.kind].d })); }
