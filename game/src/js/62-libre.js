@@ -15,7 +15,7 @@ function setupLibre() {
     if (r < 0.34) { holder = 'temple'; loc = pick(DATA.states).id; }
     else if (r < 0.46) { holder = 'fa'; loc = pick(['mitropa', 'atlante', 'gallica', 'slavo', 'sinotan']); }
     else { holder = pick(pool); loc = F[holder].hq; }
-    W.stoneHolder[s.id] = holder; W.stoneLoc[s.id] = loc;
+    W.stoneHolder[s.id] = holder; W.stoneLoc[s.id] = CANON_LOC[s.id] || loc; // lieu fixe de chaque pierre, même en mode libre
   });
   const rival = pick(pool); const prem = pick(PREMISES); W.rival = rival; W.premise = { id: prem.id, t: prem.t, text: prem.x({ r: rival }) };
   W.arcs = []; W.rivalStones = 0;
@@ -38,7 +38,7 @@ function libreMonth() {
   // le rival collecte les pierres
   if (W.rival && stonesUnlocked() && chance(W.premise && W.premise.id === 'anti' ? 0.16 : 0.1)) {
     const cand = DATA.stones.filter(s => W.stoneHolder[s.id] !== W.rival && W.stoneHolder[s.id] !== 'pc');
-    if (cand.length) { const s = pick(cand); W.stoneHolder[s.id] = W.rival; W.stoneLoc[s.id] = F[W.rival].hq; newsPush(`${F[W.rival].name} met la main sur la pierre de ${s.name}.`); }
+    if (cand.length) { const s = pick(cand); W.stoneHolder[s.id] = W.rival; newsPush(`${F[W.rival].name} met la main sur la pierre de ${s.name}.`); }
   }
   const n = DATA.stones.filter(s => W.stoneHolder[s.id] === W.rival).length;
   if (n >= 8 && !W.warned) { W.warned = 1; newsPush(`⚠ ${F[W.rival].name} détient ${n} pierres antiques : le monde retient son souffle.`); logEntry('Le rival détient 8 pierres.'); }
