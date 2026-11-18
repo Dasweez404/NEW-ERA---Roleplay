@@ -557,3 +557,23 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 
 .rail{display:flex;gap:4px;margin:2px 0 6px}.rail .rs{flex:1;text-align:center;font:600 .62rem var(--fm);letter-spacing:.08em;text-transform:uppercase;padding:3px 0;border-bottom:2px solid #2a2a44;color:#6b7099}.rail .rs.done{color:#5be3a0;border-color:#5be3a0}.rail .rs.on{color:#fcee09;border-color:#fcee09}
 .fint{font:700 .74rem var(--fb);color:#c9cdf0}.fint.atk{color:#ff6a7f}.fint.fnt{color:#27f0ff}.fint.grd{color:#fcee09}.fchip{cursor:pointer}.fchip.tgt{border-color:var(--acc)}
+
+/* ───── motion design ───── */
+.vfx{position:fixed;left:50%;top:36%;z-index:80;pointer-events:none;font:900 2.6rem/1 var(--fd);font-style:italic;letter-spacing:.04em;white-space:nowrap;animation:vfx .95s cubic-bezier(.2,1.4,.3,1) both;text-shadow:0 0 18px currentColor,0 3px 0 #000}
+.vfx.good{color:#fcee09}.vfx.bad{color:#ff3d7f}.vfx.ko{color:#fff}
+@keyframes vfx{0%{opacity:0;transform:translate(-50%,-30%) scale(.4) rotate(-9deg)}22%{opacity:1;transform:translate(-50%,-50%) scale(1.2) rotate(-3deg)}65%{opacity:1;transform:translate(-50%,-54%) scale(1) rotate(-2deg)}100%{opacity:0;transform:translate(-50%,-90%) scale(1.06) rotate(-2deg)}}
+.choices.hand .ch.rv{animation:deal .42s cubic-bezier(.2,1.25,.4,1) both;animation-delay:calc((var(--i) - 4) * 80ms)}
+@keyframes deal{from{opacity:0;transform:translateY(34px) rotate(-5deg) scale(.9)}to{opacity:1;transform:none}}
+.choices.hand .ch{transition:transform .15s,box-shadow .15s,border-color .15s}.choices.hand .ch:not(.back):hover{transform:translateY(-4px) rotate(-.6deg);box-shadow:0 10px 22px rgba(0,0,0,.45)}
+.choices.hand .ch.safe{border-color:#35f0a0;box-shadow:0 0 14px rgba(53,240,160,.28);animation:deal .42s cubic-bezier(.2,1.25,.4,1) both,gl 1.6s 0.5s ease-in-out infinite}@keyframes gl{50%{box-shadow:0 0 24px rgba(53,240,160,.5)}}
+.choices.hand .ch.risk{border-color:#ff3d7f}
+.fint{display:inline-block;animation:intentin .45s cubic-bezier(.2,1.4,.4,1) both}@keyframes intentin{from{opacity:0;transform:translateX(-10px) scale(.7)}to{opacity:1;transform:none}}
+.fint.atk{animation:intentin .45s both,thr 1s .5s ease-in-out infinite}@keyframes thr{0%,100%{transform:none}30%{transform:translateX(3px) rotate(2deg)}60%{transform:translateX(-2px)}}
+.fint.fnt{animation:intentin .45s both,spin 2.4s .5s linear infinite}@keyframes spin{0%,92%{transform:none}100%{transform:rotate(1turn)}}
+.fchip{transition:border-color .2s,transform .2s,opacity .4s}.fchip.tgt{transform:translateY(-2px)}.fchip.dead{transform:scale(.94);filter:grayscale(1)}
+.rail .rs{transition:color .3s,border-color .3s}.rail .rs.on{animation:railon .5s both}@keyframes railon{from{border-color:#2a2a44;transform:translateY(3px)}to{transform:none}}
+.rp.cur{animation:cur 1.2s ease-in-out infinite}@keyframes cur{50%{box-shadow:0 0 10px #fcee09}}
+.tlogo img{animation:logoin .7s cubic-bezier(.2,1.2,.4,1) both,glowp 3.2s 1s ease-in-out infinite}@keyframes glowp{50%{filter:drop-shadow(0 0 3px rgba(255,255,255,.8)) drop-shadow(0 0 26px rgba(39,240,255,.6))}}
+.map .stc.here{animation:here 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes here{50%{transform:scale(1.25)}}
+.chip.good{animation:chipin .4s cubic-bezier(.2,1.4,.4,1) both}@keyframes chipin{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.vfx,.fint,.rail .rs.on,.rp.cur,.tlogo img,.map .stc.here,.choices.hand .ch{animation:none!important}}

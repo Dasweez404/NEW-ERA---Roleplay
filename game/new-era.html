@@ -569,6 +569,26 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 
 .rail{display:flex;gap:4px;margin:2px 0 6px}.rail .rs{flex:1;text-align:center;font:600 .62rem var(--fm);letter-spacing:.08em;text-transform:uppercase;padding:3px 0;border-bottom:2px solid #2a2a44;color:#6b7099}.rail .rs.done{color:#5be3a0;border-color:#5be3a0}.rail .rs.on{color:#fcee09;border-color:#fcee09}
 .fint{font:700 .74rem var(--fb);color:#c9cdf0}.fint.atk{color:#ff6a7f}.fint.fnt{color:#27f0ff}.fint.grd{color:#fcee09}.fchip{cursor:pointer}.fchip.tgt{border-color:var(--acc)}
+
+/* ───── motion design ───── */
+.vfx{position:fixed;left:50%;top:36%;z-index:80;pointer-events:none;font:900 2.6rem/1 var(--fd);font-style:italic;letter-spacing:.04em;white-space:nowrap;animation:vfx .95s cubic-bezier(.2,1.4,.3,1) both;text-shadow:0 0 18px currentColor,0 3px 0 #000}
+.vfx.good{color:#fcee09}.vfx.bad{color:#ff3d7f}.vfx.ko{color:#fff}
+@keyframes vfx{0%{opacity:0;transform:translate(-50%,-30%) scale(.4) rotate(-9deg)}22%{opacity:1;transform:translate(-50%,-50%) scale(1.2) rotate(-3deg)}65%{opacity:1;transform:translate(-50%,-54%) scale(1) rotate(-2deg)}100%{opacity:0;transform:translate(-50%,-90%) scale(1.06) rotate(-2deg)}}
+.choices.hand .ch.rv{animation:deal .42s cubic-bezier(.2,1.25,.4,1) both;animation-delay:calc((var(--i) - 4) * 80ms)}
+@keyframes deal{from{opacity:0;transform:translateY(34px) rotate(-5deg) scale(.9)}to{opacity:1;transform:none}}
+.choices.hand .ch{transition:transform .15s,box-shadow .15s,border-color .15s}.choices.hand .ch:not(.back):hover{transform:translateY(-4px) rotate(-.6deg);box-shadow:0 10px 22px rgba(0,0,0,.45)}
+.choices.hand .ch.safe{border-color:#35f0a0;box-shadow:0 0 14px rgba(53,240,160,.28);animation:deal .42s cubic-bezier(.2,1.25,.4,1) both,gl 1.6s 0.5s ease-in-out infinite}@keyframes gl{50%{box-shadow:0 0 24px rgba(53,240,160,.5)}}
+.choices.hand .ch.risk{border-color:#ff3d7f}
+.fint{display:inline-block;animation:intentin .45s cubic-bezier(.2,1.4,.4,1) both}@keyframes intentin{from{opacity:0;transform:translateX(-10px) scale(.7)}to{opacity:1;transform:none}}
+.fint.atk{animation:intentin .45s both,thr 1s .5s ease-in-out infinite}@keyframes thr{0%,100%{transform:none}30%{transform:translateX(3px) rotate(2deg)}60%{transform:translateX(-2px)}}
+.fint.fnt{animation:intentin .45s both,spin 2.4s .5s linear infinite}@keyframes spin{0%,92%{transform:none}100%{transform:rotate(1turn)}}
+.fchip{transition:border-color .2s,transform .2s,opacity .4s}.fchip.tgt{transform:translateY(-2px)}.fchip.dead{transform:scale(.94);filter:grayscale(1)}
+.rail .rs{transition:color .3s,border-color .3s}.rail .rs.on{animation:railon .5s both}@keyframes railon{from{border-color:#2a2a44;transform:translateY(3px)}to{transform:none}}
+.rp.cur{animation:cur 1.2s ease-in-out infinite}@keyframes cur{50%{box-shadow:0 0 10px #fcee09}}
+.tlogo img{animation:logoin .7s cubic-bezier(.2,1.2,.4,1) both,glowp 3.2s 1s ease-in-out infinite}@keyframes glowp{50%{filter:drop-shadow(0 0 3px rgba(255,255,255,.8)) drop-shadow(0 0 26px rgba(39,240,255,.6))}}
+.map .stc.here{animation:here 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes here{50%{transform:scale(1.25)}}
+.chip.good{animation:chipin .4s cubic-bezier(.2,1.4,.4,1) both}@keyframes chipin{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.vfx,.fint,.rail .rs.on,.rp.cur,.tlogo img,.map .stc.here,.choices.hand .ch{animation:none!important}}
 </style>
 </head>
 <body>
@@ -951,7 +971,7 @@ function charToSpec(c) {
   const grade = gradeFromChar(c); const st = c.style || ['brawler', 'ranger', 'assist', 'flanker'][hashStr(c.id) % 4];
   const cc = Object.assign({}, c, { style: st });
   const powers = c.powers.length ? c.powers.slice() : fallbackPowers(c);
-  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).slice(0, Math.max(0, grade - 2)).map(x => x.id);
+  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).filter(x => x.stars <= 3).slice(0, Math.max(0, Math.floor((grade - 2) / 2))).map(x => x.id);
   return {
     pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 800, 1200, 1800, 2600][grade], charId: c.id, xp: grade * 60 },
     recruits: mates,
@@ -2139,7 +2159,7 @@ function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const
 function pcLevel() { return clamp(Math.round(pcPower()), 1, 8); }
 const rr = (a, b) => a + Math.random() * (b - a);
 const pcBase = () => { const w = weaponOf(); return 3.2 + 1.15 * pcPower() + (w ? w.dmg * 0.4 : 0) + PK('dmg') * 0.4; };
-const foeHit = f => Math.max(1, Math.round((3 + 2.5 * (f.tier || 1) + f.dmg * 0.1) * rr(0.9, 1.1)));
+const foeHit = f => Math.max(1, Math.round((3 + 2.3 * (f.tier || 1) + f.dmg * 0.1) * rr(0.9, 1.1)));
 const dmgMul = () => 1 + 0.1 * (CB.nextBonus || 0) + 0.05 * (CB.hitBuff || 0) + ((CB.boost || 1) - 1) + (CB.rage ? 0.3 : 0);
 function rollIntent(f) {
   if (f.stun > 0) return 'stn';
@@ -2204,7 +2224,8 @@ function startCombat(cfg) {
   beginDuel();
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
-function beginDuel() { if (!CB) return; CB.preview = false; coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
+function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return; const el = h('div', { class: 'vfx ' + cls }, text); document.body.append(el); setTimeout(() => el.remove(), 950); }
+function beginDuel() { if (!CB) return; CB.preview = false; splash({ title: 'COMBAT', sub: CB.cfg.title || '', icon: '⚔', color: '#ff3d7f', ms: 700 }); coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
 function renderPreview() {
   coach('combat'); const cfg = CB.cfg; const T = CB.thr;
   const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);
@@ -2219,6 +2240,7 @@ function play(card) {
   if (!CB || CB.over) return; CB.log = []; CB.pops = []; const pc = G.pc; CB.preview = false;
   if (card.cost) pc.en = Math.max(0, pc.en - card.cost);
   const t = target(); const [lab, dm, tm] = cardOutcome(card); const nb = CB.nextBonus; CB.nextBonus = 0;
+  if (lab === 'contre') { vfx('CONTRE !', 'good'); sfx('crit'); } else if (lab === 'risqué') vfx('TOUCHÉ !', 'bad'); else if (lab === 'sonné') vfx('OUVERTURE', 'good');
   CB.hist.push(lab === 'contre' || lab === 'sonné' ? 'w' : lab === 'échange' || lab === 'bloqué' ? 'd' : 'l'); if (lab === 'contre') CB.good++;
   // dégâts infligés
   let dmg = Math.round(pcBase() * card.mult * dm * (1 + 0.1 * nb + 0.05 * (CB.hitBuff || 0) + ((CB.boost || 1) - 1) + (CB.rage ? 0.3 : 0)) * rr(0.92, 1.08));
@@ -2230,7 +2252,7 @@ function play(card) {
   const friends = pc.party.filter(a => a.inj <= 0);
   let ex = 0; friends.forEach(a => { ex += 0.4 + ((CH[a.id] && CH[a.id].stars) || 0) * 0.25; }); ex = Math.min(ex, pcBase() * 0.3); if (CB.drone) ex += CB.drone * pcBase() * 0.08;
   const t2 = target(); if (ex > 0 && t2) { const e = Math.round(ex); t2.hp = Math.max(0, t2.hp - e); if (friends.length) clog(`Ton équipe frappe aussi : ${e}.`, 'good'); }
-  CB.foes.forEach(f => { if (!f.dead && f.hp <= 0) { f.dead = true; clog(`${fname(f)} s’effondre.`, 'good'); pop('f' + CB.foes.indexOf(f), 'K.O.', 'crit'); } });
+  CB.foes.forEach(f => { if (!f.dead && f.hp <= 0) { f.dead = true; clog(`${fname(f)} s’effondre.`, 'good'); vfx('K.O.', 'ko'); pop('f' + CB.foes.indexOf(f), 'K.O.', 'crit'); } });
   // dégâts reçus
   if (aliveFoes().length) incoming(card, t, tm);
   // énergie, regen, perks

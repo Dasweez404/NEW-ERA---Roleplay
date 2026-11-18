@@ -14,7 +14,7 @@ function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const
 function pcLevel() { return clamp(Math.round(pcPower()), 1, 8); }
 const rr = (a, b) => a + Math.random() * (b - a);
 const pcBase = () => { const w = weaponOf(); return 3.2 + 1.15 * pcPower() + (w ? w.dmg * 0.4 : 0) + PK('dmg') * 0.4; };
-const foeHit = f => Math.max(1, Math.round((3 + 2.5 * (f.tier || 1) + f.dmg * 0.1) * rr(0.9, 1.1)));
+const foeHit = f => Math.max(1, Math.round((3 + 2.3 * (f.tier || 1) + f.dmg * 0.1) * rr(0.9, 1.1)));
 const dmgMul = () => 1 + 0.1 * (CB.nextBonus || 0) + 0.05 * (CB.hitBuff || 0) + ((CB.boost || 1) - 1) + (CB.rage ? 0.3 : 0);
 function rollIntent(f) {
   if (f.stun > 0) return 'stn';
@@ -79,7 +79,8 @@ function startCombat(cfg) {
   beginDuel();
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
-function beginDuel() { if (!CB) return; CB.preview = false; coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
+function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return; const el = h('div', { class: 'vfx ' + cls }, text); document.body.append(el); setTimeout(() => el.remove(), 950); }
+function beginDuel() { if (!CB) return; CB.preview = false; splash({ title: 'COMBAT', sub: CB.cfg.title || '', icon: '⚔', color: '#ff3d7f', ms: 700 }); coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +30 % à ta première carte.', 'good'); } rollIntents(); drawHand(); renderCombat(); }
 function renderPreview() {
   coach('combat'); const cfg = CB.cfg; const T = CB.thr;
   const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);
@@ -94,6 +95,7 @@ function play(card) {
   if (!CB || CB.over) return; CB.log = []; CB.pops = []; const pc = G.pc; CB.preview = false;
   if (card.cost) pc.en = Math.max(0, pc.en - card.cost);
   const t = target(); const [lab, dm, tm] = cardOutcome(card); const nb = CB.nextBonus; CB.nextBonus = 0;
+  if (lab === 'contre') { vfx('CONTRE !', 'good'); sfx('crit'); } else if (lab === 'risqué') vfx('TOUCHÉ !', 'bad'); else if (lab === 'sonné') vfx('OUVERTURE', 'good');
   CB.hist.push(lab === 'contre' || lab === 'sonné' ? 'w' : lab === 'échange' || lab === 'bloqué' ? 'd' : 'l'); if (lab === 'contre') CB.good++;
   // dégâts infligés
   let dmg = Math.round(pcBase() * card.mult * dm * (1 + 0.1 * nb + 0.05 * (CB.hitBuff || 0) + ((CB.boost || 1) - 1) + (CB.rage ? 0.3 : 0)) * rr(0.92, 1.08));
@@ -105,7 +107,7 @@ function play(card) {
   const friends = pc.party.filter(a => a.inj <= 0);
   let ex = 0; friends.forEach(a => { ex += 0.4 + ((CH[a.id] && CH[a.id].stars) || 0) * 0.25; }); ex = Math.min(ex, pcBase() * 0.3); if (CB.drone) ex += CB.drone * pcBase() * 0.08;
   const t2 = target(); if (ex > 0 && t2) { const e = Math.round(ex); t2.hp = Math.max(0, t2.hp - e); if (friends.length) clog(`Ton équipe frappe aussi : ${e}.`, 'good'); }
-  CB.foes.forEach(f => { if (!f.dead && f.hp <= 0) { f.dead = true; clog(`${fname(f)} s’effondre.`, 'good'); pop('f' + CB.foes.indexOf(f), 'K.O.', 'crit'); } });
+  CB.foes.forEach(f => { if (!f.dead && f.hp <= 0) { f.dead = true; clog(`${fname(f)} s’effondre.`, 'good'); vfx('K.O.', 'ko'); pop('f' + CB.foes.indexOf(f), 'K.O.', 'crit'); } });
   // dégâts reçus
   if (aliveFoes().length) incoming(card, t, tm);
   // énergie, regen, perks

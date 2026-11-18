@@ -128,7 +128,7 @@ function charToSpec(c) {
   const grade = gradeFromChar(c); const st = c.style || ['brawler', 'ranger', 'assist', 'flanker'][hashStr(c.id) % 4];
   const cc = Object.assign({}, c, { style: st });
   const powers = c.powers.length ? c.powers.slice() : fallbackPowers(c);
-  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).slice(0, Math.max(0, grade - 2)).map(x => x.id);
+  const mates = DATA.chars.filter(x => x.faction === c.faction && x.id !== c.id && !Object.values(F).some(f => f.leaders.includes(x.id) && f.id !== c.faction)).sort((a, b) => b.stars - a.stars || b.ratio - a.ratio).filter(x => x.stars <= 3).slice(0, Math.max(0, Math.floor((grade - 2) / 2))).map(x => x.id);
   return {
     pc: { name: c.name, gender: c.gender, age: ageNum(c.age), origin: c.origin, faction: c.faction, powers, style: st, attrs: statsForChar(cc), grade, merit: MERIT_STEPS[grade] || 0, money: [300, 500, 800, 1200, 1800, 2600][grade], charId: c.id, xp: grade * 60 },
     recruits: mates,
