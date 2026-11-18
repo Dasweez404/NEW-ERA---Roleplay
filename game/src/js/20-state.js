@@ -99,7 +99,7 @@ function initRep(pc) {
 function startGame(spec) {
   const pc = blankPC(); Object.assign(pc, spec.pc);
   pc.hp = pc.hpMax; G = { v: 1, wk: 0, pc, loc: pc.origin, world: null, log: [], status: 'play', score: { stones: 0 }, settings: { mode: spec.mode || 'libre', canon: spec.mode === 'canon' }, ver: 1, ts: Date.now() };
-  G.world = initWorld(); G.fresh = true;
+  G.settings.len = (typeof UI !== 'undefined' && UI.len) || 'normal'; applyLen(); G.world = initWorld(); G.fresh = true;
   if (pc.charId) { G.world.npc[pc.charId].alive = false; G.world.npc[pc.charId].st = 'pc'; const lead = Object.values(F).find(f => f.leaders.includes(pc.charId)); if (lead) G.world.leader[lead.id] = 'pc'; }
   const f0 = F[pc.faction]; G.loc = (pc.charId && f0 && f0.leaders.includes(pc.charId)) ? f0.hq : pc.origin;
   { const mem = DATA.chars.filter(c => c.faction === pc.faction && c.id !== pc.charId && G.world.npc[c.id].alive && !F[pc.faction].leaders.includes(c.id)); // la moitié de ta faction est dans les parages dès le départ
@@ -179,7 +179,7 @@ const hasRole = r => G.pc.roles.includes(r);
 
 // ───────── Sauvegarde ─────────
 function saveGame() { try { if (G && G.status === 'play') localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch (e) { } }
-function loadGame() { try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; G = JSON.parse(s); return true; } catch (e) { return false; } }
+function loadGame() { try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; G = JSON.parse(s); applyLen(); return true; } catch (e) { return false; } }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 function loadScores() { try { return JSON.parse(localStorage.getItem(SCORE_KEY) || '[]'); } catch (e) { return []; } }
 function pushScore(rec) { try { const s = loadScores(); s.push(rec); s.sort((a, b) => b.score - a.score); localStorage.setItem(SCORE_KEY, JSON.stringify(s.slice(0, 20))); } catch (e) { } }

@@ -148,9 +148,9 @@ function render(quiet) {
 }
 function railEl(sc) {
   const f = G.pc.flags; const st = f.stage || 'contrats'; const trav = sc && sc.kicker === 'Orbitrail';
-  const idx = trav ? 3 : st === 'contrats' ? 0 : st === 'story' ? 1 : 2; const left = f.storyLeft == null ? 3 : f.storyLeft;
+  const idx = trav ? 3 : st === 'contrats' ? 0 : st === 'story' ? 1 : 2; const left = f.storyLeft == null ? LEN().c : f.storyLeft;
   const steps = ['Contrats', left > 0 || st !== 'story' ? 'Histoire' : 'Histoire', 'Ville', 'Départ'];
-  return h('div', { class: 'rail' }, steps.map((n, i) => h('span', { class: 'rs' + (i < idx ? ' done' : i === idx ? ' on' : '') }, n + (i === 1 && st === 'story' ? ` ${Math.max(0, 3 - left)}/3` : ''))));
+  return h('div', { class: 'rail' }, steps.map((n, i) => h('span', { class: 'rs' + (i < idx ? ' done' : i === idx ? ' on' : '') }, n + (i === 1 && st === 'story' ? ` ${Math.max(0, LEN().c - left)}/${LEN().c}` : ''))));
 }
 function stripEl() {
   if (!G.world.news.length && typeof monthNews === 'function') { monthNews(); monthNews(); }

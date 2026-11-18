@@ -60,7 +60,7 @@ const ROLES = {
 const GRADES = ['Recrue', 'Membre', 'Cadre', 'Commandant', 'Bras droit', 'Chef'];
 const GRADES_FA = ['Recrue', 'Officier', 'Capitaine', 'Colonel', 'Général', 'Maréchal'];
 const GRADES_FALLEN = ['Condamné', 'Traqueur', 'Pisteur', 'Chasseur', 'Sentence', 'Chef de brigade'];
-const MERIT_STEPS = [0, 30, 90, 180, 320, 520];  // mérite cumulé requis pour le grade n
+const MERIT_BASE = [0, 30, 90, 180, 320, 520]; const MERIT_STEPS = MERIT_BASE.slice();  // mérite cumulé requis pour le grade n
 const WANTED_TXT = ['Aucune prime', 'Recherché dans son pays', 'Recherché dans son État', 'Recherché sur son continent', 'Recherché sur tout le globe'];
 const WANTED_STEPS = [0, 10, 35, 60, 85];
 
@@ -212,3 +212,9 @@ const FA_UNITS = {
 
 // Le rang (grade) s'affiche en chevrons ▲ ; les étoiles ★ ne désignent que la puissance.
 const rankStr = g => g > 0 ? '▲'.repeat(g) : '△';
+
+// Durée de partie : cartes d'histoire par destination, mérite requis, déblocage des pierres et des actes
+const LENS = { court: { n: 'Courte', c: 2, m: 0.75, u: 30, a2: 18, a3: 50 }, normal: { n: 'Normale', c: 3, m: 0.88, u: 35, a2: 24, a3: 60 }, long: { n: 'Longue', c: 3, m: 1, u: 40, a2: 28, a3: 70 } };
+const lenKey = () => (typeof G !== 'undefined' && G && G.settings && G.settings.len) || (typeof UI !== 'undefined' && UI.len) || 'normal';
+const LEN = () => LENS[lenKey()] || LENS.normal;
+function applyLen() { const m = LEN().m; MERIT_BASE.forEach((v, i) => { MERIT_STEPS[i] = Math.round(v * m); }); }

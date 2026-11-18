@@ -614,3 +614,4 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .carry{box-shadow:0 0 24px rgba(5,255,161,.08)}.carry.ko{box-shadow:0 0 24px rgba(255,42,109,.1)}
 .chip{border-radius:2px;box-shadow:0 0 10px rgba(255,255,255,.06)}.chip.good{box-shadow:0 0 12px rgba(5,255,161,.25)}.chip.badc{box-shadow:0 0 12px rgba(255,42,109,.25)}
 @media(prefers-reduced-motion:reduce){body::before,.card.scene,.card.scene::after,.ch.cta::after,.tiles .ch.cta,.hud .pill.wanted,.rail .rs.on::before{animation:none!important}}
+.modesw.three{grid-template-columns:repeat(3,minmax(0,1fr))}.modesw.three .mseg b{font-size:.95rem}
