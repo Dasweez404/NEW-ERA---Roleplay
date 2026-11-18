@@ -1,7 +1,7 @@
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < 3) return null;
-  { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 3 + Math.floor(stoneCount() / 3)) return null; }
+  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < 5) return null;
+  { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 2 + Math.floor(stoneCount() / 3)) return null; }
   const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
   const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
   let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = 1; } else if (deep.length) { s = pick(deep); lv = lvOf(s.id) + 1; } else return null;

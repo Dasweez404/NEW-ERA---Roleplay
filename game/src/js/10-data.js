@@ -60,7 +60,7 @@ const ROLES = {
 const GRADES = ['Recrue', 'Membre', 'Cadre', 'Commandant', 'Bras droit', 'Chef'];
 const GRADES_FA = ['Recrue', 'Officier', 'Capitaine', 'Colonel', 'Général', 'Maréchal'];
 const GRADES_FALLEN = ['Condamné', 'Traqueur', 'Pisteur', 'Chasseur', 'Sentence', 'Chef de brigade'];
-const MERIT_STEPS = [0, 22, 68, 135, 240, 390];  // mérite cumulé requis pour le grade n
+const MERIT_STEPS = [0, 30, 90, 180, 320, 520];  // mérite cumulé requis pour le grade n
 const WANTED_TXT = ['Aucune prime', 'Recherché dans son pays', 'Recherché dans son État', 'Recherché sur son continent', 'Recherché sur tout le globe'];
 const WANTED_STEPS = [0, 10, 35, 60, 85];
 
