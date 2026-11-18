@@ -56,3 +56,9 @@ function deedCard() {
   }, { ic: '😈', cls: 'risk', sub: 'Mauvaise action · gain immédiat, la population s’en souviendra' });
   show({ kicker: 'DILEMME · ' + place.toUpperCase(), title: d.k, text: [d.text(esc(place))], choices: [goodOpt(), badOpt, C('Passer ton chemin', done, { cls: 'back' })] });
 }
+
+// ───────── Moralité de base selon la faction, et moralité qui bouge au fil des contrats ─────────
+const FACTION_MORAL = { vigilante: 12, siha: 12, hem: 10, ecobase: 8, umami: 8, uplift: 8, sanctuaire: 8, natives: 5, excels: 5, ringan: 3, artefactors: 2, incognito: 2, nebula: 0, clairobscur: 0, arena: 0, cockpits: -2, paddocks: -2, check: -3, slummer: -3, fa: -4, saibogu: -6, bruteforce: -6, manacorp: -7, galleon: -8, gamma: -8, rapinas: -9, committed: -9, ragnaroks: -9, oudatchi: -7, optimum: -12, omega: -11, necropunks: -13, fallen: -14, noir: -10, civils: 0, own: 0 };
+function moralBase(fid) { return clamp(FACTION_MORAL[fid] != null ? FACTION_MORAL[fid] : 0, -30, 30); }
+// effet moral d'un contrat réussi (en unités de addKarma : 0,4 ≈ +1 ; 0,8 ≈ +2 ; 1,2 ≈ +3)
+const ARCH_KARMA = { humanitaire: 0.8, rescape: 0.8, quarantaine: 0.8, refuge: 0.8, temoin: 0.6, mediation: 0.6, pistage: 0.4, defense: 0.4, liberation: 0.6, sentinelle: 0.4, climat: 0.4, fauxpapiers: 0.4, exfiltration: 0.4, pelerinage: 0.4, desamorcage: 0.6, escorte: 0.2, assassinat: -1.2, kidnapping: -1.2, incendie: -1.2, emeute: -0.8, racket: -1.0, braquage: -0.8, dette: -0.6, cargaison: -0.6, blanchiment: -0.6, vehicule: -0.6, gibier: -0.2, trouble: -0.4, sabotage: -0.4, prime: -0.2, hacking: -0.2 };

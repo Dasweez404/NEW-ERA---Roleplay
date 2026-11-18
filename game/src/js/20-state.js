@@ -106,7 +106,7 @@ function startGame(spec) {
     shuffle(mem.slice()).slice(0, Math.ceil(mem.length / 2)).forEach(c => { G.world.npc[c.id].loc = G.loc; }); }
   pc.inv = { capsule: 2, kit: 2 }; startKit(pc);
   if (G.settings.mode === 'libre') setupLibre();
-  initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type)); if (typeof rollUnique === 'function') rollUnique();
+  initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type)); if (typeof rollUnique === 'function') rollUnique(); pc.flags.karma = moralBase(pc.faction);
   if (spec.recruits) spec.recruits.forEach(cid => addAlly(cid, 70));
   pc.heat = Math.max(pc.heat, minHeat());
   recalc(); pc.hp = pc.hpMax; pc.en = pc.enMax;

@@ -157,6 +157,7 @@ function missionFail(o, lines, f = {}) {
 }
 function finishMission(o, quality, lines, extraFx) {
   const pc = G.pc; const a = ARCH[o.arch]; const mult = quality === 'crit' ? 1.4 : quality === 'partial' ? 0.55 : 1;
+  { const k = ARCH_KARMA[o.arch]; if (k && quality !== 'partial') addKarma(k); }
   const emp = o.emp === 'civils' ? 'civils' : o.emp === 'noir' ? 'noir' : o.emp;
   const illegal = (o.tgt === 'fa' || isAnti(pc.faction)) ? 1 : 0.4; const heat = Math.round(a.heat * illegal * (quality === 'crit' ? 0.5 : 1) * (pc.faction === 'fa' ? 0 : 1) * (o.emp === 'fa' ? 0 : 1) * (chance(0.7) ? 1 : 0));
   const rewards = { money: Math.round(o.pay * mult * (1 + PK('cash') / 100)), xp: Math.round(o.xp * mult * (1 + PK('xp') / 100)), merit: Math.round(o.merit * mult), heat: Math.round(heat * (1 - Math.min(60, PK('quiet')) / 100)), rep: {} };

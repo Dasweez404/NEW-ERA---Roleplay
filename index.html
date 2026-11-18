@@ -1010,7 +1010,7 @@ function startGame(spec) {
     shuffle(mem.slice()).slice(0, Math.ceil(mem.length / 2)).forEach(c => { G.world.npc[c.id].loc = G.loc; }); }
   pc.inv = { capsule: 2, kit: 2 }; startKit(pc);
   if (G.settings.mode === 'libre') setupLibre();
-  initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type)); if (typeof rollUnique === 'function') rollUnique();
+  initRep(pc); pc.ptype = ptypeOf(pc.powers.map(id => PW[id].type)); if (typeof rollUnique === 'function') rollUnique(); pc.flags.karma = moralBase(pc.faction);
   if (spec.recruits) spec.recruits.forEach(cid => addAlly(cid, 70));
   pc.heat = Math.max(pc.heat, minHeat());
   recalc(); pc.hp = pc.hpMax; pc.en = pc.enMax;
@@ -3105,7 +3105,7 @@ function buy(id, price, q = 1) {
 function stealDc(id) { const it = ITEMS[id]; return 12 + Math.min(5, Math.floor(it.price / 450)) * 2 + wantedStars() + (it.t === 'vehicule' ? 2 : 0); }
 function stealItem(id) {
   const pc = G.pc, it = ITEMS[id]; const dc = stealDc(id); const r = check('agilite', dc, ['stealth', 'disguise']);
-  if (r.ok) { addCityRep(-2); giveItem(id); equipIfFree(id); const L = r.crit ? [] : fx({ heat: it.price > 1000 ? 3 : 1 }); G.score.stolen = (G.score.stolen || 0) + 1; logEntry(`Tu voles : ${it.n}.`); return show({ kicker: 'Vol', title: r.crit ? 'Un vol parfait' : 'Dans la poche', text: [`${it.n} disparaît sous ton manteau. Personne n’a rien vu${r.crit ? ' — pas même une caméra' : ' (ou presque)'}.`, checkLine(r)], fx: L, choices: [C('Continuer à fouiner', () => shopMenu()), C('← Retour', cityMenu, { cls: 'back' })] }); }
+  if (r.ok) { addCityRep(-2); addKarma(-0.6); giveItem(id); equipIfFree(id); const L = r.crit ? [] : fx({ heat: it.price > 1000 ? 3 : 1 }); G.score.stolen = (G.score.stolen || 0) + 1; logEntry(`Tu voles : ${it.n}.`); return show({ kicker: 'Vol', title: r.crit ? 'Un vol parfait' : 'Dans la poche', text: [`${it.n} disparaît sous ton manteau. Personne n’a rien vu${r.crit ? ' — pas même une caméra' : ' (ou presque)'}.`, checkLine(r)], fx: L, choices: [C('Continuer à fouiner', () => shopMenu()), C('← Retour', cityMenu, { cls: 'back' })] }); }
   const tier = Math.min(3, 1 + Math.floor(it.price / 900));
   if (chance(0.5)) return show({ kicker: 'Vol', title: 'Tu files les mains vides', text: ['Une alarme, un cri. Tu cours à travers la foule et tu disparais.', checkLine(r)], fx: fx({ heat: 3, rep: { civils: -2 } }), choices: [C('Continuer', cityMenu)] });
   show({ kicker: 'Vol', title: 'Pris sur le fait !', text: ['Des vigiles te barrent la route.', checkLine(r)], choices: [C('Se battre', () => startCombat({ title: 'Vigiles du marché', foes: [mkFoe('garde', tier), mkFoe('garde', tier)], intro: 'Les vigiles dégainent leurs matraques.', lethal: wantedStars() >= 2 ? 'capture' : 'robbed', canFlee: true, onWin: L => { giveItem(id); equipIfFree(id); show({ kicker: 'Vol', title: 'Tu repars avec', text: [`Les vigiles à terre, tu prends ${it.n} et tu files.`], fx: [...L, ...fx({ heat: 5, rep: { civils: -3 } })], choices: [C('Continuer', cityMenu)] }); }, onFlee: () => show({ title: 'En fuite', text: ['Tu t’échappes, mais sans rien.'], fx: fx({ heat: 3 }), choices: [C('Continuer', cityMenu)] }) }), { cls: 'danger' }), C('Rendre l’objet et s’excuser', () => { const r2 = check('charisme', 13, ['social']); if (r2.ok) show({ title: 'Ils te laissent partir', text: ['Un sourire gêné, un faux prétexte.', checkLine(r2)], choices: [C('Continuer', cityMenu)] }); else show({ title: 'Amende', text: ['On te fait payer.', checkLine(r2)], fx: fx({ money: -Math.min(pc.money, Math.round(it.price * 0.5)), heat: 2 }), choices: [C('Continuer', cityMenu)] }); }, { odds: ['charisme', 13, ['social']] })] });
@@ -3270,6 +3270,7 @@ function missionFail(o, lines, f = {}) {
 }
 function finishMission(o, quality, lines, extraFx) {
   const pc = G.pc; const a = ARCH[o.arch]; const mult = quality === 'crit' ? 1.4 : quality === 'partial' ? 0.55 : 1;
+  { const k = ARCH_KARMA[o.arch]; if (k && quality !== 'partial') addKarma(k); }
   const emp = o.emp === 'civils' ? 'civils' : o.emp === 'noir' ? 'noir' : o.emp;
   const illegal = (o.tgt === 'fa' || isAnti(pc.faction)) ? 1 : 0.4; const heat = Math.round(a.heat * illegal * (quality === 'crit' ? 0.5 : 1) * (pc.faction === 'fa' ? 0 : 1) * (o.emp === 'fa' ? 0 : 1) * (chance(0.7) ? 1 : 0));
   const rewards = { money: Math.round(o.pay * mult * (1 + PK('cash') / 100)), xp: Math.round(o.xp * mult * (1 + PK('xp') / 100)), merit: Math.round(o.merit * mult), heat: Math.round(heat * (1 - Math.min(60, PK('quiet')) / 100)), rep: {} };
@@ -3450,6 +3451,12 @@ function deedCard() {
   }, { ic: '😈', cls: 'risk', sub: 'Mauvaise action · gain immédiat, la population s’en souviendra' });
   show({ kicker: 'DILEMME · ' + place.toUpperCase(), title: d.k, text: [d.text(esc(place))], choices: [goodOpt(), badOpt, C('Passer ton chemin', done, { cls: 'back' })] });
 }
+
+// ───────── Moralité de base selon la faction, et moralité qui bouge au fil des contrats ─────────
+const FACTION_MORAL = { vigilante: 12, siha: 12, hem: 10, ecobase: 8, umami: 8, uplift: 8, sanctuaire: 8, natives: 5, excels: 5, ringan: 3, artefactors: 2, incognito: 2, nebula: 0, clairobscur: 0, arena: 0, cockpits: -2, paddocks: -2, check: -3, slummer: -3, fa: -4, saibogu: -6, bruteforce: -6, manacorp: -7, galleon: -8, gamma: -8, rapinas: -9, committed: -9, ragnaroks: -9, oudatchi: -7, optimum: -12, omega: -11, necropunks: -13, fallen: -14, noir: -10, civils: 0, own: 0 };
+function moralBase(fid) { return clamp(FACTION_MORAL[fid] != null ? FACTION_MORAL[fid] : 0, -30, 30); }
+// effet moral d'un contrat réussi (en unités de addKarma : 0,4 ≈ +1 ; 0,8 ≈ +2 ; 1,2 ≈ +3)
+const ARCH_KARMA = { humanitaire: 0.8, rescape: 0.8, quarantaine: 0.8, refuge: 0.8, temoin: 0.6, mediation: 0.6, pistage: 0.4, defense: 0.4, liberation: 0.6, sentinelle: 0.4, climat: 0.4, fauxpapiers: 0.4, exfiltration: 0.4, pelerinage: 0.4, desamorcage: 0.6, escorte: 0.2, assassinat: -1.2, kidnapping: -1.2, incendie: -1.2, emeute: -0.8, racket: -1.0, braquage: -0.8, dette: -0.6, cargaison: -0.6, blanchiment: -0.6, vehicule: -0.6, gibier: -0.2, trouble: -0.4, sabotage: -0.4, prime: -0.2, hacking: -0.2 };
 
 // ───────── Lot 1 : arbre du pouvoir (par l'usage), réputation par ville, monde visible, némésis — introduits un par un ─────────
 const FEAT_WK = { arbre: 0, rep: 3, monde: 6, nem: 10 };
