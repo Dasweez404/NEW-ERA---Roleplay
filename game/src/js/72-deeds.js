@@ -1,7 +1,7 @@
 // ───────── Dilemmes moraux : bonnes et mauvaises actions envers la population (et leurs retombées) ─────────
 const karma = () => G.pc.flags.karma || 0;
-function addKarma(n) { G.pc.flags.karma = clamp(karma() + n, -30, 30); }
-const karmaName = () => { const k = karma(); return k >= 12 ? 'Héros du peuple' : k >= 5 ? 'Protecteur' : k <= -12 ? 'Terreur des rues' : k <= -5 ? 'Crapule' : 'Ambigu'; };
+function addKarma(n) { const d = Math.round(n * 2.5); if (!d) return; const k0 = karmaName(); G.pc.flags.karma = clamp(karma() + d, -30, 30); try { toast(`⚖ Moralité ${d > 0 ? '+' : ''}${d}${karmaName() !== k0 ? ' · ' + karmaName() : ''}`); } catch (e) { } }
+const karmaName = () => { const k = karma(); return k >= 14 ? 'Héros du peuple' : k >= 6 ? 'Protecteur' : k <= -14 ? 'Terreur des rues' : k <= -6 ? 'Crapule' : 'Ambigu'; };
 function exposureChance(extra) {
   const pc = G.pc; const visible = pc.ptype !== 'zoologique' && pc.ptype !== 'aucun' ? 0.18 : 0.04;
   return clamp(0.1 + visible + (G.world.era === 'dark' ? 0.1 : 0) + wantedStars() * 0.05 + (extra || 0) - (karma() >= 5 ? 0.1 : 0) - (pc.faction === 'fa' ? 0.15 : 0), 0.03, 0.7);

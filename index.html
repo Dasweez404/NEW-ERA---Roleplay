@@ -1363,7 +1363,7 @@ function fillSheet() {
 }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
-  box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
+  box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) box.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
   pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     box.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
@@ -2167,6 +2167,12 @@ const pwMax = () => Math.floor((CB.N + 1) / 3); // pouvoir : 1 round sur 3, 2 su
 const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
 
 // ── Les 3 gestes, définis par ta catégorie ──
+const CAT_DESC = {
+  'Offensif': 'Frapper de front (+2 au jet, risque normal) · Feinter et riposter (moitié moins de dégâts si tu perds) · Pouvoir.',
+  'Défensif': 'Tenir et repousser (tu encaisses toujours moins) · Se couvrir (presque aucun dégât, +1 énergie) · Pouvoir.',
+  'Technique': 'Coup précis (+3 au jet) · Esquiver (une chance sur trois de tout éviter) · Pouvoir.',
+  'Soutien': 'Déstabiliser (si tu gagnes, leurs coups faiblissent) · Coordonner l’équipe (mieux avec des alliés, et ils te couvrent) · Pouvoir.',
+};
 const CATS = {
   'Offensif': [
     { id: 'a', ic: '⚔', label: 'Frapper de front', sub: 'Gros risque, grosse pression', tags: ['combat'], attr: () => primAttr(), bonus: 2, sev: 1.0 },
@@ -2516,7 +2522,7 @@ function trainMenu() {
   ATTRS.forEach(a => { const hv = (pc.half || {})[a.id] || 0; const [ic] = (typeof ATTR_LOOK !== 'undefined' && ATTR_LOOK[a.id]) || ['◆']; L.push(C(a.name, () => trainAttr(a.id), { ic, sub: `½ point · ${hv}/2 · actuel ${A(a.id)} · 100 ¢`, req: { money: 100, ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })); });
   L.push(C(`Techniques anti-géno (${antiKnown().length}/7)`, antiMenu, { ic: '🧬', sub: 'Une technique par séance · 300 🪙', req: { ok: () => antiKnown().length >= 7 ? 'Tu les maîtrises toutes' : null } }));
   const cap = roleCap();
-  L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
+  L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.grade < 1 ? 'Les rôles se choisissent à ta première promotion' : null } }));
   L.push(C('← Retour', cityBack));
   const left = capActs(L, 'train', /rôle/i);
   show({ kicker: 'Progression', title: 'S’entraîner', text: [`<span class="mut">XP ${pc.xp} · ${left ? 'une séance possible' : 'séance déjà faite'} dans cette ville</span>`], choices: L, tiles: true });
@@ -2529,10 +2535,10 @@ function roleMenu() {
     if (r.req.attr) rq.attr[r.req.attr[0]] = r.req.attr[1]; if (r.req.grade) rq.grade = r.req.grade;
     const okStyle = !r.req.style || r.req.style.includes(pc.style);
     const lockStyle = okStyle ? null : `Style requis : ${r.req.style.map(s => STYLES[s].name).join(' / ')}`;
-    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); toast(has ? `Rôle abandonné : ${r.name}` : `${ROLE_IC[id] || ''} Tu deviens ${r.name}`); sfx('win'); cityMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, { money: 150 }) });
+    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); toast(has ? `Rôle abandonné : ${r.name}` : `${ROLE_IC[id] || ''} Tu deviens ${r.name}`); sfx('win'); if (pc.flags.rolePromo) { pc.flags.rolePromo = false; return hub(); } cityMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, { money: 150 }) });
     if (lockStyle && !has) ch.lock = ch.lock || lockStyle; L.push(ch);
   });
-  L.push(C('← Retour', trainMenu)); show({ kicker: 'Rôles', title: `Choisir un rôle (${pc.roles.length}/${cap})`, text: ['Un rôle donne +2 aux jets de son domaine et ouvre des contrats dédiés. Touche un rôle acquis pour l’abandonner.'], choices: L, tiles: true });
+  L.push(C(pc.flags.rolePromo ? 'Plus tard' : '← Retour', () => { if (pc.flags.rolePromo) { pc.flags.rolePromo = false; return hub(); } trainMenu(); }, pc.flags.rolePromo ? { cls: 'back' } : undefined)); show({ kicker: 'Rôles', title: `Choisir un rôle (${pc.roles.length}/${cap})`, text: ['Un rôle donne +2 aux jets de son domaine et ouvre des contrats dédiés. Touche un rôle acquis pour l’abandonner.'], choices: L, tiles: true });
 }
 
 // ───────── Retraite ─────────
@@ -3213,7 +3219,7 @@ function promote(L0) {
   recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.25)); splash({ title: 'PROMOTION', sub: `${gradeName()} ${rankStr(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
   const L = [...(L0 || [])]; if (s1 > s0) L.push({ t: `Plus tu es gradé, plus on te cherche : prime ${starStr(s1)} — ${WANTED_TXT[s1]}.`, c: 'badc' });
   const dec = ['aucune décision', 'tu votes dans les décisions de ta faction', 'tu peux proposer des opérations', 'tu décides des opérations locales', 'tu pèses sur les grandes décisions', 'tu décides de tout'][pc.grade];
-  show({ kicker: 'PROMOTION', title: `${gradeName()} ${rankStr(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });
+  show({ kicker: 'PROMOTION', title: `${gradeName()} ${rankStr(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C(pc.grade === 1 && !pc.roles.length ? '🛠 Choisir ton rôle' : 'Continuer', () => { if (pc.grade === 1 && !pc.roles.length) { pc.flags.rolePromo = true; return roleMenu(); } hub(); }, { cls: 'cta' })] });
 }
 
 // ───────── Complications après un succès ─────────
@@ -3301,8 +3307,8 @@ function complication(o, k, okText, r, done) {
 
 // ───────── Dilemmes moraux : bonnes et mauvaises actions envers la population (et leurs retombées) ─────────
 const karma = () => G.pc.flags.karma || 0;
-function addKarma(n) { G.pc.flags.karma = clamp(karma() + n, -30, 30); }
-const karmaName = () => { const k = karma(); return k >= 12 ? 'Héros du peuple' : k >= 5 ? 'Protecteur' : k <= -12 ? 'Terreur des rues' : k <= -5 ? 'Crapule' : 'Ambigu'; };
+function addKarma(n) { const d = Math.round(n * 2.5); if (!d) return; const k0 = karmaName(); G.pc.flags.karma = clamp(karma() + d, -30, 30); try { toast(`⚖ Moralité ${d > 0 ? '+' : ''}${d}${karmaName() !== k0 ? ' · ' + karmaName() : ''}`); } catch (e) { } }
+const karmaName = () => { const k = karma(); return k >= 14 ? 'Héros du peuple' : k >= 6 ? 'Protecteur' : k <= -14 ? 'Terreur des rues' : k <= -6 ? 'Crapule' : 'Ambigu'; };
 function exposureChance(extra) {
   const pc = G.pc; const visible = pc.ptype !== 'zoologique' && pc.ptype !== 'aucun' ? 0.18 : 0.04;
   return clamp(0.1 + visible + (G.world.era === 'dark' ? 0.1 : 0) + wantedStars() * 0.05 + (extra || 0) - (karma() >= 5 ? 0.1 : 0) - (pc.faction === 'fa' ? 0.15 : 0), 0.03, 0.7);
@@ -4807,7 +4813,7 @@ function crPicked(o, state, p) {
   CR.powers = state.got.map(x => x.id); CR.ptype = ptypeOf(state.got.map(x => x.type)); crStyle();
 }
 function crStyle() {
-  const L = Object.entries(STYLES).map(([id, s]) => C(`${s.name} — ${s.grp}`, () => { CR.style = id; crAttrs(); }, { sub: `${s.desc} Technique : ${s.tech.name}.` }));
+  const L = Object.entries(STYLES).map(([id, s]) => C(`${s.name} — ${s.grp}`, () => { CR.style = id; crAttrs(); }, { sub: `${s.desc} Technique : ${s.tech.name}. En combat : ${CAT_DESC[s.grp] || ''}` }));
   L.push(C('🎲 Style au hasard', () => { CR.style = pick(Object.keys(STYLES)); crAttrs(); })); L.push(C('← Retour', crPower));
   crHead(4, 'Ton style de combat', ['Huit catégories de géno-porteurs, deux par famille : offensifs (Brawler, Performer), défensifs (Juggernaut, Protector), techniques (Flanker, Ranger), soutiens (Assist, Engineer).'], L);
 }

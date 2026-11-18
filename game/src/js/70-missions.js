@@ -193,7 +193,7 @@ function promote(L0) {
   recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * 0.25)); splash({ title: 'PROMOTION', sub: `${gradeName()} ${rankStr(pc.grade)}`, icon: '🎖', color: '#ffe83a' }); logEntry(`Promotion : ${gradeName()} (${f.name}).`);
   const L = [...(L0 || [])]; if (s1 > s0) L.push({ t: `Plus tu es gradé, plus on te cherche : prime ${starStr(s1)} — ${WANTED_TXT[s1]}.`, c: 'badc' });
   const dec = ['aucune décision', 'tu votes dans les décisions de ta faction', 'tu peux proposer des opérations', 'tu décides des opérations locales', 'tu pèses sur les grandes décisions', 'tu décides de tout'][pc.grade];
-  show({ kicker: 'PROMOTION', title: `${gradeName()} ${rankStr(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C('Continuer', hub)] });
+  show({ kicker: 'PROMOTION', title: `${gradeName()} ${rankStr(pc.grade)}`, text: [`${esc(leaderName(pc.faction))} te serre la main devant tout le monde : tu es promu(e) <b>${esc(gradeName())}</b> de ${esc(f.name)}.`, `Désormais, ${dec}. Ta puissance augmente (PV max +4).`], fx: L, choices: [C(pc.grade === 1 && !pc.roles.length ? '🛠 Choisir ton rôle' : 'Continuer', () => { if (pc.grade === 1 && !pc.roles.length) { pc.flags.rolePromo = true; return roleMenu(); } hub(); }, { cls: 'cta' })] });
 }
 
 // ───────── Complications après un succès ─────────

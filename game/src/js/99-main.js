@@ -115,7 +115,7 @@ function crPicked(o, state, p) {
   CR.powers = state.got.map(x => x.id); CR.ptype = ptypeOf(state.got.map(x => x.type)); crStyle();
 }
 function crStyle() {
-  const L = Object.entries(STYLES).map(([id, s]) => C(`${s.name} — ${s.grp}`, () => { CR.style = id; crAttrs(); }, { sub: `${s.desc} Technique : ${s.tech.name}.` }));
+  const L = Object.entries(STYLES).map(([id, s]) => C(`${s.name} — ${s.grp}`, () => { CR.style = id; crAttrs(); }, { sub: `${s.desc} Technique : ${s.tech.name}. En combat : ${CAT_DESC[s.grp] || ''}` }));
   L.push(C('🎲 Style au hasard', () => { CR.style = pick(Object.keys(STYLES)); crAttrs(); })); L.push(C('← Retour', crPower));
   crHead(4, 'Ton style de combat', ['Huit catégories de géno-porteurs, deux par famille : offensifs (Brawler, Performer), défensifs (Juggernaut, Protector), techniques (Flanker, Ranger), soutiens (Assist, Engineer).'], L);
 }

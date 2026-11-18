@@ -184,7 +184,7 @@ function trainMenu() {
   ATTRS.forEach(a => { const hv = (pc.half || {})[a.id] || 0; const [ic] = (typeof ATTR_LOOK !== 'undefined' && ATTR_LOOK[a.id]) || ['◆']; L.push(C(a.name, () => trainAttr(a.id), { ic, sub: `½ point · ${hv}/2 · actuel ${A(a.id)} · 100 ¢`, req: { money: 100, ok: () => pc.attrs[a.id] >= 12 ? 'Au maximum' : null } })); });
   L.push(C(`Techniques anti-géno (${antiKnown().length}/7)`, antiMenu, { ic: '🧬', sub: 'Une technique par séance · 300 🪙', req: { ok: () => antiKnown().length >= 7 ? 'Tu les maîtrises toutes' : null } }));
   const cap = roleCap();
-  L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.missions < 3 ? 'Il faut avoir mené au moins 3 missions pour qu’on te reconnaisse un rôle' : null } }));
+  L.push(C(`Choisir un rôle (${pc.roles.length}/${cap})`, roleMenu, { sub: pc.roles.length ? pc.roles.map(r => ROLES[r].name).join(', ') : 'Éclaireur, combattant, artilleur, leader, médecin, ingénieur…', req: { ok: () => pc.grade < 1 ? 'Les rôles se choisissent à ta première promotion' : null } }));
   L.push(C('← Retour', cityBack));
   const left = capActs(L, 'train', /rôle/i);
   show({ kicker: 'Progression', title: 'S’entraîner', text: [`<span class="mut">XP ${pc.xp} · ${left ? 'une séance possible' : 'séance déjà faite'} dans cette ville</span>`], choices: L, tiles: true });
@@ -197,10 +197,10 @@ function roleMenu() {
     if (r.req.attr) rq.attr[r.req.attr[0]] = r.req.attr[1]; if (r.req.grade) rq.grade = r.req.grade;
     const okStyle = !r.req.style || r.req.style.includes(pc.style);
     const lockStyle = okStyle ? null : `Style requis : ${r.req.style.map(s => STYLES[s].name).join(' / ')}`;
-    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); toast(has ? `Rôle abandonné : ${r.name}` : `${ROLE_IC[id] || ''} Tu deviens ${r.name}`); sfx('win'); cityMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, { money: 150 }) });
+    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); toast(has ? `Rôle abandonné : ${r.name}` : `${ROLE_IC[id] || ''} Tu deviens ${r.name}`); sfx('win'); if (pc.flags.rolePromo) { pc.flags.rolePromo = false; return hub(); } cityMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, { money: 150 }) });
     if (lockStyle && !has) ch.lock = ch.lock || lockStyle; L.push(ch);
   });
-  L.push(C('← Retour', trainMenu)); show({ kicker: 'Rôles', title: `Choisir un rôle (${pc.roles.length}/${cap})`, text: ['Un rôle donne +2 aux jets de son domaine et ouvre des contrats dédiés. Touche un rôle acquis pour l’abandonner.'], choices: L, tiles: true });
+  L.push(C(pc.flags.rolePromo ? 'Plus tard' : '← Retour', () => { if (pc.flags.rolePromo) { pc.flags.rolePromo = false; return hub(); } trainMenu(); }, pc.flags.rolePromo ? { cls: 'back' } : undefined)); show({ kicker: 'Rôles', title: `Choisir un rôle (${pc.roles.length}/${cap})`, text: ['Un rôle donne +2 aux jets de son domaine et ouvre des contrats dédiés. Touche un rôle acquis pour l’abandonner.'], choices: L, tiles: true });
 }
 
 // ───────── Retraite ─────────

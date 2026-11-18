@@ -20,6 +20,12 @@ const pwMax = () => Math.floor((CB.N + 1) / 3); // pouvoir : 1 round sur 3, 2 su
 const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
 
 // ── Les 3 gestes, définis par ta catégorie ──
+const CAT_DESC = {
+  'Offensif': 'Frapper de front (+2 au jet, risque normal) · Feinter et riposter (moitié moins de dégâts si tu perds) · Pouvoir.',
+  'Défensif': 'Tenir et repousser (tu encaisses toujours moins) · Se couvrir (presque aucun dégât, +1 énergie) · Pouvoir.',
+  'Technique': 'Coup précis (+3 au jet) · Esquiver (une chance sur trois de tout éviter) · Pouvoir.',
+  'Soutien': 'Déstabiliser (si tu gagnes, leurs coups faiblissent) · Coordonner l’équipe (mieux avec des alliés, et ils te couvrent) · Pouvoir.',
+};
 const CATS = {
   'Offensif': [
     { id: 'a', ic: '⚔', label: 'Frapper de front', sub: 'Gros risque, grosse pression', tags: ['combat'], attr: () => primAttr(), bonus: 2, sev: 1.0 },
