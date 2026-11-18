@@ -172,7 +172,7 @@ function finishMission(o, quality, lines, extraFx) {
   pc.party.forEach(al => { al.loy = clamp(al.loy + 3, 0, 100); });
   // butins
   if (chance(0.16 + PK('loot') / 100)) { const id = pick(['capsule', 'kit', 'capsule', 'nanosoin', 'stimulant']); L.push(...fx({ item: { [id]: 1 } })); }
-  if (G.wk >= 6 && chance((['fouille', 'enquete', 'ecoute', 'ruines', 'prototype', 'taupe'].includes(o.arch) ? 0.3 : 0.07) * (quality === 'crit' ? 1.8 : 1))) { const l = stoneClueGain(); if (l) L.push({ t: '💎 Indice : ' + cap(l), c: 'acc' }); }
+  if (G.wk >= 6 && chance((['fouille', 'enquete', 'ecoute', 'ruines', 'prototype', 'taupe'].includes(o.arch) ? 0.5 : 0.15) * (quality === 'crit' ? 1.8 : 1))) { const l = stoneClueGain(); if (l) L.push({ t: '💎 Indice : ' + cap(l), c: 'acc' }); }
   logEntry(`Mission « ${a.n} » (${o.empName}) : ${quality === 'crit' ? 'triomphe' : quality === 'partial' ? 'demi-succès' : 'réussie'}.`);
   const after = () => {
     if (o.promo && quality !== 'partial') return promote(L);

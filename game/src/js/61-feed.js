@@ -40,7 +40,7 @@ function dealCard() {
   const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
   pool.push({ w: 34, f: missionCard });
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
-  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 6, f: clueCard });
+  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 10, f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5 && pc.flags.restDest !== pc.flags.dest) pool.push({ w: 80, f: restCard }); // une seule fois par destination
   pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });

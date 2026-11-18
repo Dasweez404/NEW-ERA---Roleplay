@@ -2682,7 +2682,7 @@ function dealCard() {
   const promo = promoOffer(); if (promo && chance(0.7)) { promo.feed = true; return missionApproach(promo); }
   pool.push({ w: 34, f: missionCard });
   if (pc.roles.length) pool.push({ w: 10, f: () => { const r = pick(pc.roles); const o = genOffer(pc.faction !== 'civils' ? pc.faction : 'civils', rint(Math.max(1, tiersForGrade()[0]), tiersForGrade()[1]), { arch: pick(ROLE_ARCH[r]) }); o.roleOffer = r; o.feed = true; missionApproach(o); } });
-  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 6, f: clueCard });
+  if (stoneCount() < 16 && stonesUnlocked()) pool.push({ w: 10, f: clueCard });
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5 && pc.flags.restDest !== pc.flags.dest) pool.push({ w: 80, f: restCard }); // une seule fois par destination
   pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
@@ -3250,7 +3250,7 @@ function finishMission(o, quality, lines, extraFx) {
   pc.party.forEach(al => { al.loy = clamp(al.loy + 3, 0, 100); });
   // butins
   if (chance(0.16 + PK('loot') / 100)) { const id = pick(['capsule', 'kit', 'capsule', 'nanosoin', 'stimulant']); L.push(...fx({ item: { [id]: 1 } })); }
-  if (G.wk >= 6 && chance((['fouille', 'enquete', 'ecoute', 'ruines', 'prototype', 'taupe'].includes(o.arch) ? 0.3 : 0.07) * (quality === 'crit' ? 1.8 : 1))) { const l = stoneClueGain(); if (l) L.push({ t: '💎 Indice : ' + cap(l), c: 'acc' }); }
+  if (G.wk >= 6 && chance((['fouille', 'enquete', 'ecoute', 'ruines', 'prototype', 'taupe'].includes(o.arch) ? 0.5 : 0.15) * (quality === 'crit' ? 1.8 : 1))) { const l = stoneClueGain(); if (l) L.push({ t: '💎 Indice : ' + cap(l), c: 'acc' }); }
   logEntry(`Mission « ${a.n} » (${o.empName}) : ${quality === 'crit' ? 'triomphe' : quality === 'partial' ? 'demi-succès' : 'réussie'}.`);
   const after = () => {
     if (o.promo && quality !== 'partial') return promote(L);
@@ -3980,11 +3980,11 @@ function arenaInvite() {
 
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < 5) return null;
-  { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 2 + Math.floor(stoneCount() / 3)) return null; }
+  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < 2) return null;
+  { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 3 + Math.floor(stoneCount() / 3)) return null; }
   const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
   const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
-  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = 1; } else if (deep.length) { s = pick(deep); lv = lvOf(s.id) + 1; } else return null;
+  let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = chance(0.6) ? 2 : 1; } else if (deep.length) { s = pick(deep); lv = Math.min(3, lvOf(s.id) + (chance(0.4) ? 2 : 1)); } else return null;
   W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; fl.clueWk = G.wk; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
   logEntry(`Indice ${lv}/3 : pierre de ${s.name}.`);
   if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (des 💎 creux marquent les États possibles : ouvre la carte quand tu choisis ta destination).`;
@@ -4003,7 +4003,7 @@ function stoneQuestCard(s) {
   const W = G.world; const lv = W.stoneLv[s.id] || 2; const hold = W.stoneHolder[s.id]; const dc = 14 + Math.min(4, stoneCount());
   const go = () => stoneAttempt(s.id); const L = [];
   if (lv >= 3) { L.push(C('Tenter de la récupérer', go, { ic: '💎', cls: 'risk' })); L.push(C('Pas maintenant', hub, { cls: 'back' })); }
-  else { L.push(C('Enquêter sur place', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; if (r.ok) { W.stoneLv[s.id] = 3; show({ kicker: 'ENQUÊTE · PIERRE ANTIQUE', title: 'Tu tiens la piste', text: [esc(cap(stoneClueText(s))), 'Tu pourras tenter de la récupérer à la fin de ta mission principale.', checkLine(r)], fx: fx({ xp: 20 }), choices: [C('Continuer', hub)] }); } else show({ kicker: 'ENQUÊTE · PIERRE ANTIQUE', title: 'Rien de concluant', text: ['Les témoins se rétractent, les archives sont incomplètes.', checkLine(r)], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' })); L.push(C('Pas maintenant', hub, { cls: 'back' })); }
+  else { L.push(C('Enquêter sur place', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; if (r.ok) { W.stoneLv[s.id] = 3; show({ kicker: 'ENQUÊTE · PIERRE ANTIQUE', title: 'Tu tiens la piste', text: [esc(cap(stoneClueText(s))), 'Tu pourras tenter de la récupérer à la fin de ta mission principale.', checkLine(r)], fx: fx({ xp: 20 }), choices: [C('Continuer', hub)] }); } else show({ kicker: 'ENQUÊTE · PIERRE ANTIQUE', title: 'Rien de concluant', text: ['Les témoins se rétractent, les archives sont incomplètes.', checkLine(r)], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' })); L.push(C('Tenter de la récupérer sans enquête', go, { ic: '💎', cls: 'risk', sub: 'Plus risqué : tu ignores ce qui t’attend.' })); L.push(C('Pas maintenant', hub, { cls: 'back' })); }
   show({ kicker: lv >= 3 ? 'PIERRE ANTIQUE · RÉCUPÉRATION' : 'ENQUÊTE · PIERRE ANTIQUE', title: `La pierre de ${s.name}`, text: [lv >= 3 ? `Tu sais ce qui t’attend : ${hold === 'temple' ? 'un temple oublié' : esc(holderName(hold))}. Royaume ${esc(s.ruler)} — ${esc(s.spec)}.` : `Ton indice t’a mené jusqu’ici. La pierre du royaume ${esc(s.ruler)} est tout près, mais il faut d’abord trouver où.`], choices: L });
 }
 function stoneClueText(s) { const W = G.world; const hold = W.stoneHolder[s.id]; const loc = W.stoneLoc[s.id]; return hold === 'temple' ? `la pierre de ${s.name} dort dans un temple oublié près de ${capName(loc)}.` : hold === 'pnj-levant' ? `la pierre de ${s.name} est aux mains d’un descendant du peuple du feu.` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}.`; }
