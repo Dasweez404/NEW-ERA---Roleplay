@@ -55,10 +55,13 @@ function travelMenu(pre) {
       h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
   box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap() });
+  const W0 = G.world; const clues = DATA.stones.filter(s => !G.pc.stones[s.id] && (W0.stoneLv[s.id] || W0.stoneClue[s.id]));
+  const clueRow = clues.length ? h('div', { class: 'stleads' }, clues.map(s => { const lv = W0.stoneLv[s.id] || 1; const loc = W0.stoneLoc[s.id];
+    return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
-  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: back });
+  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, clueRow, box, info), choices: back });
 }
 function travelList() {
   const here = G.loc; const L = [];

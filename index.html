@@ -589,6 +589,9 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .map .stc.here{animation:here 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes here{50%{transform:scale(1.25)}}
 .chip.good{animation:chipin .4s cubic-bezier(.2,1.4,.4,1) both}@keyframes chipin{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.vfx,.fint,.rail .rs.on,.rp.cur,.tlogo img,.map .stc.here,.choices.hand .ch{animation:none!important}}
+
+.stleads{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.stlead{display:flex;gap:6px;align-items:center;background:#12121f;border:1px solid var(--c,#b026ff);color:#e9ebff;border-radius:999px;padding:4px 10px;font:600 .78rem var(--fb);cursor:pointer}.stlead b{color:var(--c,#d7a8ff)}.stlead i{font-style:normal;letter-spacing:1px;color:#b026ff}
+.stdia{filter:drop-shadow(0 0 6px #b026ff);animation:dpl 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes dpl{50%{transform:scale(1.18)}}
 </style>
 </head>
 <body>
@@ -1473,7 +1476,7 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 16},${y - 24} ${x + 23},${y - 16} ${x + 16},${y - 8} ${x + 9},${y - 16}`, fill: full ? '#b026ff' : 'none', stroke: '#e9ebff', 'stroke-width': 2.5, class: 'stdia' + (full ? ' full' : '') })); }
+    if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 18},${y - 40} ${x + 30},${y - 27} ${x + 18},${y - 14} ${x + 6},${y - 27}`, fill: full ? '#b026ff' : 'rgba(176,38,255,.12)', stroke: full ? '#fff' : '#d7a8ff', 'stroke-width': 3, 'stroke-dasharray': full ? '' : '4 3', class: 'stdia' + (full ? ' full' : ' hollow') })); }
     if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
@@ -2391,10 +2394,13 @@ function travelMenu(pre) {
       h('div', { class: poor ? 'badc' : 'acc small' }, poor ? 'Pas assez de crédits' : `▶ Touche encore ${capName(to)} pour partir`)].filter(Boolean));
   };
   box = mapBox({ here, pick: new Set(ids), onPick: select, reco, terr: feat('monde'), stones: stoneHints(), leads: leadMap(), closed: closedMap() });
+  const W0 = G.world; const clues = DATA.stones.filter(s => !G.pc.stones[s.id] && (W0.stoneLv[s.id] || W0.stoneClue[s.id]));
+  const clueRow = clues.length ? h('div', { class: 'stleads' }, clues.map(s => { const lv = W0.stoneLv[s.id] || 1; const loc = W0.stoneLoc[s.id];
+    return h('button', { class: 'stlead', style: `--c:${s.color}`, onclick: () => { if (lv >= 2 && loc !== here) { sfx('click'); select(loc); } else if (lv >= 2) toast('C’est ici : l’enquête se fait pendant ton séjour.'); else toast(`Rumeur : zone ${zoneOf(loc)}. Les 💎 creux marquent les États possibles.`); } }, `💎 ${s.name} · `, h('b', {}, lv >= 2 ? capName(loc) : `zone ${zoneOf(loc)}`), h('i', {}, '◆'.repeat(lv) + '◇'.repeat(3 - lv))); })) : null;
   const ms = box.querySelector('.mapscroll') || box; ms.style.position = 'relative'; ms.append(h('button', { class: 'mapcorner', onclick: () => vehicleMenu(), title: 'Voyager autrement' }, '🛴 Autre moyen'));
   if (pre) setTimeout(() => select(pre), 30);
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
-  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, box, info), choices: back });
+  coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, clueRow, box, info), choices: back });
 }
 function travelList() {
   const here = G.loc; const L = [];
@@ -3903,8 +3909,8 @@ function stoneClueGain() {
   let s, lv; if (unk.length && (!deep.length || chance(0.5))) { s = pick(unk); lv = 1; } else if (deep.length) { s = pick(deep); lv = lvOf(s.id) + 1; } else return null;
   W.stoneLv[s.id] = lv; W.stoneClue[s.id] = true; const loc = W.stoneLoc[s.id]; const hold = W.stoneHolder[s.id];
   logEntry(`Indice ${lv}/3 : pierre de ${s.name}.`);
-  if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (un 💎 vide est apparu sur ta carte de l’Orbitrail).`;
-  if (lv === 2) return `la pierre de ${s.name} serait du côté de ${capName(loc)} (${stateName(loc)}). Un 💎 est apparu sur ta carte : une quête t’y attendra.`;
+  if (lv === 1) return `une rumeur parle de la pierre de ${s.name}, quelque part en zone ${zoneOf(loc)} (des 💎 creux marquent les États possibles : ouvre la carte quand tu choisis ta destination).`;
+  if (lv === 2) return `la pierre de ${s.name} serait du côté de ${capName(loc)} (${stateName(loc)}). Un 💎 violet marque cet État sur la carte de l’Orbitrail (au moment de choisir ta destination) : une enquête t’y attendra.`;
   return hold === 'temple' ? `la pierre de ${s.name} dort dans un temple oublié près de ${capName(loc)}. Tu sais maintenant où chercher.` : hold === 'pnj-levant' ? `la pierre de ${s.name} est aux mains d’un descendant du peuple du feu, à ${capName(loc)}.` : `la pierre de ${s.name} est détenue par ${F[hold] ? F[hold].name : hold}, à ${capName(loc)}. Tu connais leurs défenses.`;
 }
 // États où un indice fait apparaître un 💎 sur la carte de l'Orbitrail

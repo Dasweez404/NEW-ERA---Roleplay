@@ -295,7 +295,7 @@ function mapEl(o = {}) {
   for (const [id, v] of Object.entries(OT_ST)) {
     const [x, y, name, state, stub, dx, dy] = v; const here = o.here === state; const go = o.pick && o.pick.has(state);
     const rc = !!(o.reco && o.reco.has(state)); const g = el('g', { class: 'st' + (go ? ' go' : '') });
-    if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 16},${y - 24} ${x + 23},${y - 16} ${x + 16},${y - 8} ${x + 9},${y - 16}`, fill: full ? '#b026ff' : 'none', stroke: '#e9ebff', 'stroke-width': 2.5, class: 'stdia' + (full ? ' full' : '') })); }
+    if (o.stones && o.stones.get(state)) { const full = o.stones.get(state) === 'full'; g.append(el('polygon', { points: `${x + 18},${y - 40} ${x + 30},${y - 27} ${x + 18},${y - 14} ${x + 6},${y - 27}`, fill: full ? '#b026ff' : 'rgba(176,38,255,.12)', stroke: full ? '#fff' : '#d7a8ff', 'stroke-width': 3, 'stroke-dasharray': full ? '' : '4 3', class: 'stdia' + (full ? ' full' : ' hollow') })); }
     if (o.terr) { const ow = G.world.terr[state]; if (ow) g.append(el('circle', { cx: x, cy: y, r: 16, fill: 'none', stroke: facHue(ow), 'stroke-width': 3, opacity: .85 })); }
     if (rc) g.append(el('circle', { cx: x, cy: y, r: 20, fill: 'none', stroke: '#fcee09', 'stroke-width': 3, class: 'recoring' }));
     if (stub) g.append(el('rect', { x: x - 4, y: y - 13, width: 8, height: 26, class: 'stc stub' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff' })); else g.append(el('circle', { cx: x, cy: y, r: 12, class: 'stc' + (here ? ' here' : '') + (rc ? ' reco' : ''), fill: '#fff', stroke: '#000', 'stroke-width': 5 }));
