@@ -62,3 +62,42 @@ const FACTION_MORAL = { vigilante: 12, siha: 12, hem: 10, ecobase: 8, umami: 8, 
 function moralBase(fid) { return clamp(FACTION_MORAL[fid] != null ? FACTION_MORAL[fid] : 0, -30, 30); }
 // effet moral d'un contrat réussi (en unités de addKarma : 0,4 ≈ +1 ; 0,8 ≈ +2 ; 1,2 ≈ +3)
 const ARCH_KARMA = { humanitaire: 0.8, rescape: 0.8, quarantaine: 0.8, refuge: 0.8, temoin: 0.6, mediation: 0.6, pistage: 0.4, defense: 0.4, liberation: 0.6, sentinelle: 0.4, climat: 0.4, fauxpapiers: 0.4, exfiltration: 0.4, pelerinage: 0.4, desamorcage: 0.6, escorte: 0.2, assassinat: -1.2, kidnapping: -1.2, incendie: -1.2, emeute: -0.8, racket: -1.0, braquage: -0.8, dette: -0.6, cargaison: -0.6, blanchiment: -0.6, vehicule: -0.6, gibier: -0.2, trouble: -0.4, sabotage: -0.4, prime: -0.2, hacking: -0.2 };
+
+// ───────── Avantage de faction (passif) : branché sur PK() et les jets (c_<tag>) ─────────
+const FPERK = {
+  vigilante: ['🛡', 'Esprit d’équipe', 'Tes équipiers te soignent un peu chaque round · +1 aux jets d’équipe', { allyheal: 1, c_ally: 1 }],
+  siha: ['🩺', 'Mains de guérisseur', 'Régénération en combat · +2 aux jets de soin', { regen: 1, c_heal: 2 }],
+  hem: ['⛑', 'Terrain humanitaire', '+1 aux soins · +10 % d’expérience', { c_heal: 1, xp: 10 }],
+  ecobase: ['🌿', 'Enfant de la nature', '+1 au repérage · voyages un peu plus discrets', { c_scout: 1, travel: 6 }],
+  umami: ['🍜', 'Sens de l’accueil', '+1 au social · prix du marché −5 %', { c_social: 1, fix: 5 }],
+  uplift: ['📣', 'Voix du peuple', '+2 aux jets de persuasion', { c_social: 2 }],
+  sanctuaire: ['🏯', 'Calme intérieur', '−1 dégât reçu · bouclier de départ', { def: 1, shield: 4 }],
+  natives: ['🏹', 'Pisteur né', '+1 au repérage · voyages plus discrets', { c_scout: 1, travel: 6 }],
+  excels: ['🏅', 'Élite entraînée', '+8 % d’expérience', { xp: 8 }],
+  ringan: ['📜', 'Diplomates', '+1 au social · un peu plus d’indices', { c_social: 1, clue: 1 }],
+  artefactors: ['🏺', 'Flair d’archéologue', '+2 aux jets de reliques · indices plus faciles', { c_relic: 2, clue: 1 }],
+  incognito: ['🕶', 'Visage anonyme', '+1 à la discrétion · prime qui monte moins vite', { c_stealth: 1, quiet: 10 }],
+  nebula: ['🔭', 'Œil de la station', '+1 au repérage · initiative', { c_scout: 1, first: 1 }],
+  clairobscur: ['🎭', 'Entre ombre et lumière', '+1 à la discrétion · une esquive de départ', { c_stealth: 1, dodge: 1 }],
+  arena: ['🥊', 'Gladiateur', '+1 dégât · bourses d’ARENA plus fortes', { dmg: 1, cash: 8 }],
+  cockpits: ['🏎', 'Pilotes d’exception', '+2 aux jets de mobilité', { c_mobility: 2 }],
+  paddocks: ['🛞', 'Rois de la route', '+1 mobilité · voyages discrets', { c_mobility: 1, travel: 6 }],
+  check: ['💼', 'Mercenaires', '+1 au combat · contrats mieux payés', { c_combat: 1, cash: 8 }],
+  slummer: ['🏚', 'Enfant des rues', '+1 à la discrétion · prime qui monte moins vite', { c_stealth: 1, quiet: 10 }],
+  galleon: ['⚓', 'Marchands de l’Alliance', 'Prix du marché −8 % · +1 mobilité', { fix: 8, c_mobility: 1 }],
+  bruteforce: ['💪', 'Force brute', '+1 dégât · +1 au combat', { dmg: 1, c_combat: 1 }],
+  necropunks: ['💀', 'Rien à perdre', 'Une fois par combat, tu survis à 1 PV', { lastbreath: 1 }],
+  optimum: ['🧿', 'Perfectionnistes', 'Initiative · coups critiques plus fréquents', { first: 1, crit: 1 }],
+  rapinas: ['🦅', 'Charognards', '+1 à la discrétion · contrats mieux payés', { c_stealth: 1, cash: 10 }],
+  ragnaroks: ['🪓', 'Peau de guerrier', '+1 dégât · −1 dégât reçu', { dmg: 1, def: 1 }],
+  saibogu: ['🤖', 'Cyber-augmentés', '+2 aux jets de technique · +1 énergie par round', { c_tech: 2, energy: 1 }],
+  oudatchi: ['🕵', 'Réseau d’espions', '+1 à la discrétion et au repérage', { c_stealth: 1, c_scout: 1 }],
+  committed: ['🔔', 'Ferveur', '+1 au social · les ennemis frappent moins fort', { c_social: 1, weaken: 1 }],
+  omega: ['🎯', 'Chasseurs d’élite', 'Tes coups percent les défenses · initiative', { pierce: 1, first: 1 }],
+  manacorp: ['💰', 'Réseaux d’affaires', '+1 au social · contrats mieux payés', { c_social: 1, cash: 12 }],
+  gamma: ['🧪', 'Laboratoire', '+1 à la technique · régénération', { c_tech: 1, regen: 1 }],
+  fa: ['⚜', 'Autorité', '−1 dégât reçu · +1 au combat · contrôles de gare évités', { def: 1, c_combat: 1, travel: 10 }],
+  fallen: ['🔗', 'Traqueurs sous contrainte', '+1 au repérage · +1 au combat', { c_scout: 1, c_combat: 1 }],
+};
+const factionPerk = () => FPERK[G.pc.faction] || null;
+const factionSum = id => { const f = factionPerk(); return f ? (f[3][id] || 0) : 0; };

@@ -661,3 +661,5 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .spark{position:absolute;bottom:26px;font-style:normal;font-size:2.2rem;pointer-events:none;animation:sparkp .55s .2s both}.spark.r{right:24%}.spark.l{left:24%}.spark.pw{color:#27f0ff;text-shadow:0 0 14px #27f0ff,0 0 26px #b026ff;font-size:2.6rem}
 @keyframes sparkp{0%{opacity:0;transform:scale(.2) rotate(-30deg)}40%{opacity:1;transform:scale(1.4) rotate(10deg)}100%{opacity:0;transform:scale(1.9) rotate(20deg)}}
 @media(prefers-reduced-motion:reduce){.cstage img,.spark{animation:none!important}}
+
+.fperk{display:flex;gap:10px;align-items:center;margin:0 0 8px;padding:8px 10px;border:1px solid rgba(252,238,9,.35);background:linear-gradient(90deg,rgba(252,238,9,.10),transparent)}.fperk .fpi{font-size:1.6rem;filter:drop-shadow(0 0 8px rgba(252,238,9,.4))}.fperk b{color:var(--acc)}
