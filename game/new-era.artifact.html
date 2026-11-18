@@ -1026,18 +1026,22 @@ function skill(attrId, tags = []) {
   if (pc.enMax > 0 && pc.en <= 0 && pc.ptype !== 'aucun') { parts.push(['épuisé', -1]); mod -= 1; }
   { const hr = pc.hp / pc.hpMax; const wp = hr < 0.2 ? 3 : hr < 0.4 ? 2 : hr < 0.6 ? 1 : 0; if (wp) { parts.push(['blessé', -wp]); mod -= wp; } }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
+  { const bonus = mod - A(attrId); if (bonus > 6) { const cut = Math.floor((bonus - 6) / 2); parts.push(['plafond des bonus', -cut]); mod -= cut; } }
   return { mod, parts };
 }
+// Équilibrage : les difficultés (dc) écrites dans le jeu sont recalées sur une courbe douce (±9 % par niveau d'écart),
+// et les bonus cumulés (pouvoir, rôle, style, matériel, équipe…) sont plafonnés pour qu'un perso spécialisé reste battable.
+const dcEff = dc => Math.round(3.8 + 0.58 * dc);
 function check(attrId, dc, tags = [], extra = 0) {
-  const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod;
-  const res = { r, total, dc, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
-  res.ok = res.crit || (!res.fumble && total >= dc);
+  const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
+  const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
+  res.ok = res.crit || (!res.fumble && total >= d);
   if (G.pc.stim > 0) G.pc.stim = 0;
   UI.roll = res;
   return res;
 }
-function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dc - m)) / 20, 0.05, 0.95); }
-const dcOf = (tier, mod = 0) => 11 + 3 * tier + mod + ((typeof G !== 'undefined' && G && G.pc && G.pc.grade >= 4) ? 1 : 0);
+function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dcEff(dc) - m)) / 20, 0.08, 0.93); }
+const dcOf = (tier, mod = 0) => 10 + 3 * tier + mod;
 function checkLine(r) { return `🎲 d20 ${r.r} + ${r.mod} = ${r.total} contre ${r.dc} — ${r.crit ? 'RÉUSSITE CRITIQUE' : r.fumble ? 'ÉCHEC CRITIQUE' : r.ok ? 'réussite' : 'échec'}`; }
 
 // ───────── Réputation / prime ─────────
@@ -3120,7 +3124,7 @@ function resolveApproach(o, k, dc) {
   const L = [txt[2], checkLine(r)];
   if (d.fail === 'loss') return missionFail(o, L, { lost: true });
   const tiers = o.tier; const nFoes = 1 + (tiers >= 3 ? 1 : 0) + (chance(0.4) ? 1 : 0);
-  if (d.fail === 'chase' && r.total >= dc - 3) return missionFail(o, [...L, 'Tu t’en sors de justesse en lâchant la mission.'], { partial: true });
+  if (d.fail === 'chase' && r.total >= r.dc - 3) return missionFail(o, [...L, 'Tu t’en sors de justesse en lâchant la mission.'], { partial: true });
   const foes = o.tgt === 'fa' ? foesFor('fa', Math.min(5, tiers), nFoes) : foesFor(o.tgt, Math.min(5, tiers), nFoes);
   show({ kicker: 'Complication', title: 'Ça tourne mal', text: [...L, 'On te tombe dessus !'], choices: [C('Se battre', () => startCombat({ title: 'Contre-attaque', foes, intro: 'L’alerte est donnée : ils foncent sur toi.', lethal: lethalOf(o.tgt), canFlee: true,
     onWin: (L2) => finishMission(o, 'partial', ['Tu t’en sors en les battant. La mission est à moitié réussie.'], L2), onFlee: () => missionFail(o, ['Tu prends la fuite : mission ratée.'], { fled: true }) })), C('Tenter de fuir', () => { const rf = check('agilite', 11 + tiers * 2, ['mobility']); if (rf.ok) missionFail(o, ['Tu t’échappes de justesse. Mission ratée.'], { fled: true }); else startCombat({ title: 'Pris en chasse', foes, intro: 'Tu n’as pas pu les semer.', lethal: lethalOf(o.tgt), canFlee: false, onWin: (L2) => finishMission(o, 'partial', ['Tu les as finalement battus.'], L2) }); })] });
@@ -3128,7 +3132,7 @@ function resolveApproach(o, k, dc) {
 function lethalOf(fid) { return { fa: 'capture', fallen: 'capture', arena: 'capture', check: 'robbed', noir: 'robbed', slummer: 'robbed', galleon: 'robbed', manacorp: 'capture', gamma: 'capture', saibogu: 'capture', omega: 'capture', necropunks: 'death', ragnaroks: 'death', optimum: 'death', committed: 'robbed' }[fid] || 'robbed'; }
 function missionFail(o, lines, f = {}) {
   const pc = G.pc; const L = [];
-  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(3, 6 + o.tier * 2) });
+  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(2, 5 + o.tier * 2) });
   if (pc.hp <= 0) { pc.hp = 1; }
   pc.missions++; G.score.fails = (G.score.fails || 0) + 1;
   // loyauté des alliés
@@ -3298,7 +3302,7 @@ function deedCard() {
   const pc = G.pc; const okd = DEEDS.filter((x, i) => !uniqSkip('deeds', i)); const d = pick(okd.length ? okd : DEEDS); const place = capName(G.loc); const t = wTier();
   const done = () => hub();
   const goodOpt = () => {
-    const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 12 + 2 * t;
+    const [lab, attr, tags, okT, koT, expo, dmg] = d.good; const dc = 11 + 2 * t;
     if (tags === 0 || tags === 1) { // combat contre soldats ou voyous
       return C(lab, () => startCombat({ title: d.k, foes: tags === 0 ? foesFor('fa', Math.min(3, t), 2) : [mkFoe('voyou', t), mkFoe('voyou', t)], intro: 'Ils se tournent vers toi.', lethal: tags === 0 ? 'capture' : 'robbed', canFlee: true, onWin: L => { addKarma(2); const L2 = fx({ rep: tags === 0 ? { civils: 9, fa: -8 } : { civils: 8 }, xp: 20 + 6 * t, heat: tags === 0 ? 5 : 1 }); show({ kicker: d.k.toUpperCase(), title: 'Bien joué', text: [okT], fx: [...L, ...L2], choices: [C('Continuer', () => (chance(exposureChance(expo)) ? backfire(done) : done()))] }); }, onFlee: () => show({ title: 'Repli', text: ['Tu t’éloignes, la mort dans l’âme.'], fx: fx({ rep: { civils: -2 } }), choices: [C('Continuer', done)] }) }), { ic: '🤝', odds: null, sub: 'Combat · bonne action' });
     }
@@ -3413,7 +3417,7 @@ function campCard() {
   const pc = G.pc, f = pc.flags; let c = f.camp; const done = f.campDone = f.campDone || [];
   if (!c) { const left = Object.keys(CAMPS).filter(k => !done.includes(k) && !uniqSkip('camps', k)); if (!left.length) return missionCard(); c = f.camp = { id: pick(left), ch: 0, s: 0 }; }
   const def = CAMPS[c.id]; const ch = def.ch[c.ch]; f.campWk = G.wk; const place = esc(capName(G.loc));
-  const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 12 + 2 * wTier(); return C(lab, () => {
+  const L = ch.o.map(([lab, attr, tags, okT, koT]) => { const dc = 11 + 2 * wTier(); return C(lab, () => {
     const r = check(attr, dc, tags); if (r.ok) c.s++; c.ch++;
     const last = c.ch >= def.ch.length; const gain = fx({ xp: 12 + 4 * wTier(), hp: r.ok ? 0 : -rint(2, 7), heat: r.ok ? 0 : 2 });
     if (!last) return show({ kicker: `CAMPAGNE · ${def.n.toUpperCase()}`, title: r.ok ? 'Ça avance' : 'Un contretemps', text: [r.ok ? okT : koT, checkLine(r), `<span class="mut">Chapitre ${c.ch}/${def.ch.length} terminé. La suite viendra bientôt.</span>`], fx: gain, choices: [C('Continuer', hub)] });
@@ -4500,7 +4504,7 @@ function storyCard() {
   const f = G.pc.flags; const seen = f.storySeen = f.storySeen || []; const t = wTier(); const place = esc(capName(G.loc));
   let ids = STORIES.map((_, i) => i).filter(i => !seen.includes(i) && !uniqSkip('stories', i)); if (!ids.length) { f.storySeen = []; ids = STORIES.map((_, i) => i); }
   const i = pick(ids); seen.push(i); if (seen.length > STORIES.length - 4) seen.shift(); const s = STORIES[i];
-  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 12 + 2 * t;
+  const L = s[3].map(o => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
     return C(lab, () => {
       const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
       show({ kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });

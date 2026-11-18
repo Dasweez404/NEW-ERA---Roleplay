@@ -140,7 +140,7 @@ function resolveApproach(o, k, dc) {
   const L = [txt[2], checkLine(r)];
   if (d.fail === 'loss') return missionFail(o, L, { lost: true });
   const tiers = o.tier; const nFoes = 1 + (tiers >= 3 ? 1 : 0) + (chance(0.4) ? 1 : 0);
-  if (d.fail === 'chase' && r.total >= dc - 3) return missionFail(o, [...L, 'Tu t’en sors de justesse en lâchant la mission.'], { partial: true });
+  if (d.fail === 'chase' && r.total >= r.dc - 3) return missionFail(o, [...L, 'Tu t’en sors de justesse en lâchant la mission.'], { partial: true });
   const foes = o.tgt === 'fa' ? foesFor('fa', Math.min(5, tiers), nFoes) : foesFor(o.tgt, Math.min(5, tiers), nFoes);
   show({ kicker: 'Complication', title: 'Ça tourne mal', text: [...L, 'On te tombe dessus !'], choices: [C('Se battre', () => startCombat({ title: 'Contre-attaque', foes, intro: 'L’alerte est donnée : ils foncent sur toi.', lethal: lethalOf(o.tgt), canFlee: true,
     onWin: (L2) => finishMission(o, 'partial', ['Tu t’en sors en les battant. La mission est à moitié réussie.'], L2), onFlee: () => missionFail(o, ['Tu prends la fuite : mission ratée.'], { fled: true }) })), C('Tenter de fuir', () => { const rf = check('agilite', 11 + tiers * 2, ['mobility']); if (rf.ok) missionFail(o, ['Tu t’échappes de justesse. Mission ratée.'], { fled: true }); else startCombat({ title: 'Pris en chasse', foes, intro: 'Tu n’as pas pu les semer.', lethal: lethalOf(o.tgt), canFlee: false, onWin: (L2) => finishMission(o, 'partial', ['Tu les as finalement battus.'], L2) }); })] });
@@ -148,7 +148,7 @@ function resolveApproach(o, k, dc) {
 function lethalOf(fid) { return { fa: 'capture', fallen: 'capture', arena: 'capture', check: 'robbed', noir: 'robbed', slummer: 'robbed', galleon: 'robbed', manacorp: 'capture', gamma: 'capture', saibogu: 'capture', omega: 'capture', necropunks: 'death', ragnaroks: 'death', optimum: 'death', committed: 'robbed' }[fid] || 'robbed'; }
 function missionFail(o, lines, f = {}) {
   const pc = G.pc; const L = [];
-  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(3, 6 + o.tier * 2) });
+  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(2, 5 + o.tier * 2) });
   if (pc.hp <= 0) { pc.hp = 1; }
   pc.missions++; G.score.fails = (G.score.fails || 0) + 1;
   // loyauté des alliés

@@ -33,18 +33,22 @@ function skill(attrId, tags = []) {
   if (pc.enMax > 0 && pc.en <= 0 && pc.ptype !== 'aucun') { parts.push(['épuisé', -1]); mod -= 1; }
   { const hr = pc.hp / pc.hpMax; const wp = hr < 0.2 ? 3 : hr < 0.4 ? 2 : hr < 0.6 ? 1 : 0; if (wp) { parts.push(['blessé', -wp]); mod -= wp; } }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
+  { const bonus = mod - A(attrId); if (bonus > 6) { const cut = Math.floor((bonus - 6) / 2); parts.push(['plafond des bonus', -cut]); mod -= cut; } }
   return { mod, parts };
 }
+// Équilibrage : les difficultés (dc) écrites dans le jeu sont recalées sur une courbe douce (±9 % par niveau d'écart),
+// et les bonus cumulés (pouvoir, rôle, style, matériel, équipe…) sont plafonnés pour qu'un perso spécialisé reste battable.
+const dcEff = dc => Math.round(3.8 + 0.58 * dc);
 function check(attrId, dc, tags = [], extra = 0) {
-  const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod;
-  const res = { r, total, dc, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
-  res.ok = res.crit || (!res.fumble && total >= dc);
+  const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
+  const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
+  res.ok = res.crit || (!res.fumble && total >= d);
   if (G.pc.stim > 0) G.pc.stim = 0;
   UI.roll = res;
   return res;
 }
-function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dc - m)) / 20, 0.05, 0.95); }
-const dcOf = (tier, mod = 0) => 11 + 3 * tier + mod + ((typeof G !== 'undefined' && G && G.pc && G.pc.grade >= 4) ? 1 : 0);
+function odds(attrId, dc, tags = [], extra = 0) { const m = skill(attrId, tags).mod + extra; return clamp((21 - (dcEff(dc) - m)) / 20, 0.08, 0.93); }
+const dcOf = (tier, mod = 0) => 10 + 3 * tier + mod;
 function checkLine(r) { return `🎲 d20 ${r.r} + ${r.mod} = ${r.total} contre ${r.dc} — ${r.crit ? 'RÉUSSITE CRITIQUE' : r.fumble ? 'ÉCHEC CRITIQUE' : r.ok ? 'réussite' : 'échec'}`; }
 
 // ───────── Réputation / prime ─────────
