@@ -22,6 +22,9 @@ function mkFoe(tid, tier, name, extra = {}) {
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
+  // Les factions ennemies se battent en groupe : un homme de plus assez souvent, et jamais seuls quand elles ont les moyens
+  if (fid !== 'civils') { if (n >= 2 && tier >= 2 && chance(0.4)) n++; else if (n === 1 && chance(0.4)) n++; }
+  n = Math.min(4, n);
   const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
   const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(1, tier) && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
   for (let i = 0; i < n; i++) {

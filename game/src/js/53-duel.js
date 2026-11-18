@@ -62,7 +62,7 @@ function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags
 // ── Lancement ──
 function roundsFor2(cfg, foes, gap) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || 1)); let n = 4; if (foes.length === 1 && gap <= -1) n = 3; if (foes.length >= 3 || t >= 5 || gap >= 2) n = 5; return n; }
 function startCombat(cfg) {
-  if (cfg.foes.length > 3) cfg.foes = cfg.foes.slice(0, 3);
+  if (cfg.foes.length > 4) cfg.foes = cfg.foes.slice(0, 4);
   scaleFoes(cfg); dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 4, round: 1, W: 0, Lz: 0, hist: [], log: [], pops: [], tier: Math.max(...cfg.foes.map(f => f.tier || Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, weak: 0, sig: {}, tgt: 0 };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });

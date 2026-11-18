@@ -998,12 +998,13 @@ function blankPC() {
   };
 }
 
+// Emplacement de chaque pierre selon le document (lieu canonique), indépendamment du QG du détenteur
+const CANON_LOC = { lumiere: 'albion', plante: 'aymaro', magma: 'isgarde', eau: 'avaiki', air: 'sinotan', feu: 'caribana', fumee: 'atlante', sable: 'saha', acide: 'bengal', roche: 'ubunye', foudre: 'balka', glace: 'polaris', gaz: 'australis', metal: 'australis', terre: 'sahel', tenebres: 'mitropa' };
 function initWorld() {
   const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, stoneLv: {}, flags: {}, wanted: {} };
   DATA.stones.forEach(s => {
     W.stoneHolder[s.id] = s.holder;
-    W.stoneLoc[s.id] = s.id === 'lumiere' ? 'albion' : (F[s.holder] ? F[s.holder].hq : s.temple);
-    if (s.holder === 'pnj-levant') W.stoneLoc[s.id] = 'levant';
+    W.stoneLoc[s.id] = CANON_LOC[s.id] || (F[s.holder] ? F[s.holder].hq : s.temple);
   });
   DATA.factions.forEach(f => {
     const mem = DATA.chars.filter(c => c.faction === f.id);
@@ -2095,6 +2096,9 @@ function mkFoe(tid, tier, name, extra = {}) {
 }
 const FOE_BY_FAC = { fa: ['soldat', 'droide', 'centaure', 'gorgone', 'harpie'], arena: ['gladiateur'], check: ['mercenaire'], slummer: ['voyou'], galleon: ['pirate'], saibogu: ['cyborg'], necropunks: ['necro'], ragnaroks: ['ragnarok'], optimum: ['optimum'], committed: ['secte'], manacorp: ['garde'], gamma: ['cyborg', 'garde'], fallen: ['fallen'], noir: ['mercenaire', 'garde'], omega: ['porteur'] };
 function foesFor(fid, tier, n = 2) {
+  // Les factions ennemies se battent en groupe : un homme de plus assez souvent, et jamais seuls quand elles ont les moyens
+  if (fid !== 'civils') { if (n >= 2 && tier >= 2 && chance(0.4)) n++; else if (n === 1 && chance(0.4)) n++; }
+  n = Math.min(4, n);
   const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
   const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(1, tier) && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
   for (let i = 0; i < n; i++) {
@@ -2331,7 +2335,7 @@ function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags
 // ── Lancement ──
 function roundsFor2(cfg, foes, gap) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || 1)); let n = 4; if (foes.length === 1 && gap <= -1) n = 3; if (foes.length >= 3 || t >= 5 || gap >= 2) n = 5; return n; }
 function startCombat(cfg) {
-  if (cfg.foes.length > 3) cfg.foes = cfg.foes.slice(0, 3);
+  if (cfg.foes.length > 4) cfg.foes = cfg.foes.slice(0, 4);
   scaleFoes(cfg); dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 4, round: 1, W: 0, Lz: 0, hist: [], log: [], pops: [], tier: Math.max(...cfg.foes.map(f => f.tier || Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, weak: 0, sig: {}, tgt: 0 };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
