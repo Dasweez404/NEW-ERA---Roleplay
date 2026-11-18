@@ -102,7 +102,7 @@ function gainStone(id) {
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
   recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 2);
-  { const W = G.world; W.stoneLv = W.stoneLv || {}; const nx = DATA.stones.filter(x => !pc.stones[x.id] && (W.stoneLv[x.id] || 0) < 2 && W.stoneLoc[x.id] !== G.loc); if (nx.length) { const t = pick(nx); W.stoneLv[t.id] = 2; W.stoneClue[t.id] = true; L.push({ t: `💎 La pierre résonne : celle de ${t.name} se trouve vers ${capName(W.stoneLoc[t.id])}.`, c: 'acc' }); } }
+  { const W = G.world; W.stoneLv = W.stoneLv || {}; const nx = shuffle(DATA.stones.filter(x => !pc.stones[x.id] && (W.stoneLv[x.id] || 0) < 2 && W.stoneLoc[x.id] !== G.loc)).slice(0, 2); nx.forEach(t => { W.stoneLv[t.id] = 2; W.stoneClue[t.id] = true; L.push({ t: `💎 La pierre résonne : celle de ${t.name} se trouve vers ${capName(W.stoneLoc[t.id])}.`, c: 'acc' }); }); }
   const n = stoneCount(); if (n === 4) L.push({ t: '🌟 Résonance : 4 pierres — +1 à tous les attributs.', c: 'acc' });
   if (n === 8) L.push({ t: '🌟 Aura : 8 pierres — tes pouvoirs s’éveillent plus facilement et sans risque.', c: 'acc' });
   if (n === 12) L.push({ t: '⚠️ Convergence : 12 pierres — le Panthéon et Néo te traquent désormais.', c: 'warnc' });
@@ -115,11 +115,12 @@ function loseStone(id, toFaction) {
 
 // ───────── Temps ─────────
 function advance(weeks) {
-  for (let i = 0; i < weeks; i++) {
+  // Le temps est compressé (Normale : la moitié) : le calendrier avance moins vite, la récupération reste celle de la durée annoncée
+  const pc0 = G.pc; for (let i = 0; i < weeks; i++) { pc0.hp = Math.min(pc0.hpMax, pc0.hp + Math.max(1, Math.round(pc0.hpMax * 0.02))); if (i % 2 === 0) pc0.en = Math.min(pc0.enMax, pc0.en + 1); pc0.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); }); }
+  G.wkFrac = (G.wkFrac || 0) + weeks * (LEN().t || 1); const nW = Math.floor(G.wkFrac); G.wkFrac -= nW;
+  for (let i = 0; i < nW; i++) {
     G.wk++;
     const pc = G.pc;
-    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + (G.wk % 2 ? 1 : 0));
-    pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
     if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;
   }

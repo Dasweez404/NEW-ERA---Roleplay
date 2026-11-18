@@ -943,7 +943,7 @@ const FA_UNITS = {
 const rankStr = g => g > 0 ? '▲'.repeat(g) : '△';
 
 // Durée de partie : cartes d'histoire par destination, mérite requis, déblocage des pierres et des actes
-const LENS = { court: { n: 'Courte', c: 1, m: 0.75, u: 30, a2: 18, a3: 50 }, normal: { n: 'Normale', c: 2, m: 0.88, u: 35, a2: 24, a3: 60 }, long: { n: 'Longue', c: 3, m: 1, u: 40, a2: 28, a3: 70 } };
+const LENS = { court: { n: 'Courte', t: 0.35, c: 1, m: 0.75, u: 30, a2: 18, a3: 50 }, normal: { n: 'Normale', t: 0.5, c: 2, m: 0.88, u: 35, a2: 24, a3: 60 }, long: { n: 'Longue', t: 0.75, c: 3, m: 1, u: 40, a2: 28, a3: 70 } };
 const lenKey = () => (typeof G !== 'undefined' && G && G.settings && G.settings.len) || (typeof UI !== 'undefined' && UI.len) || 'normal';
 const LEN = () => LENS[lenKey()] || LENS.normal;
 function applyLen() { const m = LEN().m; MERIT_BASE.forEach((v, i) => { MERIT_STEPS[i] = Math.round(v * m); }); }
@@ -1256,7 +1256,7 @@ function gainStone(id) {
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
   recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 2);
-  { const W = G.world; W.stoneLv = W.stoneLv || {}; const nx = DATA.stones.filter(x => !pc.stones[x.id] && (W.stoneLv[x.id] || 0) < 2 && W.stoneLoc[x.id] !== G.loc); if (nx.length) { const t = pick(nx); W.stoneLv[t.id] = 2; W.stoneClue[t.id] = true; L.push({ t: `💎 La pierre résonne : celle de ${t.name} se trouve vers ${capName(W.stoneLoc[t.id])}.`, c: 'acc' }); } }
+  { const W = G.world; W.stoneLv = W.stoneLv || {}; const nx = shuffle(DATA.stones.filter(x => !pc.stones[x.id] && (W.stoneLv[x.id] || 0) < 2 && W.stoneLoc[x.id] !== G.loc)).slice(0, 2); nx.forEach(t => { W.stoneLv[t.id] = 2; W.stoneClue[t.id] = true; L.push({ t: `💎 La pierre résonne : celle de ${t.name} se trouve vers ${capName(W.stoneLoc[t.id])}.`, c: 'acc' }); }); }
   const n = stoneCount(); if (n === 4) L.push({ t: '🌟 Résonance : 4 pierres — +1 à tous les attributs.', c: 'acc' });
   if (n === 8) L.push({ t: '🌟 Aura : 8 pierres — tes pouvoirs s’éveillent plus facilement et sans risque.', c: 'acc' });
   if (n === 12) L.push({ t: '⚠️ Convergence : 12 pierres — le Panthéon et Néo te traquent désormais.', c: 'warnc' });
@@ -1269,11 +1269,12 @@ function loseStone(id, toFaction) {
 
 // ───────── Temps ─────────
 function advance(weeks) {
-  for (let i = 0; i < weeks; i++) {
+  // Le temps est compressé (Normale : la moitié) : le calendrier avance moins vite, la récupération reste celle de la durée annoncée
+  const pc0 = G.pc; for (let i = 0; i < weeks; i++) { pc0.hp = Math.min(pc0.hpMax, pc0.hp + Math.max(1, Math.round(pc0.hpMax * 0.02))); if (i % 2 === 0) pc0.en = Math.min(pc0.enMax, pc0.en + 1); pc0.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); }); }
+  G.wkFrac = (G.wkFrac || 0) + weeks * (LEN().t || 1); const nW = Math.floor(G.wkFrac); G.wkFrac -= nW;
+  for (let i = 0; i < nW; i++) {
     G.wk++;
     const pc = G.pc;
-    pc.hp = Math.min(pc.hpMax, pc.hp + Math.max(1, Math.round(pc.hpMax * 0.02))); pc.en = Math.min(pc.enMax, pc.en + (G.wk % 2 ? 1 : 0));
-    pc.party.forEach(a => { if (a.inj > 0) a.inj--; if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + 3); });
     if (G.wk % 4 === 0) { monthTick(); const dd = dateOf(G.wk); if (dd.m === 0) splash({ title: String(dd.y), sub: 'Une nouvelle année commence', cls: 'year' }); }
     if (G.status !== 'play') return;
   }
@@ -2807,7 +2808,7 @@ function hub() {
 // Niveau gagné : on dépense le point tout de suite, devant toi.
 const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
 // Points à répartir : exigés seulement s'ils n'ont pas été remis à plus tard pour cette destination
-const ptsCost = id => (G.pc.attrs[id] >= 9 ? 2 : 1); // au-delà de 9, un attribut coûte 2 points
+const ptsCost = id => { const v = G.pc.attrs[id]; return v >= 10 ? 3 : v >= 7 ? 2 : 1; }; // 7+ : 2 points · 10+ : 3 points
 const ptsCan = () => ATTRS.some(a => G.pc.attrs[a.id] < 12 && G.pc.pts >= ptsCost(a.id));
 const ptsDue = () => { const pc = G.pc; if (pc.pts > 0 && ATTRS.every(a => pc.attrs[a.id] >= 12)) pc.pts = 0; return pc.pts > 0 && ptsCan() && (pc.flags.ptsHold === undefined || pc.flags.ptsHold !== (pc.flags.dest || 0)); };
 function autoPoints() { const pc = G.pc; const pref = ['corps', 'agilite', 'intellect', 'charisme', 'maitrise'].filter(a => pc.attrs[a] !== undefined); let g = 0; while (pc.pts > 0 && g++ < 200) { const open = ATTRS.filter(a => pc.attrs[a.id] < 12 && pc.pts >= ptsCost(a.id)); if (!open.length) break; open.sort((a, b) => pc.attrs[a.id] - pc.attrs[b.id]); const c = ptsCost(open[0].id); pc.attrs[open[0].id]++; pc.pts -= c; } recalc(); }
@@ -2820,7 +2821,7 @@ function spendPoints(cont) {
     const [ic, col] = ATTR_LOOK[a.id] || ['◆', '#fcee09']; const pips = h('div', { class: 'lvpips' }); const val = h('b', { class: 'lvval' });
     const draw = (pop) => { pips.innerHTML = ''; const v = A(a.id); for (let i = 0; i < 12; i++) pips.append(h('i', { class: 'lvp' + (i < v ? ' on' : '') + (pop && i === v - 1 ? ' pop' : '') + (i === v && pc.pts > 0 && v < 12 ? ' nx' : '') })); val.textContent = String(v); };
     const card = h('button', { class: 'lvcard', style: `--c:${col};--d:${idx * 70}ms`, onclick: () => {
-      const cost = ptsCost(a.id); if (done || pc.pts < cost || pc.attrs[a.id] >= 12) { if (!done && pc.pts >= 1 && pc.pts < cost) toast('Au-delà de 9, il faut 2 points'); return; } pc.attrs[a.id]++; pc.pts -= cost; recalc(); sfx('win'); buzz(18); draw(true); drawGems(); burstAt(card, col, 26); card.classList.remove('hit'); void card.offsetWidth; card.classList.add('hit');
+      const cost = ptsCost(a.id); if (done || pc.pts < cost || pc.attrs[a.id] >= 12) { if (!done && pc.pts >= 1 && pc.pts < cost) toast(`Il faut ${cost} points pour cet attribut`); return; } pc.attrs[a.id]++; pc.pts -= cost; recalc(); sfx('win'); buzz(18); draw(true); drawGems(); burstAt(card, col, 26); card.classList.remove('hit'); void card.offsetWidth; card.classList.add('hit');
       cards.querySelectorAll('.lvcard').forEach(c => c.classList.toggle('dim', !ptsCan()));
       if (!ptsCan()) { done = true; head.classList.add('fin'); head.querySelector('.lvsub').textContent = 'Parfait. Ton personnage progresse.'; flash('#fcee09'); sfx('crit'); setTimeout(() => { cont ? cont() : hub(); }, 1100); }
     } }, h('span', { class: 'lvic' }, ic), h('span', { class: 'lvmid' }, h('span', { class: 'lvname' }, a.name), h('span', { class: 'lvdesc' }, a.desc), pips), val, h('span', { class: 'lvplusb' }, '＋'));

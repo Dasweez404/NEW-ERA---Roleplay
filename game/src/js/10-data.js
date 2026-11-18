@@ -214,7 +214,7 @@ const FA_UNITS = {
 const rankStr = g => g > 0 ? '▲'.repeat(g) : '△';
 
 // Durée de partie : cartes d'histoire par destination, mérite requis, déblocage des pierres et des actes
-const LENS = { court: { n: 'Courte', c: 1, m: 0.75, u: 30, a2: 18, a3: 50 }, normal: { n: 'Normale', c: 2, m: 0.88, u: 35, a2: 24, a3: 60 }, long: { n: 'Longue', c: 3, m: 1, u: 40, a2: 28, a3: 70 } };
+const LENS = { court: { n: 'Courte', t: 0.35, c: 1, m: 0.75, u: 30, a2: 18, a3: 50 }, normal: { n: 'Normale', t: 0.5, c: 2, m: 0.88, u: 35, a2: 24, a3: 60 }, long: { n: 'Longue', t: 0.75, c: 3, m: 1, u: 40, a2: 28, a3: 70 } };
 const lenKey = () => (typeof G !== 'undefined' && G && G.settings && G.settings.len) || (typeof UI !== 'undefined' && UI.len) || 'normal';
 const LEN = () => LENS[lenKey()] || LENS.normal;
 function applyLen() { const m = LEN().m; MERIT_BASE.forEach((v, i) => { MERIT_STEPS[i] = Math.round(v * m); }); }
