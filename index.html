@@ -1674,7 +1674,7 @@ function tabAide() {
 <p><b>Boucle d’une destination :</b> Contrats → Histoire (3 cartes) → Ville (une action) → Départ. Le rail en haut montre où tu en es.</p>
 <p><b>Jets :</b> d20 + attribut + bonus (pouvoir, rôle, style, équipement, équipe) contre une difficulté. Le pourcentage est affiché ; une option verrouillée 🔑 demande un attribut minimum.</p>
 <p><b>Étoiles ★ = Puissance</b> (1 à 10 💥) ; le <b>rang ▲</b> est ta position (Recrue → Chef). Le chef d’une faction est son membre le plus puissant. Plus tu montes en rang, plus tu es recherché (<b>prime</b> ⭐ à ⭐⭐⭐⭐).</p>
-<p><b>Combat :</b> 3 à 5 rounds. À chaque round, un geste parmi 3, adapté à ta catégorie de style (Offensif, Défensif, Technique, Soutien) ; le % est affiché. Ton pouvoir n’est utilisable qu’1 round sur 3 (2 sur 5). Gagne assez de rounds pour les battre ; perds-en trop et tu encaisses.</p>
+<p><b>Combat :</b> 3 à 5 rounds. À chaque round, <b>3 cartes sont tirées au sort</b> (ton style en favorise certaines) : tu fais avec ta main. L’ennemi annonce son intention : le bon geste donne +4. Si un geste a plus de 80 % de réussite, le combat est réglé d’un coup ; le % est affiché. Ton pouvoir n’est utilisable qu’1 round sur 3 (2 sur 5). Gagne assez de rounds pour les battre ; perds-en trop et tu encaisses.</p>
 <p><b>Énergie ⚡ :</b> pour les pouvoirs, « Forcer » (+3) et « Se concentrer » (+3). Elle revient lentement. Les consommables du sac sont proposés quand ils servent.</p>
 <p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Elle est posée par la Force d’Autorité (pour un officier de la F.A. : par les factions anti, via le Marché Noir) et monte avec ton rang. Un échec peut te faire capturer… ou tuer.</p>
 <p><b>Orbitrail :</b> 13 lignes, contrôles de la F.A. ; des stations peuvent fermer, des villes être confinées.</p>
@@ -2400,10 +2400,11 @@ const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une vi
 // ── Intentions ennemies : on voit ce que l'adversaire prépare, et on choisit le geste qui le contre ──
 const INTENTS = {
   charge: { ic: '💥', n: 'Charge', tip: 'Gros coup en approche : esquive ou encaisse', mul: 1.4, counter: m => !!m.dodge || (m.sev != null && m.sev <= 0.6 && m.cat !== 'pw') },
-  garde: { ic: '🛡', n: 'Garde haute', tip: 'Il se couvre : vise la faille, ne fonce pas', mul: 1, counter: m => m.cat === 'pw' || (m.tags || []).some(t => ['scout', 'social', 'tech', 'ranged', 'control'].includes(t)), penal: m => m.cat === 'mv' && m.id === 'a' && (m.tags || []).includes('combat') && !(m.tags || []).includes('scout') },
+  garde: { ic: '🛡', n: 'Garde haute', tip: 'Il se couvre : vise la faille, ne fonce pas', mul: 1, counter: m => m.cat === 'pw' || (m.tags || []).some(t => ['scout', 'social', 'tech', 'ranged', 'control'].includes(t)), penal: m => m.cat === 'mv' && (m.tags || []).includes('combat') && (m.sev || 1) >= 1 && !(m.tags || []).some(t => ['scout', 'tech'].includes(t)) },
   rafale: { ic: '🌪', n: 'Rafale', tip: 'Coups rapides : couvre-toi ou coordonne-toi', mul: 1.15, counter: m => (m.tags || []).some(t => ['defense', 'ally'].includes(t)) || !!m.dodge },
 };
 function nextIntent() {
+  dealHand();
   const hostile = aliveFoes(); if (!hostile.length) return CB.intent = null;
   const heavy = hostile.some(f => f.m || (f.tier || 1) >= 4); const keys = Object.keys(INTENTS).filter(k => k !== (CB.intent && CB.intent.k));
   const w = { charge: heavy ? 3 : 2, garde: 2, rafale: hostile.length >= 2 ? 3 : 1 }; const bag = []; keys.forEach(k => { for (let i = 0; i < w[k]; i++) bag.push(k); });
@@ -2439,6 +2440,25 @@ const CATS = {
   ],
 };
 function catMoves() { return CATS[STYLES[G.pc.style].grp] || CATS['Offensif']; }
+// ── Main de cartes : à chaque round, 3 cartes tirées au sort (ton style en favorise certaines). On fait avec ce qu'on a. ──
+const bestAttr = () => ATTRS.reduce((b, a) => A(a.id) > A(b) ? a.id : b, 'corps');
+const XCARDS = [
+  { id: 'x1', ic: '💥', label: 'Charge furieuse', sub: 'Gros risque, gros jet', tags: ['combat'], attr: () => 'corps', bonus: 3, sev: 1.4, grp: 'Offensif' },
+  { id: 'x2', ic: '🗡', label: 'Coup bas', sub: 'Affaiblit leurs coups si tu gagnes', tags: ['stealth', 'combat'], attr: () => 'agilite', bonus: 1, sev: 0.8, weak: 1, grp: 'Offensif' },
+  { id: 'x3', ic: '🤺', label: 'Parade', sub: 'Encaisse peu · bon jet', tags: ['defense'], attr: () => 'corps', bonus: 2, sev: 0.5, grp: 'Défensif' },
+  { id: 'x4', ic: '🔍', label: 'Viser la faille', sub: 'Excellent contre une garde haute', tags: ['scout', 'tech'], attr: () => 'intellect', bonus: 3, sev: 1.0, grp: 'Technique' },
+  { id: 'x5', ic: '📣', label: 'Appel à l’aide', sub: 'Meilleur avec des alliés', tags: ['ally', 'social'], attr: () => 'charisme', bonus: () => Math.min(4, G.pc.party.filter(a => a.inj <= 0).length * 1.5), sev: 0.6, grp: 'Soutien' },
+  { id: 'x6', ic: '😈', label: 'Provoquer', sub: 'Leurs coups faiblissent si tu gagnes', tags: ['social'], attr: () => 'charisme', bonus: 1, sev: 0.9, weak: 2, grp: 'Soutien' },
+  { id: 'x7', ic: '🎲', label: 'Improviser', sub: 'Ton meilleur attribut, sans bonus', tags: ['combat'], attr: bestAttr, bonus: 0, sev: 0.7 },
+  { id: 'x8', ic: '🏃', label: 'Repli tactique', sub: 'Peu de dégâts · une chance d’esquive', tags: ['mobility'], attr: () => 'agilite', bonus: 2, sev: 0.3, dodge: 0.25 },
+  { id: 'x9', ic: '🌬', label: 'Canaliser', sub: 'Ton pouvoir à l’état brut', tags: ['control'], attr: () => 'maitrise', bonus: 1, sev: 0.8 },
+];
+function cardPool() { const grp = STYLES[G.pc.style].grp; const pool = []; Object.entries(CATS).forEach(([g, arr]) => arr.forEach(c => pool.push(Object.assign({ grp: g, w: g === grp ? 3 : 1 }, c, { id: g[0] + c.id })))); XCARDS.forEach(c => pool.push(Object.assign({ w: c.grp === grp ? 3 : c.grp ? 1 : 1.5 }, c))); return pool; }
+function dealHand() {
+  const pool = cardPool(); const last = (CB && CB.hand) ? CB.hand.map(c => c.id) : []; const hand = [];
+  for (let k = 0; k < 3; k++) { const cand = pool.filter(c => !hand.some(h => h.id === c.id) && !(last.includes(c.id) && Math.random() < 0.75)); const c = wpick(cand.length ? cand : pool.filter(c => !hand.some(h => h.id === c.id)), x => x.w); hand.push(c); }
+  if (CB) CB.hand = hand; return hand;
+}
 function powerMove() {
   const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
   const base = { ic: '✦', cat: 'pw', sev: 1.0 };
@@ -2450,7 +2470,7 @@ function powerMove() {
   const st = STYLES[pc.style]; const fin = Object.assign({}, base, { id: 'tech', kind: 'tech', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: primAttr(), tags: ['combat'], bonus: 3, cost: st.tech.cost + 1 });
   if (ok(fin)) return fin; fin.lock = 'Énergie insuffisante'; fin.sub = 'Pas assez d’énergie'; return fin;
 }
-function moves() { return [...catMoves().map(m => Object.assign({ kind: 'hit', cat: 'mv' }, m, { attr: m.attr() })), powerMove()]; }
+function moves() { const hand = (CB && CB.hand) || dealHand(); return [...hand.map(m => Object.assign({ kind: 'hit', cat: 'mv' }, m, { attr: m.attr(), bonus: typeof m.bonus === 'function' ? m.bonus() : m.bonus })), powerMove()]; }
 function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + (CB.nextBonus || 0) + intentBonus(m)]; }
 
 // ── Lancement ──
@@ -2465,9 +2485,15 @@ function startCombat(cfg) {
   clog(cfg.intro || 'Le combat commence !');
   if (cfg.noPreview) return beginDuel();
   if (CB.thr.gap <= -2) return sweepAway();
+  if (!cfg.noAuto && cfg.lethal !== 'death' && !cfg.noPreview) { nextIntent(); const mv = moves().filter(m => m.attr && !m.lock && m.kind === 'hit'); const best = mv.reduce((b, m) => Math.max(b, odds(...oddsOf(m))), 0); if (best >= 0.8 && CB.foes.length <= 3) return autoWin(); }
   if (CB.thr.gap === -1 && !cfg.noAuto && cfg.lethal !== 'death') { CB.preview = true; return renderEasy(); }
   if (CB.thr.gap >= 1) { CB.preview = true; return renderPreview(); }
   beginDuel();
+}
+// Plus de 80 % de réussite sur chaque round : le combat se joue tout seul avec le meilleur geste de chaque main
+function autoWin() {
+  CB.auto = true; let g = 0; clog('⚡ Victoire quasi certaine : le combat est réglé d’un coup.', 'good');
+  while (CB && !CB.over && g++ < 12) { const mv = moves().filter(m => m.attr && !m.lock && m.kind === 'hit'); if (!mv.length) break; mv.sort((a, b) => odds(...oddsOf(b)) - odds(...oddsOf(a))); play(mv[0]); }
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
 function beginDuel() { if (!CB) return; CB.preview = false; nextIntent(); coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); } renderCombat(); }
@@ -2578,6 +2604,7 @@ function teamStrip() {
 }
 function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, 'Il prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
+  if (CB && CB.auto) return;
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
   const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
     const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : 100)}%` }); const pct = Math.max(0, f.hp) / f.hpMax * 100; bars.push([bi, pct]); CB.prev[i] = pct;
