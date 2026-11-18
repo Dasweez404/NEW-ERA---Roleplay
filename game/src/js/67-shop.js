@@ -45,24 +45,25 @@ function itemStat(it) { return it.t === 'arme' ? `+${it.dmg} dég.${it.ranged ? 
 function shopMenu() {
   const pc = G.pc; const cat = SHOP.cat; const steal = SHOP.steal; const bok = blackOkNow();
   const bar = h('div', { class: 'shopbar' }, h('div', { class: 'shopcats' }, SHOP_CATS.map(([t, ic, n]) => h('button', { class: 'tab' + (cat === t ? ' on' : ''), onclick: () => { SHOP.cat = t; sfx('click'); shopMenu(); }, title: n }, ic + ' ' + n.split(' ')[0]))),
+    h('div', { class: 'shopqty' }, [1, 3, 5].map(n => h('button', { class: 'tab' + ((SHOP.qty || 1) === n ? ' on' : ''), title: 'Quantité (consommables)', onclick: () => { SHOP.qty = n; sfx('click'); shopMenu(); } }, '×' + n))),
     h('button', { class: 'swt' + (steal ? ' on' : ''), onclick: () => { SHOP.steal = !steal; sfx('click'); shopMenu(); }, 'aria-pressed': steal }, h('span', { class: 'swl' }, 'Acheter'), h('span', { class: 'swk' }), h('span', { class: 'swl' }, 'Voler')));
   const ids = shopIds().filter(id => ITEMS[id].t === cat).sort((a, b) => ITEMS[a].price - ITEMS[b].price); const L = [];
   ids.forEach(id => {
     const it = ITEMS[id]; const blk = isBlackItem(id); const price = shopPrice(id); const own = pc.inv[id] || 0; const eq = pc.eq.arme === id || pc.eq.armure === id; const st = itemStat(it);
-    const label = `${blk ? '🕶 ' : ''}${it.n}${own ? ' ×' + own : ''}`; const sub = `${steal ? 'voler' : price + ' ¢'}${st ? ' · ' + st : ''}${eq ? ' · équipé' : ''} — ${it.desc}`;
+    const q = it.stack && !steal ? (SHOP.qty || 1) : 1; const label = `${blk ? '🕶 ' : ''}${it.n}${own ? ' ×' + own : ''}${q > 1 ? ' (+' + q + ')' : ''}`; const sub = `${steal ? 'voler' : price * q + ' ¢'}${st ? ' · ' + st : ''}${eq ? ' · équipé' : ''} — ${it.desc}`;
     if (steal) L.push(C(label, () => stealItem(id), { sub, odds: ['agilite', stealDc(id), ['stealth', 'disguise']], cls: 'risk', req: { ok: () => blk ? 'Pas de vol au Marché Noir' : null } }));
-    else L.push(C(label, () => buy(id, price), { sub, req: { money: price, ok: () => (blk && !bok) ? 'Marché Noir : 10 de réputation requise' : null } }));
+    else L.push(C(label, () => buy(id, price, q), { sub, req: { money: price * q, ok: () => (blk && !bok) ? 'Marché Noir : 10 de réputation requise' : null } }));
   });
   L.push(C('Vendre', sellMenu, { ic: '💰', req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
   L.push(C('← Retour', cityBack, { cls: 'back' }));
   show({ kicker: 'MARCHÉ', title: steal ? 'Mode vol' : 'Marché', text: [`<b>${fmt(pc.money)} ¢</b>${bok ? '' : ' · 🕶 articles du Marché Noir verrouillés (10 de réputation)'}${steal ? ' · <b class="badc">discret et risqué</b>' : ''}`], extra: bar, choices: L, tiles: true, tileCls: 'shop' });
 }
 function equipIfFree(id) { const pc = G.pc, it = ITEMS[id]; if ((it.t === 'arme' && !pc.eq.arme) || (it.t === 'armure' && !pc.eq.armure)) { pc.eq[it.t === 'arme' ? 'arme' : 'armure'] = id; return true; } return false; }
-function buy(id, price) {
-  const pc = G.pc; pc.money -= price; giveItem(id); const it = ITEMS[id]; equipIfFree(id); sfx('coin');
+function buy(id, price, q = 1) {
+  const pc = G.pc; pc.money -= price * q; giveItem(id, q); const it = ITEMS[id]; equipIfFree(id); sfx('coin');
   
   if (!isBlackItem(id) && wantedStars() >= 2 && chance(0.12 * wantedStars())) return show({ kicker: 'Marché', title: 'Reconnu !', text: ['Un vendeur lève les yeux de son écran… puis vers la caméra. Il t’a reconnu.'], fx: fx({ heat: 5 }), choices: [C('Filer', hub)] });
-  toast(`${it.n} acheté`); shopMenu();
+  toast(`${it.n}${q > 1 ? ' ×' + q : ''} acheté`); shopMenu();
 }
 function stealDc(id) { const it = ITEMS[id]; return 12 + Math.min(5, Math.floor(it.price / 450)) * 2 + wantedStars() + (it.t === 'vehicule' ? 2 : 0); }
 function stealItem(id) {

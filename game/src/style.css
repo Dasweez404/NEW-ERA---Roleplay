@@ -552,3 +552,5 @@ body{background:var(--ambbg,#07070f)!important;transition:background .9s}body::b
 .recapbar{border:1px solid #2a2a44;background:#10101f;padding:6px 10px;margin:0 0 8px}.recap-h{font:700 .66rem var(--fb);letter-spacing:.12em;color:#8a90c0;margin-bottom:2px}
 
 .qgos{display:grid;gap:6px;margin:0 0 8px}.qgo{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;background:#0f1d18;border:1px solid #35f0a0;color:#e9ebff;padding:8px 12px;cursor:pointer;font:600 .95rem var(--fb);transition:transform .15s,box-shadow .15s}.qgo:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(53,240,160,.2)}.qgo small{font-weight:500;color:#9fd8c0;font-size:.74rem}
+
+.shopqty{display:flex;gap:4px}
