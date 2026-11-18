@@ -71,7 +71,9 @@ function addHeat(n, lines) {
   const s0 = wantedStars(); pc.heat = clamp(pc.heat + n, minHeat(), 100); const s1 = wantedStars();
   if (lines) { if (s1 > s0) lines.push({ t: `Ta prime augmente : ${starStr(s1)} — ${WANTED_TXT[s1]}`, c: 'badc' }); else if (s1 < s0) lines.push({ t: `Ta prime baisse : ${s1 ? starStr(s1) : 'plus de prime'}`, c: 'good' }); }
 }
-function addXp(n) { const pc = G.pc; const o = Math.floor(pc.xp / 80); pc.xp += n; pc.pts += Math.floor(pc.xp / 80) - o; }
+// Points de compétence : le k-ᵉ point demande de plus en plus d'XP (80 + 18 par point déjà gagné, cumulés)
+const lvlFromXp = xp => { let k = 0, need = 0; while (k < 80) { need += 80 + 18 * k; if (xp < need) break; k++; } return k; };
+function addXp(n) { const pc = G.pc; const o = lvlFromXp(pc.xp); pc.xp += n; pc.pts += lvlFromXp(pc.xp) - o; }
 
 function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });

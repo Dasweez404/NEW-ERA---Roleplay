@@ -1168,7 +1168,9 @@ function addHeat(n, lines) {
   const s0 = wantedStars(); pc.heat = clamp(pc.heat + n, minHeat(), 100); const s1 = wantedStars();
   if (lines) { if (s1 > s0) lines.push({ t: `Ta prime augmente : ${starStr(s1)} — ${WANTED_TXT[s1]}`, c: 'badc' }); else if (s1 < s0) lines.push({ t: `Ta prime baisse : ${s1 ? starStr(s1) : 'plus de prime'}`, c: 'good' }); }
 }
-function addXp(n) { const pc = G.pc; const o = Math.floor(pc.xp / 80); pc.xp += n; pc.pts += Math.floor(pc.xp / 80) - o; }
+// Points de compétence : le k-ᵉ point demande de plus en plus d'XP (80 + 18 par point déjà gagné, cumulés)
+const lvlFromXp = xp => { let k = 0, need = 0; while (k < 80) { need += 80 + 18 * k; if (xp < need) break; k++; } return k; };
+function addXp(n) { const pc = G.pc; const o = lvlFromXp(pc.xp); pc.xp += n; pc.pts += lvlFromXp(pc.xp) - o; }
 
 function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
@@ -2289,11 +2291,25 @@ function startCombat(cfg) {
   clog(cfg.intro || 'Le combat commence !');
   if (cfg.noPreview) return beginDuel();
   if (CB.thr.gap <= -2) return sweepAway();
+  if (CB.thr.gap === -1 && !cfg.noAuto && cfg.lethal !== 'death') { CB.preview = true; return renderEasy(); }
   if (CB.thr.gap >= 1) { CB.preview = true; return renderPreview(); }
   beginDuel();
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
 function beginDuel() { if (!CB) return; CB.preview = false; coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); } renderCombat(); }
+// Adversaires à ta portée : on peut régler le combat hors-champ, sans jouer les rounds
+function autoResolve() {
+  if (!CB) return; const pc = G.pc; const r = Math.random(); CB.over = true;
+  const loss = Math.round(pc.hpMax * rr(0.03, 0.09)); pc.hp = Math.max(1, pc.hp - loss);
+  if (r < 0.84) { CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.bilan = `⚡ Réglé hors-champ · −${loss} ❤`; return finishCombat('win'); }
+  if (r < 0.97) { CB.partial = true; CB.bilan = `⚡ Réglé hors-champ · ils fuient · −${loss} ❤`; return finishCombat('win'); }
+  CB.bilan = ''; toast(`Ça tourne mal : tu te replies (−${loss} ❤)`); return CB.cfg.canFlee === false ? loseCombat(false) : finishCombat('flee');
+}
+function renderEasy() {
+  coach('combat'); const cfg = CB.cfg; const T = CB.thr;
+  const r = CB.foes.map(f => h('div', { class: 'fcard' }, foeIcon(f, 48) || '', h('div', { class: 'fi2' }, h('div', { class: 'fn2' }, h('b', {}, fname(f))))));
+  show({ compact: true, kicker: 'FACE À FACE', title: cfg.title || 'Un affrontement', text: [cfg.intro || '', '<span class="acc">Des adversaires à ta portée : tu peux régler ça d’un coup.</span>'].filter(Boolean), extra: h('div', {}, h('div', { class: 'pvchips' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label)), h('div', { class: 'fpv' }, r)), choices: [C('Régler d’un coup', autoResolve, { ic: '⚡', cls: 'cta', sub: 'Rapide, peu de risques, un peu moins d’XP' }), C('Combattre', engage, { ic: '⚔' })] });
+}
 function renderPreview() {
   coach('combat'); const cfg = CB.cfg; const T = CB.thr;
   const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);

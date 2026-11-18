@@ -71,11 +71,25 @@ function startCombat(cfg) {
   clog(cfg.intro || 'Le combat commence !');
   if (cfg.noPreview) return beginDuel();
   if (CB.thr.gap <= -2) return sweepAway();
+  if (CB.thr.gap === -1 && !cfg.noAuto && cfg.lethal !== 'death') { CB.preview = true; return renderEasy(); }
   if (CB.thr.gap >= 1) { CB.preview = true; return renderPreview(); }
   beginDuel();
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
 function beginDuel() { if (!CB) return; CB.preview = false; coach('combat'); if (PK('first')) { CB.nextBonus += 3; clog('Initiative : +3 à ton premier jet.', 'good'); } renderCombat(); }
+// Adversaires à ta portée : on peut régler le combat hors-champ, sans jouer les rounds
+function autoResolve() {
+  if (!CB) return; const pc = G.pc; const r = Math.random(); CB.over = true;
+  const loss = Math.round(pc.hpMax * rr(0.03, 0.09)); pc.hp = Math.max(1, pc.hp - loss);
+  if (r < 0.84) { CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.bilan = `⚡ Réglé hors-champ · −${loss} ❤`; return finishCombat('win'); }
+  if (r < 0.97) { CB.partial = true; CB.bilan = `⚡ Réglé hors-champ · ils fuient · −${loss} ❤`; return finishCombat('win'); }
+  CB.bilan = ''; toast(`Ça tourne mal : tu te replies (−${loss} ❤)`); return CB.cfg.canFlee === false ? loseCombat(false) : finishCombat('flee');
+}
+function renderEasy() {
+  coach('combat'); const cfg = CB.cfg; const T = CB.thr;
+  const r = CB.foes.map(f => h('div', { class: 'fcard' }, foeIcon(f, 48) || '', h('div', { class: 'fi2' }, h('div', { class: 'fn2' }, h('b', {}, fname(f))))));
+  show({ compact: true, kicker: 'FACE À FACE', title: cfg.title || 'Un affrontement', text: [cfg.intro || '', '<span class="acc">Des adversaires à ta portée : tu peux régler ça d’un coup.</span>'].filter(Boolean), extra: h('div', {}, h('div', { class: 'pvchips' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label)), h('div', { class: 'fpv' }, r)), choices: [C('Régler d’un coup', autoResolve, { ic: '⚡', cls: 'cta', sub: 'Rapide, peu de risques, un peu moins d’XP' }), C('Combattre', engage, { ic: '⚔' })] });
+}
 function renderPreview() {
   coach('combat'); const cfg = CB.cfg; const T = CB.thr;
   const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);
