@@ -2635,8 +2635,9 @@ function dealCard() {
 function missionCard() { if (G.pc.flags.stage === 'story') return deedCard(); contractCard(); }
 // Les contrats font partie du fil : on arrive, on choisit un contrat (ou on file), puis l'intrigue continue.
 function contractCard(arrive) {
-  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
+  const pc = G.pc; if (!pc.flags.stage || pc.flags.stage === 'contrats') { pc.flags.stage = 'story'; pc.flags.storyLeft = 3; { const sq = stoneQuestHere(); pc.flags.stoneStep = !!(sq && (G.world.stoneLv[sq.id] || 0) === 2); pc.flags.stoneOffered = false; pc.flags.ambushDone = false; pc.flags.dest = (pc.flags.dest || 0) + 1; } G.fresh = false; } const offers = getBoard().slice(); const L = []; const cp = feat('rep') ? cityPerk() : { offers: 0 }; const nShow = Math.max(1, 3 + cp.offers);
   { const po = offers.find(o => o.promo), key = G.wk + ':' + G.loc; if (po && pc.flags.promoAsked !== key) { pc.flags.promoAsked = key; const a = ARCH[po.arch]; const lead = typeof leaderName === 'function' ? leaderName(pc.faction) : 'Ta faction'; return show({ kicker: '🎖 ÉPREUVE DE GRADE', title: 'Ta faction te met à l’épreuve', text: [`Ton mérite est suffisant. ${esc(lead)} t’attendait : pour monter en grade, il faut d’abord faire tes preuves.`, ctxText(a.intro, po), `<span class="mut">${esc(a.n)} · ${stars(po.tier)} · grade à la clé</span>`], choices: [C('Relever l’épreuve', () => missionApproach(po), { cls: 'cta', ic: '🎖' })] }); } }
+  if (pc.flags.dest >= 5 && pc.flags.dest % 5 === 0 && pc.flags.factionAt !== pc.flags.dest) { pc.flags.factionAt = pc.flags.dest; return factionPoint(); }
   ensureLeads(); { const ld = (G.world.leads || {})[G.loc]; if (ld && ld.exp >= G.wk) L.push(C(`${LEAD_KINDS[ld.kind].ic} ${leadTitle(ld)}`, () => leadAct(ld), { cls: 'risk', sub: '🔴 Opportunité · ' + LEAD_KINDS[ld.kind].d })); }
   if (pc.implant) L.push(C('🔥 Contrat de chasseur Fallen (sauve ton implant)', fallenContract, { cls: 'danger', sub: `Avant le ${dateStr(pc.implant.deadline)} ou ça explose.` }));
   const promo = offers.filter(o => o.promo), rest = shuffle(offers.filter(o => !o.promo));
@@ -2672,6 +2673,15 @@ function joinCard() {
   if (!ids.length) return missionCard();
   const fid = pick(ids); const f = F[fid]; const dc = (f.secret ? 19 : 14) - Math.floor((pc.rep[fid] || 0) / 10);
   show({ kicker: f.name.toUpperCase(), title: 'On t’a remarqué', text: [`Quelqu’un de <b>${esc(f.name)}</b> t’aborde : « ${esc(f.goal)} Ça t’intéresse ? »`], choices: [C(`Les rejoindre`, () => joinFaction(fid, dc), { odds: ['charisme', dc, ['social']], ic: '🏴' }), C('Décliner', hub, { cls: 'back' })] });
+}
+
+// Point de faction : toutes les 5 destinations, on fait le point avec sa faction (ou on cherche à en rejoindre une).
+function factionPoint() {
+  const pc = G.pc; const done = () => contractCard();
+  if (pc.faction === 'civils') return show({ kicker: '🏴 POINT DE FACTION', title: 'Toujours sans camp ?', text: ['Tu voyages seul depuis un moment. Les factions recrutent, chacune à sa manière : une affiliation ouvre des contrats, des alliés et un grade.'], choices: [C('Voir les factions qui recrutent', () => parkOpen(joinMenu), { ic: '🏴', cls: 'cta' }), C('Continuer vers les contrats', done, { cls: 'back' })] });
+  const f = F[pc.faction]; const nxt = MERIT_STEPS[pc.grade + 1]; const en = (typeof enemiesOf === 'function' ? enemiesOf(pc.faction) : []).slice(0, 2).map(x => F[x] ? F[x].name : x);
+  const lines = [`${esc(leaderName(pc.faction))} te demande des nouvelles. Grade : <b>${esc(gradeName())}</b> ${'★'.repeat(pc.grade)}${nxt ? ` · mérite ${pc.merit}/${nxt}` : ''}.`, en.length ? `Fronts ouverts : ${esc(en.join(', '))}.` : '', pc.grade >= 1 ? 'Le conseil se réunit : tu peux y peser sur les décisions.' : 'Recrue : encore sans voix au conseil.'].filter(Boolean);
+  show({ kicker: '🏴 POINT DE FACTION', title: f.name, text: lines, choices: [C('Ouvrir le tableau de faction', () => { addRep(pc.faction, 2, { spill: false }); parkOpen(factionMenu); }, { ic: '🏴', cls: 'cta', sub: 'Conseil, relations, grade, escouade. +2 réputation.' }), C('Continuer vers les contrats', done, { cls: 'back' })] });
 }
 
 // ───────── Mode libre : scénario général aléatoire (sans la timeline d'Ora) ─────────
