@@ -9,6 +9,8 @@ function warMonth() {
   // ruptures et trêves : le monde ne reste jamais calme
   if (chance(0.22)) { const a = pick(ids), b = pick(ids.filter(x => x !== a)); if (b && relation(a, b) > -2) { setRel(a, b, -2); warLog(`Rupture entre ${F[a].name} et ${F[b].name} : les hostilités commencent.`); } }
   if (chance(0.05)) { const hot = Object.keys(W.war).filter(k => W.war[k] > 6); if (hot.length) { const [a, b] = pick(hot).split('|'); setRel(a, b, 0); delete W.war[warKey(a, b)]; warLog(`Trêve fragile entre ${F[a].name} et ${F[b].name}.`); } }
+  // plus tu as de pierres, plus tes ennemis déclarent la guerre à ta faction
+  { const n = stoneCount(), pf = G.pc.faction; if (n >= 2 && pf !== 'civils' && F[pf] && chance(Math.min(0.3, 0.03 * n))) { const foes = WAR_FAC().filter(x => F[x] && x !== pf && relation(pf, x) <= 0 && relation(pf, x) > -2); if (foes.length) { const e = pick(foes); setRel(pf, e, -2); warLog(`${F[e].name} déclare la guerre à ${F[pf].name} : la rumeur de tes pierres antiques les rend avides.`); } } }
   // affrontements : 2 à 4 par mois
   const pairs = []; ids.forEach(a => enemiesOf(a).forEach(b => { if (a < b) pairs.push([a, b]); }));
   for (let i = 0; i < Math.min(pairs.length, rint(2, 4)); i++) {

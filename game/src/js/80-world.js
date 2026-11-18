@@ -29,7 +29,7 @@ function monthTick() {
   if (chance(0.5)) monthNews();
   // menace sur les pierres
   const n = stoneCount();
-  if (n > 0 && chance(Math.min(0.4, 0.06 + 0.025 * n)) && !pc.flags.cap) queue('stoneRaid');
+  if (n > 0 && G.wk - (pc.flags.raidWk == null ? -99 : pc.flags.raidWk) >= 12 && chance(Math.min(0.16, 0.015 + 0.011 * n)) && !pc.flags.cap) { pc.flags.raidWk = G.wk; queue('stoneRaid'); } // rare : au plus un raid par trimestre
   if (n >= 6 && W.era !== 'newera' && chance(0.12)) queue('neo');
   // conseil de faction
   if (pc.grade >= 1 && pc.faction !== 'civils' && !pc.flags.cap && chance(0.55)) queue('council');
