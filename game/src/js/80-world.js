@@ -16,6 +16,8 @@ function monthTick() {
     a.loy = clamp(a.loy + PK('bond') + (hasRole('leader') ? 2 : 0) + rint(-3, 2) + ((pc.rep[CH[a.id].faction] || 0) < -30 ? -4 : 0), 0, 100);
     if (a.loy <= 12) { const c = CH[a.id]; removeAlly(a.id); newsPush(`${c.name} a quitté ton groupe.`); logEntry(`${c.name} t'a quitté.`); if (chance(0.3) && isAnti(c.faction) === false && wantedStars() > 0) { pc.flags.betrayed = (pc.flags.betrayed || 0) + 1; addHeat(8); logEntry(`${c.name} t'a vendu à la F.A.`); newsPush(`Une dénonciation vise un fugitif.`); } }
   });
+  // retraite du chef : si tu es Bras droit et que tu attends, il peut passer la main
+  if (pc.faction !== 'civils' && pc.grade === 4 && pc.flags.awaitRetire && W.leader[pc.faction] && W.leader[pc.faction] !== 'pc' && chance(0.14) && !pc.flags.cap) queue('retraiteChef');
   // implant
   if (pc.implant && G.wk >= pc.implant.deadline - 2 && !pc.flags.capnote) { queue('implant'); }
   // captivité : exécution / vente
