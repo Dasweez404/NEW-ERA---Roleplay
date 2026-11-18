@@ -72,8 +72,8 @@ function addHeat(n, lines) {
   if (lines) { if (s1 > s0) lines.push({ t: `Ta prime augmente : ${starStr(s1)} — ${WANTED_TXT[s1]}`, c: 'badc' }); else if (s1 < s0) lines.push({ t: `Ta prime baisse : ${s1 ? starStr(s1) : 'plus de prime'}`, c: 'good' }); }
 }
 // Points de compétence : le k-ᵉ point demande de plus en plus d'XP (80 + 18 par point déjà gagné, cumulés)
-const lvlFromXp = xp => { let k = 0, need = 0; while (k < 80) { need += 80 + 18 * k; if (xp < need) break; k++; } return k; };
-function addXp(n) { const pc = G.pc; const o = lvlFromXp(pc.xp); pc.xp += n; pc.pts += lvlFromXp(pc.xp) - o; }
+const lvlFromXp = xp => { let k = 0, need = 0; while (k < 80) { need += 110 + 40 * k; if (xp < need) break; k++; } return k; };
+function addXp(n) { const pc = G.pc; const o = lvlFromXp(pc.xp); n = Math.max(1, Math.round(n * clamp(1 - 0.012 * o, 0.55, 1))); pc.xp += n; pc.pts += lvlFromXp(pc.xp) - o; }
 
 function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
@@ -102,6 +102,7 @@ function gainStone(id) {
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
   recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 2);
+  { const W = G.world; W.stoneLv = W.stoneLv || {}; const nx = DATA.stones.filter(x => !pc.stones[x.id] && (W.stoneLv[x.id] || 0) < 2 && W.stoneLoc[x.id] !== G.loc); if (nx.length) { const t = pick(nx); W.stoneLv[t.id] = 2; W.stoneClue[t.id] = true; L.push({ t: `💎 La pierre résonne : celle de ${t.name} se trouve vers ${capName(W.stoneLoc[t.id])}.`, c: 'acc' }); } }
   const n = stoneCount(); if (n === 4) L.push({ t: '🌟 Résonance : 4 pierres — +1 à tous les attributs.', c: 'acc' });
   if (n === 8) L.push({ t: '🌟 Aura : 8 pierres — tes pouvoirs s’éveillent plus facilement et sans risque.', c: 'acc' });
   if (n === 12) L.push({ t: '⚠️ Convergence : 12 pierres — le Panthéon et Néo te traquent désormais.', c: 'warnc' });

@@ -4,7 +4,7 @@
 // Ta catégorie (Offensif, Défensif, Technique, Soutien) donne leur forme aux gestes.
 
 // Puissance : UNE seule échelle (1 à 10) tirée de la somme des attributs (étoiles + progression + pierres) et un peu du matériel.
-function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const sum = ATTRS.reduce((t, x) => t + A(x.id), 0); return clamp(sum / 5.6 + 0.12 * ((w ? w.dmg : 0) + (a ? a.def : 0)), 1, 10); }
+function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const sum = ATTRS.reduce((t, x) => t + A(x.id), 0); return clamp(sum / 5.6 + 0.09 * ((w ? w.dmg : 0) + (a ? a.def : 0)), 1, 10); }
 function pcLevel() { return clamp(Math.round(pcPower()), 1, 8); }
 // Équipe : rendements décroissants. 0 allié = 0, 1 ≈ 0,30, 3 ≈ 0,66, 6 ≈ 0,88.
 const teamF = n => 1 - Math.pow(0.7, Math.max(0, n));

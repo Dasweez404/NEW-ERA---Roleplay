@@ -943,7 +943,7 @@ const FA_UNITS = {
 const rankStr = g => g > 0 ? '▲'.repeat(g) : '△';
 
 // Durée de partie : cartes d'histoire par destination, mérite requis, déblocage des pierres et des actes
-const LENS = { court: { n: 'Courte', c: 2, m: 0.75, u: 30, a2: 18, a3: 50 }, normal: { n: 'Normale', c: 3, m: 0.88, u: 35, a2: 24, a3: 60 }, long: { n: 'Longue', c: 3, m: 1, u: 40, a2: 28, a3: 70 } };
+const LENS = { court: { n: 'Courte', c: 1, m: 0.75, u: 30, a2: 18, a3: 50 }, normal: { n: 'Normale', c: 2, m: 0.88, u: 35, a2: 24, a3: 60 }, long: { n: 'Longue', c: 3, m: 1, u: 40, a2: 28, a3: 70 } };
 const lenKey = () => (typeof G !== 'undefined' && G && G.settings && G.settings.len) || (typeof UI !== 'undefined' && UI.len) || 'normal';
 const LEN = () => LENS[lenKey()] || LENS.normal;
 function applyLen() { const m = LEN().m; MERIT_BASE.forEach((v, i) => { MERIT_STEPS[i] = Math.round(v * m); }); }
@@ -1100,8 +1100,8 @@ function charToSpec(c) {
 function stoneCount() { return Object.keys(G.pc.stones).length; }
 function A(id) {
   const pc = G.pc; let v = pc.attrs[id] || 0;
-  for (const sid in pc.stones) if (STONE_ATTR[sid] === id) v++;
-  const n = stoneCount(); if (n >= 4) v += 1; if (n >= 8) v += 1;
+  { let k = 0; for (const sid in pc.stones) if (STONE_ATTR[sid] === id) k++; v += Math.ceil(k * 0.5); } // rendements décroissants : la 3e pierre d'un même attribut compte moins
+  const n = stoneCount(); if (n >= 4) v += 1; // Résonance (l'Aura de 8 pierres n'ajoute plus d'attribut)
   if (pc.implant && false) v -= 0;
   return v;
 }
@@ -1226,8 +1226,8 @@ function addHeat(n, lines) {
   if (lines) { if (s1 > s0) lines.push({ t: `Ta prime augmente : ${starStr(s1)} — ${WANTED_TXT[s1]}`, c: 'badc' }); else if (s1 < s0) lines.push({ t: `Ta prime baisse : ${s1 ? starStr(s1) : 'plus de prime'}`, c: 'good' }); }
 }
 // Points de compétence : le k-ᵉ point demande de plus en plus d'XP (80 + 18 par point déjà gagné, cumulés)
-const lvlFromXp = xp => { let k = 0, need = 0; while (k < 80) { need += 80 + 18 * k; if (xp < need) break; k++; } return k; };
-function addXp(n) { const pc = G.pc; const o = lvlFromXp(pc.xp); pc.xp += n; pc.pts += lvlFromXp(pc.xp) - o; }
+const lvlFromXp = xp => { let k = 0, need = 0; while (k < 80) { need += 110 + 40 * k; if (xp < need) break; k++; } return k; };
+function addXp(n) { const pc = G.pc; const o = lvlFromXp(pc.xp); n = Math.max(1, Math.round(n * clamp(1 - 0.012 * o, 0.55, 1))); pc.xp += n; pc.pts += lvlFromXp(pc.xp) - o; }
 
 function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
@@ -1256,6 +1256,7 @@ function gainStone(id) {
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
   recalc(); pc.hp = Math.min(pc.hpMax, pc.hp + 4); pc.en = Math.min(pc.enMax, pc.en + 2);
+  { const W = G.world; W.stoneLv = W.stoneLv || {}; const nx = DATA.stones.filter(x => !pc.stones[x.id] && (W.stoneLv[x.id] || 0) < 2 && W.stoneLoc[x.id] !== G.loc); if (nx.length) { const t = pick(nx); W.stoneLv[t.id] = 2; W.stoneClue[t.id] = true; L.push({ t: `💎 La pierre résonne : celle de ${t.name} se trouve vers ${capName(W.stoneLoc[t.id])}.`, c: 'acc' }); } }
   const n = stoneCount(); if (n === 4) L.push({ t: '🌟 Résonance : 4 pierres — +1 à tous les attributs.', c: 'acc' });
   if (n === 8) L.push({ t: '🌟 Aura : 8 pierres — tes pouvoirs s’éveillent plus facilement et sans risque.', c: 'acc' });
   if (n === 12) L.push({ t: '⚠️ Convergence : 12 pierres — le Panthéon et Néo te traquent désormais.', c: 'warnc' });
@@ -2294,7 +2295,7 @@ function foeSpecialChips(f) { return (f.sp || []).map(s => ANTI[s] ? h('span', {
 // Ta catégorie (Offensif, Défensif, Technique, Soutien) donne leur forme aux gestes.
 
 // Puissance : UNE seule échelle (1 à 10) tirée de la somme des attributs (étoiles + progression + pierres) et un peu du matériel.
-function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const sum = ATTRS.reduce((t, x) => t + A(x.id), 0); return clamp(sum / 5.6 + 0.12 * ((w ? w.dmg : 0) + (a ? a.def : 0)), 1, 10); }
+function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const sum = ATTRS.reduce((t, x) => t + A(x.id), 0); return clamp(sum / 5.6 + 0.09 * ((w ? w.dmg : 0) + (a ? a.def : 0)), 1, 10); }
 function pcLevel() { return clamp(Math.round(pcPower()), 1, 8); }
 // Équipe : rendements décroissants. 0 allié = 0, 1 ≈ 0,30, 3 ≈ 0,66, 6 ≈ 0,88.
 const teamF = n => 1 - Math.pow(0.7, Math.max(0, n));
@@ -2806,8 +2807,10 @@ function hub() {
 // Niveau gagné : on dépense le point tout de suite, devant toi.
 const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
 // Points à répartir : exigés seulement s'ils n'ont pas été remis à plus tard pour cette destination
-const ptsDue = () => { const pc = G.pc; if (pc.pts > 0 && ATTRS.every(a => pc.attrs[a.id] >= 12)) pc.pts = 0; return pc.pts > 0 && (pc.flags.ptsHold === undefined || pc.flags.ptsHold !== (pc.flags.dest || 0)); };
-function autoPoints() { const pc = G.pc; const pref = ['corps', 'agilite', 'intellect', 'charisme', 'maitrise'].filter(a => pc.attrs[a] !== undefined); let g = 0; while (pc.pts > 0 && g++ < 200) { const open = ATTRS.filter(a => pc.attrs[a.id] < 12); if (!open.length) { pc.pts = 0; break; } open.sort((a, b) => pc.attrs[a.id] - pc.attrs[b.id]); pc.attrs[open[0].id]++; pc.pts--; } recalc(); }
+const ptsCost = id => (G.pc.attrs[id] >= 9 ? 2 : 1); // au-delà de 9, un attribut coûte 2 points
+const ptsCan = () => ATTRS.some(a => G.pc.attrs[a.id] < 12 && G.pc.pts >= ptsCost(a.id));
+const ptsDue = () => { const pc = G.pc; if (pc.pts > 0 && ATTRS.every(a => pc.attrs[a.id] >= 12)) pc.pts = 0; return pc.pts > 0 && ptsCan() && (pc.flags.ptsHold === undefined || pc.flags.ptsHold !== (pc.flags.dest || 0)); };
+function autoPoints() { const pc = G.pc; const pref = ['corps', 'agilite', 'intellect', 'charisme', 'maitrise'].filter(a => pc.attrs[a] !== undefined); let g = 0; while (pc.pts > 0 && g++ < 200) { const open = ATTRS.filter(a => pc.attrs[a.id] < 12 && pc.pts >= ptsCost(a.id)); if (!open.length) break; open.sort((a, b) => pc.attrs[a.id] - pc.attrs[b.id]); const c = ptsCost(open[0].id); pc.attrs[open[0].id]++; pc.pts -= c; } recalc(); }
 function spendPoints(cont) {
   const pc = G.pc; if (!ptsDue() && !(cont && cont.force)) return cont ? cont() : hub();
   const total = pc.pts; let done = false; if (UI.scene && !UI.scene.noLevel) UI.lvlPrev = UI.scene; // pour « Revenir en arrière » après le gain de niveau
@@ -2817,9 +2820,9 @@ function spendPoints(cont) {
     const [ic, col] = ATTR_LOOK[a.id] || ['◆', '#fcee09']; const pips = h('div', { class: 'lvpips' }); const val = h('b', { class: 'lvval' });
     const draw = (pop) => { pips.innerHTML = ''; const v = A(a.id); for (let i = 0; i < 12; i++) pips.append(h('i', { class: 'lvp' + (i < v ? ' on' : '') + (pop && i === v - 1 ? ' pop' : '') + (i === v && pc.pts > 0 && v < 12 ? ' nx' : '') })); val.textContent = String(v); };
     const card = h('button', { class: 'lvcard', style: `--c:${col};--d:${idx * 70}ms`, onclick: () => {
-      if (done || pc.pts <= 0 || pc.attrs[a.id] >= 12) return; pc.attrs[a.id]++; pc.pts--; recalc(); sfx('win'); buzz(18); draw(true); drawGems(); burstAt(card, col, 26); card.classList.remove('hit'); void card.offsetWidth; card.classList.add('hit');
-      cards.querySelectorAll('.lvcard').forEach(c => c.classList.toggle('dim', pc.pts <= 0));
-      if (pc.pts <= 0) { done = true; head.classList.add('fin'); head.querySelector('.lvsub').textContent = 'Parfait. Ton personnage progresse.'; flash('#fcee09'); sfx('crit'); setTimeout(() => { cont ? cont() : hub(); }, 1100); }
+      const cost = ptsCost(a.id); if (done || pc.pts < cost || pc.attrs[a.id] >= 12) { if (!done && pc.pts >= 1 && pc.pts < cost) toast('Au-delà de 9, il faut 2 points'); return; } pc.attrs[a.id]++; pc.pts -= cost; recalc(); sfx('win'); buzz(18); draw(true); drawGems(); burstAt(card, col, 26); card.classList.remove('hit'); void card.offsetWidth; card.classList.add('hit');
+      cards.querySelectorAll('.lvcard').forEach(c => c.classList.toggle('dim', !ptsCan()));
+      if (!ptsCan()) { done = true; head.classList.add('fin'); head.querySelector('.lvsub').textContent = 'Parfait. Ton personnage progresse.'; flash('#fcee09'); sfx('crit'); setTimeout(() => { cont ? cont() : hub(); }, 1100); }
     } }, h('span', { class: 'lvic' }, ic), h('span', { class: 'lvmid' }, h('span', { class: 'lvname' }, a.name), h('span', { class: 'lvdesc' }, a.desc), pips), val, h('span', { class: 'lvplusb' }, '＋'));
     draw(false); return card;
   }));
@@ -4191,7 +4194,7 @@ function ctlRes(r, ok, ko) {
 // ───────── Événements aléatoires ─────────
 function randomTravelEvent() {
   if (!chance(0.32)) return null;
-  const pool = [{ w: 3, f: climateEvent }, { w: 3, f: () => banditEvent() }, { w: 2, f: () => randomHubEvent(true) }, { w: 2, f: () => meetEvent() }];
+  const pool = [{ w: 3, f: climateEvent }, { w: 3, f: () => banditEvent() }, { w: 2, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else contractCard(); } }, { w: 2, f: () => meetEvent() }];
   const e = wpick(pool, x => x.w); return e.f;
 }
 function climateEvent() {
@@ -4230,7 +4233,7 @@ function arenaInvite() {
 
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; const sc0 = stoneCount(); if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < (sc0 >= 6 ? 0 : sc0 >= 3 ? 1 : 2)) return null; // plus tu as de pierres, plus les pistes affluent
+  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; const sc0 = stoneCount(); if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < (sc0 >= 3 ? 0 : sc0 >= 1 ? 1 : 2)) return null; // plus tu as de pierres, plus les pistes affluent
   { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 3 + Math.floor(stoneCount() / 3)) return null; }
   const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
   const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);

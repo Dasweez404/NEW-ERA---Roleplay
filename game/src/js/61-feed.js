@@ -18,8 +18,10 @@ function hub() {
 // Niveau gagné : on dépense le point tout de suite, devant toi.
 const ATTR_LOOK = { corps: ['💪', '#ff6a3d'], agilite: ['⚡', '#5be3a0'], intellect: ['🧠', '#27f0ff'], charisme: ['🎭', '#ff3d7f'], maitrise: ['✦', '#b026ff'] };
 // Points à répartir : exigés seulement s'ils n'ont pas été remis à plus tard pour cette destination
-const ptsDue = () => { const pc = G.pc; if (pc.pts > 0 && ATTRS.every(a => pc.attrs[a.id] >= 12)) pc.pts = 0; return pc.pts > 0 && (pc.flags.ptsHold === undefined || pc.flags.ptsHold !== (pc.flags.dest || 0)); };
-function autoPoints() { const pc = G.pc; const pref = ['corps', 'agilite', 'intellect', 'charisme', 'maitrise'].filter(a => pc.attrs[a] !== undefined); let g = 0; while (pc.pts > 0 && g++ < 200) { const open = ATTRS.filter(a => pc.attrs[a.id] < 12); if (!open.length) { pc.pts = 0; break; } open.sort((a, b) => pc.attrs[a.id] - pc.attrs[b.id]); pc.attrs[open[0].id]++; pc.pts--; } recalc(); }
+const ptsCost = id => (G.pc.attrs[id] >= 9 ? 2 : 1); // au-delà de 9, un attribut coûte 2 points
+const ptsCan = () => ATTRS.some(a => G.pc.attrs[a.id] < 12 && G.pc.pts >= ptsCost(a.id));
+const ptsDue = () => { const pc = G.pc; if (pc.pts > 0 && ATTRS.every(a => pc.attrs[a.id] >= 12)) pc.pts = 0; return pc.pts > 0 && ptsCan() && (pc.flags.ptsHold === undefined || pc.flags.ptsHold !== (pc.flags.dest || 0)); };
+function autoPoints() { const pc = G.pc; const pref = ['corps', 'agilite', 'intellect', 'charisme', 'maitrise'].filter(a => pc.attrs[a] !== undefined); let g = 0; while (pc.pts > 0 && g++ < 200) { const open = ATTRS.filter(a => pc.attrs[a.id] < 12 && pc.pts >= ptsCost(a.id)); if (!open.length) break; open.sort((a, b) => pc.attrs[a.id] - pc.attrs[b.id]); const c = ptsCost(open[0].id); pc.attrs[open[0].id]++; pc.pts -= c; } recalc(); }
 function spendPoints(cont) {
   const pc = G.pc; if (!ptsDue() && !(cont && cont.force)) return cont ? cont() : hub();
   const total = pc.pts; let done = false; if (UI.scene && !UI.scene.noLevel) UI.lvlPrev = UI.scene; // pour « Revenir en arrière » après le gain de niveau
@@ -29,9 +31,9 @@ function spendPoints(cont) {
     const [ic, col] = ATTR_LOOK[a.id] || ['◆', '#fcee09']; const pips = h('div', { class: 'lvpips' }); const val = h('b', { class: 'lvval' });
     const draw = (pop) => { pips.innerHTML = ''; const v = A(a.id); for (let i = 0; i < 12; i++) pips.append(h('i', { class: 'lvp' + (i < v ? ' on' : '') + (pop && i === v - 1 ? ' pop' : '') + (i === v && pc.pts > 0 && v < 12 ? ' nx' : '') })); val.textContent = String(v); };
     const card = h('button', { class: 'lvcard', style: `--c:${col};--d:${idx * 70}ms`, onclick: () => {
-      if (done || pc.pts <= 0 || pc.attrs[a.id] >= 12) return; pc.attrs[a.id]++; pc.pts--; recalc(); sfx('win'); buzz(18); draw(true); drawGems(); burstAt(card, col, 26); card.classList.remove('hit'); void card.offsetWidth; card.classList.add('hit');
-      cards.querySelectorAll('.lvcard').forEach(c => c.classList.toggle('dim', pc.pts <= 0));
-      if (pc.pts <= 0) { done = true; head.classList.add('fin'); head.querySelector('.lvsub').textContent = 'Parfait. Ton personnage progresse.'; flash('#fcee09'); sfx('crit'); setTimeout(() => { cont ? cont() : hub(); }, 1100); }
+      const cost = ptsCost(a.id); if (done || pc.pts < cost || pc.attrs[a.id] >= 12) { if (!done && pc.pts >= 1 && pc.pts < cost) toast('Au-delà de 9, il faut 2 points'); return; } pc.attrs[a.id]++; pc.pts -= cost; recalc(); sfx('win'); buzz(18); draw(true); drawGems(); burstAt(card, col, 26); card.classList.remove('hit'); void card.offsetWidth; card.classList.add('hit');
+      cards.querySelectorAll('.lvcard').forEach(c => c.classList.toggle('dim', !ptsCan()));
+      if (!ptsCan()) { done = true; head.classList.add('fin'); head.querySelector('.lvsub').textContent = 'Parfait. Ton personnage progresse.'; flash('#fcee09'); sfx('crit'); setTimeout(() => { cont ? cont() : hub(); }, 1100); }
     } }, h('span', { class: 'lvic' }, ic), h('span', { class: 'lvmid' }, h('span', { class: 'lvname' }, a.name), h('span', { class: 'lvdesc' }, a.desc), pips), val, h('span', { class: 'lvplusb' }, '＋'));
     draw(false); return card;
   }));

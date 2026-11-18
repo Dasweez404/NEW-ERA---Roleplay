@@ -150,8 +150,8 @@ function charToSpec(c) {
 function stoneCount() { return Object.keys(G.pc.stones).length; }
 function A(id) {
   const pc = G.pc; let v = pc.attrs[id] || 0;
-  for (const sid in pc.stones) if (STONE_ATTR[sid] === id) v++;
-  const n = stoneCount(); if (n >= 4) v += 1; if (n >= 8) v += 1;
+  { let k = 0; for (const sid in pc.stones) if (STONE_ATTR[sid] === id) k++; v += Math.ceil(k * 0.5); } // rendements décroissants : la 3e pierre d'un même attribut compte moins
+  const n = stoneCount(); if (n >= 4) v += 1; // Résonance (l'Aura de 8 pierres n'ajoute plus d'attribut)
   if (pc.implant && false) v -= 0;
   return v;
 }

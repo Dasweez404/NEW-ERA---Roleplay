@@ -159,7 +159,7 @@ function ctlRes(r, ok, ko) {
 // ───────── Événements aléatoires ─────────
 function randomTravelEvent() {
   if (!chance(0.32)) return null;
-  const pool = [{ w: 3, f: climateEvent }, { w: 3, f: () => banditEvent() }, { w: 2, f: () => randomHubEvent(true) }, { w: 2, f: () => meetEvent() }];
+  const pool = [{ w: 3, f: climateEvent }, { w: 3, f: () => banditEvent() }, { w: 2, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else contractCard(); } }, { w: 2, f: () => meetEvent() }];
   const e = wpick(pool, x => x.w); return e.f;
 }
 function climateEvent() {

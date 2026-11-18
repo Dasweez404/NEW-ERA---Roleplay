@@ -1,6 +1,6 @@
 // ───────── Pierres antiques : enquête, temples, détenteurs ─────────
 function stoneClueGain() {
-  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; const sc0 = stoneCount(); if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < (sc0 >= 6 ? 0 : sc0 >= 3 ? 1 : 2)) return null; // plus tu as de pierres, plus les pistes affluent
+  const W = G.world; W.stoneLv = W.stoneLv || {}; const fl = G.pc.flags; if (!stonesUnlocked()) return null; const sc0 = stoneCount(); if (G.wk - (fl.clueWk == null ? -99 : fl.clueWk) < (sc0 >= 3 ? 0 : sc0 >= 1 ? 1 : 2)) return null; // plus tu as de pierres, plus les pistes affluent
   { const act = DATA.stones.filter(s => !G.pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).length; if (act >= 3 + Math.floor(stoneCount() / 3)) return null; }
   const lvOf = id => W.stoneLv[id] || (W.stoneClue[id] ? 1 : 0); const rest = DATA.stones.filter(s => !G.pc.stones[s.id]);
   const unk = rest.filter(s => !lvOf(s.id)), deep = rest.filter(s => lvOf(s.id) >= 1 && lvOf(s.id) < 3);
