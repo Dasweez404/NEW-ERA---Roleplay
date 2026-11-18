@@ -51,12 +51,12 @@ function shopMenu() {
   ids.forEach(id => {
     const it = ITEMS[id]; const blk = isBlackItem(id); const price = shopPrice(id); const own = pc.inv[id] || 0; const eq = pc.eq.arme === id || pc.eq.armure === id; const st = itemStat(it);
     const q = it.stack && !steal ? (SHOP.qty || 1) : 1; const label = `${blk ? '🕶 ' : ''}${it.n}${own ? ' ×' + own : ''}${q > 1 ? ' (+' + q + ')' : ''}`; const sub = `${steal ? 'voler' : price * q + ' ¢'}${st ? ' · ' + st : ''}${eq ? ' · équipé' : ''} — ${it.desc}`;
-    if (steal) L.push(C(label, () => stealItem(id), { sub, odds: ['agilite', stealDc(id), ['stealth', 'disguise']], cls: 'risk', req: { ok: () => blk ? 'Pas de vol au Marché Noir' : null } }));
-    else L.push(C(label, () => buy(id, price, q), { sub, req: { money: price * q, ok: () => (blk && !bok) ? 'Marché Noir : 10 de réputation requise' : null } }));
+    if (steal) L.push(C(label, () => stealItem(id), { sub, odds: ['agilite', stealDc(id), ['stealth', 'disguise']], cls: 'risk', req: { ok: () => blk ? 'Pas de vol au Marché Noir' : (it.t !== 'vehicule' && invFree() < 1) ? 'Sac plein' : null } }));
+    else L.push(C(label, () => buy(id, price, q), { sub, req: { money: price * q, ok: () => (blk && !bok) ? 'Marché Noir : 10 de réputation requise' : (ITEMS[id].t !== 'vehicule' && invFree() < q) ? 'Sac plein (' + invCount() + '/' + invCap() + ')' : null } }));
   });
   L.push(C('Vendre', sellMenu, { ic: '💰', req: { ok: () => Object.keys(pc.inv).length ? null : 'Rien à vendre' } }));
   L.push(C('← Retour', cityBack, { cls: 'back' }));
-  show({ kicker: 'MARCHÉ', title: steal ? 'Mode vol' : 'Marché', text: [`<b>${fmt(pc.money)} ¢</b>${bok ? '' : ' · 🕶 articles du Marché Noir verrouillés (10 de réputation)'}${steal ? ' · <b class="badc">discret et risqué</b>' : ''}`], extra: bar, choices: L, tiles: true, tileCls: 'shop' });
+  show({ kicker: 'MARCHÉ', title: steal ? 'Mode vol' : 'Marché', text: [`<b>${fmt(pc.money)} ¢</b> · 🎒 ${invCount()}/${invCap()}${bok ? '' : ' · 🕶 articles du Marché Noir verrouillés (10 de réputation)'}${steal ? ' · <b class="badc">discret et risqué</b>' : ''}`], extra: bar, choices: L, tiles: true, tileCls: 'shop' });
 }
 function equipIfFree(id) { const pc = G.pc, it = ITEMS[id]; if ((it.t === 'arme' && !pc.eq.arme) || (it.t === 'armure' && !pc.eq.armure)) { pc.eq[it.t === 'arme' ? 'arme' : 'armure'] = id; return true; } return false; }
 function buy(id, price, q = 1) {

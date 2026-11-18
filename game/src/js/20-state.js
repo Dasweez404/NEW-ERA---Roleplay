@@ -80,7 +80,17 @@ function initWorld() {
   return W;
 }
 
-function giveItem(id, n = 1) { G.pc.inv[id] = (G.pc.inv[id] || 0) + n; }
+// Limite d'inventaire : 10 + 2 par grade + 4 avec une planque/QG (les véhicules ne comptent pas)
+const invCount = () => Object.keys(G.pc.inv).reduce((a, id) => a + ((typeof ITEMS !== 'undefined' && ITEMS[id] && ITEMS[id].t === 'vehicule') ? 0 : G.pc.inv[id]), 0);
+const invCap = () => { const pc = G.pc; return 10 + 2 * (pc.grade || 0) + ((pc.base && pc.base.city) ? 2 * (pc.base.lvl || 1) : 0); };
+const invFree = () => Math.max(0, invCap() - invCount());
+function giveItem(id, n = 1) {
+  const veh = typeof ITEMS !== 'undefined' && ITEMS[id] && ITEMS[id].t === 'vehicule';
+  const k = veh || !G.pc.flags ? n : Math.min(n, invFree());
+  if (k > 0) G.pc.inv[id] = (G.pc.inv[id] || 0) + k;
+  if (k < n && typeof toast === 'function') toast('🎒 Sac plein : ' + (n - k > 1 ? (n - k) + ' objets laissés' : 'objet laissé'));
+  return k;
+}
 function hasItem(id) { return (G.pc.inv[id] || 0) > 0; }
 function takeItem(id, n = 1) { if (!hasItem(id)) return false; G.pc.inv[id] -= n; if (G.pc.inv[id] <= 0) delete G.pc.inv[id]; return true; }
 
