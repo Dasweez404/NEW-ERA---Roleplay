@@ -104,7 +104,7 @@ function finishCombat(kind) {
   const cfg = CB.cfg; const pc = G.pc; const awoke = CB.wasAwake; const free = stoneCount() >= 8; const rage = CB.rage;
   if (CB.rage && !free) { pc.en = 0; }
   const bil = CB.bilan; const rounds = CB.N; const partial = !!CB.partial; const thr = CB.thr || { mul: 1 }; const tier = CB.tier; const foes = CB.foes; const bm = CB.bonusMoney || 0, bx = CB.bonusXp, bl = CB.bonusLoot, bq = CB.quiet; CB = null;
-  if (kind === 'flee') { G.score.fled = (G.score.fled || 0) + 1; return cfg.onFlee ? cfg.onFlee() : hub(); }
+  if (kind === 'flee') { G.score.fled = (G.score.fled || 0) + 1; G.pc.flags.escW = G.wk; return cfg.onFlee ? cfg.onFlee() : hub(); }
   G.score.wins = (G.score.wins || 0) + 1;
   const xp = Math.round(foes.reduce((t, f) => t + f.hpMax / 3, 0) * thr.mul * (partial ? 0.5 : 1));
   const L = fx(Object.assign({ xp: xp * (bx ? 2 : 1) }, cfg.loot || {}, bm ? { money: ((cfg.loot || {}).money || 0) + bm } : {}, bl ? { item: { capsule: 1 } } : {}));

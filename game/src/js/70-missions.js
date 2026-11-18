@@ -73,7 +73,7 @@ function genOffer(emp, tier, opts = {}) {
   return o;
 }
 const ROLE_ARCH = { eclaireur: ['fouille', 'enquete'], combattant: ['prime', 'defense'], artilleur: ['prime', 'defense'], leader: ['liberation', 'defense'], medecin: ['humanitaire', 'climat'], ingenieur: ['sabotage', 'course'], costumier: ['infiltration', 'propagande'], hacker: ['infiltration', 'enquete', 'propagande'], gardien: ['escorte', 'defense'], logisticien: ['contrebande', 'escorte', 'humanitaire'], strategiste: ['defense', 'liberation'] };
-function tiersForGrade() { const g = G.pc.grade; return [Math.max(1, g), Math.min(5, Math.max(1, g) + 1)]; }
+function tiersForGrade() { const t0 = clamp(Math.round(pcPower() - 1.8), 1, 5); return [t0, Math.min(5, t0 + 1)]; }
 function getBoard() {
   const pc = G.pc;
   if (G.board && G.board.wk === G.wk && G.board.loc === G.loc && G.board.fac === pc.faction) return G.board.offers;
@@ -143,7 +143,7 @@ function resolveApproach(o, k, dc) {
   if (d.fail === 'chase' && r.total >= r.dc - 3) return missionFail(o, [...L, 'Tu t’en sors de justesse en lâchant la mission.'], { partial: true });
   const foes = o.tgt === 'fa' ? foesFor('fa', Math.min(5, tiers), nFoes) : foesFor(o.tgt, Math.min(5, tiers), nFoes);
   show({ kicker: 'Complication', title: 'Ça tourne mal', text: [...L, 'On te tombe dessus !'], choices: [C('Se battre', () => startCombat({ title: 'Contre-attaque', foes, intro: 'L’alerte est donnée : ils foncent sur toi.', lethal: lethalOf(o.tgt), canFlee: true,
-    onWin: (L2) => finishMission(o, 'partial', ['Tu t’en sors en les battant. La mission est à moitié réussie.'], L2), onFlee: () => missionFail(o, ['Tu prends la fuite : mission ratée.'], { fled: true }) })), C('Tenter de fuir', () => { const rf = check('agilite', 11 + tiers * 2, ['mobility']); if (rf.ok) missionFail(o, ['Tu t’échappes de justesse. Mission ratée.'], { fled: true }); else startCombat({ title: 'Pris en chasse', foes, intro: 'Tu n’as pas pu les semer.', lethal: lethalOf(o.tgt), canFlee: false, onWin: (L2) => finishMission(o, 'partial', ['Tu les as finalement battus.'], L2) }); })] });
+    onWin: (L2) => finishMission(o, 'partial', ['Tu t’en sors en les battant. La mission est à moitié réussie.'], L2), onFlee: () => missionFail(o, ['Tu prends la fuite : mission ratée.'], { fled: true }) })), C('Tenter de fuir', () => { const rf = check('agilite', 11 + tiers * 2, ['mobility']); if (rf.ok) { G.pc.flags.escW = G.wk; missionFail(o, ['Tu t’échappes de justesse. Mission ratée.'], { fled: true }); } else startCombat({ title: 'Pris en chasse', foes, intro: 'Tu n’as pas pu les semer.', lethal: lethalOf(o.tgt), canFlee: false, onWin: (L2) => finishMission(o, 'partial', ['Tu les as finalement battus.'], L2) }); })] });
 }
 function lethalOf(fid) { return { fa: 'capture', fallen: 'capture', arena: 'capture', check: 'robbed', noir: 'robbed', slummer: 'robbed', galleon: 'robbed', manacorp: 'capture', gamma: 'capture', saibogu: 'capture', omega: 'capture', necropunks: 'death', ragnaroks: 'death', optimum: 'death', committed: 'robbed' }[fid] || 'robbed'; }
 function missionFail(o, lines, f = {}) {

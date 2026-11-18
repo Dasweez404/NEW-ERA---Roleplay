@@ -48,7 +48,8 @@ function dealCard() {
   if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
   if (pc.implant) pool.push({ w: 25, f: fallenContract });
-  conflictPool(pool); pool.push({ w: 16, f: deedCard }); lot1Pool(pool); lot2Pool(pool); storyPool(pool);
+  const calm = pc.flags.escW != null && G.wk - pc.flags.escW <= 5; // on vient de leur échapper : l'affaire est close
+  if (!calm) conflictPool(pool); pool.push({ w: 16, f: deedCard }); if (!calm) lot1Pool(pool); lot2Pool(pool); storyPool(pool);
   if (pc.flags.stage === 'story') pool = pool.filter(e => ![missionCard, townCard, travelCard, vehicleCard].includes(e.f));
   const e = wpick(pool, x => x.w); e.f();
 }
