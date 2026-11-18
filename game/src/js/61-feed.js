@@ -68,14 +68,6 @@ function contractCard(arrive) {
   L.push(C('Se faire petit', hub, { cls: 'cta', ic: '🤫' }));
   coach('contrats'); show({ arriveBanner: !!arrive, kicker: capName(G.loc).toUpperCase() + ' · CONTRATS', title: arrive ? `Arrivée à ${capName(G.loc)}` : 'Des contrats à prendre', text: [arrive || 'Des contrats à prendre ici.', cityLine()].filter(Boolean), choices: L });
 }
-function stoneCard(s) {
-  const hold = G.world.stoneHolder[s.id];
-  show({ kicker: 'PIERRE ANTIQUE', title: `La pierre de ${s.name} est ici`, text: [`Elle est ${hold === 'temple' ? 'cachée dans un temple oublié' : 'aux mains de ' + esc(holderName(hold))}, tout près de toi. Royaume ${esc(s.ruler)} — ${esc(s.spec)}.`], choices: [C('Tenter de la récupérer', () => stoneAttempt(s.id), { ic: '💎', cls: 'risk' }), C('Pas maintenant', hub, { cls: 'back' })] });
-}
-function leadCard(s) {
-  const loc = G.world.stoneLoc[s.id]; const r = otRoute(G.loc, loc); const cost = r ? r.cost : 0;
-  show({ kicker: 'PISTE', title: `La pierre de ${s.name}`, text: [`Ta piste te mène à <b>${esc(capName(loc))}</b> (${esc(stateName(loc))}) : ${esc(holderName(G.world.stoneHolder[s.id]))}.`], choices: [C(`Prendre l’Orbitrail (${cost} ¢)`, () => travelConfirm(loc), { ic: '🚆', req: { money: cost } }), C('Pas maintenant', hub, { cls: 'back' })] });
-}
 function clueCard() {
   const dc = 14 + Math.min(4, stoneCount());
   show({ kicker: 'RUMEUR', title: 'Un indice sur les pierres', text: ['Un vieux conteur, une archive piratée, une fresque effacée… quelque chose parle des seize pierres muta.'], choices: [C('Creuser la piste', () => { const r = check('intellect', dc, ['scout', 'relic'], PK('clue')); advance(1); if (G.status !== 'play') return; const l = r.ok ? stoneClueGain() : null; show({ kicker: 'PIERRES ANTIQUES', title: r.ok ? 'Une piste !' : 'Fausse piste', text: [r.ok ? (l ? esc(cap(l)) : 'Tu sais déjà tout ce qu’il y a à savoir.') : 'Rien de concluant, cette fois.'], fx: r.ok ? fx({ xp: 15 }) : [], choices: [C('Continuer', hub)] }); }, { odds: ['intellect', dc, ['scout', 'relic']], ic: '🔍' }), C('Laisser tomber', hub, { cls: 'back' })] });

@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+# fichiers générés par game/build.py (index.html reste suivi pour GitHub Pages)
+game/new-era.html
+game/new-era.artifact.html
+node_modules/

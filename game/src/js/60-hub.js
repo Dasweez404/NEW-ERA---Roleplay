@@ -1,16 +1,4 @@
 // ───────── Hub : menu principal du tour, voyage, repos, marché, recrutement, rôles, retraite ─────────
-function hubText() {
-  const pc = G.pc; const st = S[G.loc]; const t = [];
-  const era = G.world.era === 'newera' ? ' Le Nouveau Régime est tombé : le monde se reconstruit.' : G.wk >= 40 && G.world.era === 'dark' ? ' Néo règne dans l’ombre : la traque redouble.' : '';
-  t.push(`Tu es à <b>${esc(capName(G.loc))}</b>, capitale de <b>${esc(st.name)}</b> (${esc(st.countries)}). Population : ${st.pop}.${era}`);
-  const zone = ZSHORT(DATA.stateZone[G.loc]); if (zone) t.push(`<span class="mut">Zone de la Force d’Autorité : ${esc(zone)} · Contrôle : ${esc(F[G.world.terr[G.loc]] ? F[G.world.terr[G.loc]].name : G.world.terr[G.loc])}.</span>`);
-  const here = npcsHere(); if (here.length) t.push(`<span class="mut">Visages connus dans les parages : ${here.slice(0, 5).map(c => esc(c.name) + ' (' + esc(F[c.faction].name) + ')').join(', ')}.</span>`);
-  if (typeof feat === 'function' && feat('ville')) { const ce = cityEventNow().ev; t.push(`<span class="mut">Ce soir à ${esc(capName(G.loc))} : ${esc(ce.k)}.</span>`); }
-  const n = G.world.news[0]; if (n && G.wk - n.wk < 8) t.push(`<span class="acc">📰 ${esc(n.t)}</span>`);
-  if (pc.hp < pc.hpMax * 0.5) t.push('<span class="warnc">Tu es blessé : pense à te reposer.</span>');
-  if (pc.pts > 0) t.push(`<span class="acc">Tu as ${pc.pts} point(s) d’attribut à répartir (onglet Perso).</span>`);
-  return t;
-}
 function npcsHere() { return DATA.chars.filter(c => { const n = G.world.npc[c.id]; return n.alive && n.st === 'free' && n.loc === G.loc && c.faction !== 'civils'; }); }
 
 // Le menu éclair n'existe plus : « actionsMenu » ramène à la scène en cours (ou à la ville).
@@ -73,12 +61,6 @@ function travelMenu(pre) {
   const back = (UI.parked || (G.pc.flags.stage === 'ville' && G.pc.flags.cityActs > 0)) ? [C('← Retour', () => (UI.parked ? resumeScene() : cityMenu()), { cls: 'back' })] : [];
   coach('voyage'); show({ compact: true, kicker: 'Orbitrail', title: 'Où veux-tu aller ?', text: [], extra: h('div', {}, recap ? h('div', { class: 'recapbar' }, h('div', { class: 'recap-h' }, `BILAN · ${capName(recap.loc)}${recap.wks ? ' · ' + recap.wks + ' sem.' : ''}`), fxHTML(recap.chips.length ? recap.chips : [{ t: 'Rien de notable', c: '' }])) : null, h('div', { class: 'qgos' }, quick.map(c => h('button', { class: 'qgo', onclick: () => { sfx('click'); c.go(); } }, h('b', {}, '🚆 ' + c.label), h('small', {}, c.sub)))), clueRow, box, info), choices: back });
 }
-function travelList() {
-  const here = G.loc; const L = [];
-  CONT.forEach(ct => DATA.states.filter(s => s.continent === ct && s.id !== here).forEach(s => { const r = otRoute(here, s.id); L.push(C(`${s.capital} — ${s.name}`, () => travelConfirm(s.id), { sub: `${ct} · ${r.hops} arrêt(s) · ${r.cost} ¢` })); }));
-  L.push(C('← Retour', () => travelMenu())); show({ kicker: 'Orbitrail', title: 'Destinations', text: [], choices: L });
-}
-function routeText(r) { return r.legs.map(l => `ligne ${l.line} : ${OT_ST[l.from][2]} → ${OT_ST[l.to][2]}`).join(' ; '); }
 function travelConfirm(to) { travelMenu(to); }
 const haveFaux = () => (G.pc.inv.faux || 0) + (G.pc.faux || 0) > 0, haveBrouil = () => (G.pc.inv.brouilleur || 0) + (G.pc.brouil || 0) > 0;
 const pc_hasFaux = haveFaux;
@@ -119,9 +101,6 @@ function travelGo(to, r, weeks) {
     const ev = randomTravelEvent(); if (ev) return ev();
     contractCard(used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : 'Le train glisse sans histoire.');
   });
-}
-function travelHover() {
-  show({ kicker: 'Scout-hover', title: 'Cap sur…', text: ['Hors du réseau : pas de contrôle de gare, mais les dérèglements de l’ogénite ne préviennent pas. Coût : 120 ¢ de carburant (capsules OGEN), 1 à 3 semaines.'], choices: [...CONT.flatMap(ct => DATA.states.filter(s => s.continent === ct && s.id !== G.loc && !isLockdown(s.id)).map(s => C(`${s.capital} — ${s.name}`, () => hoverGo(s.id), { sub: ct, req: { money: 120 } }))), C('← Retour', travelMenu)] });
 }
 function hoverGo(to) {
   G.pc.money -= 120; const from = G.loc; G.loc = to; advance(rint(1, 3)); if (G.status !== 'play') return; logEntry(`Vol en scout-hover vers ${capName(to)}.`);
@@ -245,23 +224,6 @@ function startVanish() {
     if (attr === 'fight') return startCombat({ title: 'La dernière poursuite', foes: foesFor(chance(0.5) ? 'fa' : (enemiesOf(pc.faction)[0] || 'fa'), Math.min(5, tier), 2), lethal: 'capture', intro: 'Ils te rattrapent à la sortie de la ville.', onWin: L => { stepEnd(true, 'Tu t’en sors : ils ne te suivront plus.'); }, onFlee: () => stepEnd(false, 'Tu t’échappes, mais ils savent où tu vas.') });
     const r = check(attr, dc, tags); stepEnd(r.ok, (r.ok ? 'Ça passe. ' : 'Ça coince. ') + checkLine(r)); }, { odds: (attr === 'money' || attr === 'fight') ? null : [attr, dc, tags], ic: attr === 'money' ? '💰' : attr === 'fight' ? '⚔' : '🎲', req: attr === 'money' ? { money: tags } : undefined })) }); };
   next();
-}
-
-// ───────── Objectifs : tout ce qui t'attend, au même endroit ─────────
-function objectives() {
-  const pc = G.pc, W = G.world, f = pc.flags; const L = [];
-  if (pc.faction !== 'civils' && pc.grade < 5) { const nx = MERIT_STEPS[pc.grade + 1]; if (nx) L.push(pc.merit >= nx ? { ic: '🎖', t: 'Épreuve de grade', sub: 'Ton mérite est suffisant : elle t’attend à la prochaine arrivée.' } : { ic: '🎖', t: `Grade suivant : ${gradeNames(pc)[pc.grade + 1]}`, sub: `Mérite ${pc.merit}/${nx} — fais des contrats pour ta faction.` }); }
-  if (f.camp && CAMPS[f.camp.id]) L.push({ ic: '📖', t: `Campagne : ${CAMPS[f.camp.id].n}`, sub: `Chapitre ${f.camp.ch + 1}/${CAMPS[f.camp.id].ch.length} — la suite arrive dans la trame.` });
-  DATA.stones.filter(s => !pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id])).forEach(s => { const lv = W.stoneLv[s.id] || 1, loc = W.stoneLoc[s.id]; L.push(lv >= 2 ? { ic: '💎', t: `Pierre de ${s.name}`, sub: `Piste à ${capName(loc)} (${stateName(loc)}).`, go: () => travelMenu(loc) } : { ic: '💎', t: `Pierre de ${s.name}`, sub: `Rumeur : zone ${zoneOf(loc)}. Cherche d’autres indices.` }); });
-  leadMap().forEach((ld, st) => { L.push({ ic: '🔴', t: leadTitle(ld), sub: `Opportunité à ${capName(st)}.`, go: () => travelMenu(st) }); });
-  if (pc.implant) L.push({ ic: '💥', t: 'Implant explosif', sub: `Livre une prime avant le ${dateStr(pc.implant.deadline)}.` });
-  if (wantedStars() >= 2) L.push({ ic: '⭐', t: `Prime ${starStr(wantedStars())}`, sub: 'Fais-toi oublier : mois au vert, faux papiers, ou fais tomber ta prime.' });
-  return L;
-}
-function objectivesMenu() {
-  const L = objectives().map(o => C(o.t, o.go ? () => { UI.parked = null; o.go(); } : () => { }, { ic: o.ic, sub: o.sub, cls: o.go ? '' : '' }));
-  if (!L.length) L.push(Object.assign(C('Rien d’urgent', () => { }), { lock: 'Explore, fais des contrats : de nouveaux objectifs apparaîtront.' }));
-  L.push(C('← Retour', actionsMenu)); show({ kicker: 'Objectifs', title: `${objectives().length} chose${objectives().length > 1 ? 's' : ''} à garder en tête`, text: [`<span class="mut">Pierres : ${stoneCount()}/16 · Destination n° ${G.pc.flags.dest || 1}</span>`], choices: L });
 }
 
 // ───────── Bilan de la destination (bandeau sur la carte de départ) ─────────

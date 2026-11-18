@@ -9,7 +9,6 @@ function sprFit(id, hpx, cls) {
   return h('img', { class: 'spr ' + (cls || ''), src: s[2], width: s[0] * k, height: s[1] * k, alt: '', draggable: 'false' });
 }
 const pcSprite = () => (G && G.pc && (G.pc.charId || G.pc.sprite)) || null;
-const foeSprite = f => f.cid || FOE_SPR[f.tid] || null;
 const portrait = (id, hpx) => { const e = sprFit(id, hpx, 'portrait'); return e ? h('div', { class: 'portwrap' }, e) : null; };
 function spritePicker(back, onPick) {
   // grille d'apparences : au choix parmi tous les personnages

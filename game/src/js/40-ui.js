@@ -1,8 +1,5 @@
 // ───────── Interface ─────────
 const UI = { mode: 'libre', tab: 'perso', scene: null, sheetOpen: false, after: [], prev: null, roll: null };
-const PCN = () => esc(G.pc.name);
-
-// Conditions d'accès (choix verrouillés mais visibles)
 function reqReason(rq) {
   if (!rq) return null;
   if (rq.ok) { const r = rq.ok(); if (r) return r; }
@@ -100,7 +97,7 @@ function hudEl() {
       h('div', { class: 'stat en' }, h('span', { class: 'lab ic' }, '⚡'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
       h('span', { class: 'pill cash', title: 'Crédits' }, '🪙 ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
-      h('button', { class: 'pill obj', title: 'Objectifs', onclick: () => { sfx('click'); parkOpen(objectivesMenu); } }, '🎯 ' + objectives().length), h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
+      h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
 }
 function menuPop() {
   const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
@@ -125,10 +122,6 @@ function choicesEl(list, tiles, tcls) {
   }));
 }
 
-function tickerEl() {
-  const n = G.world.news[0]; if (!n || G.wk - n.wk > 5 || UI.tickerWk === n.wk + n.t) return null; const key = n.wk + n.t; if (UI.tickerSeen === key && UI.tickerScene !== UI.scene) { UI.tickerWk = key; return null; } UI.tickerSeen = key; UI.tickerScene = UI.scene;
-  return h('div', { class: 'ticker', onclick: () => { UI.tickerWk = n.wk + n.t; render(true); } }, h('span', { class: 'tk' }, '⚡ ACTU'), h('span', { class: 'tt' }, n.t), h('span', { class: 'x' }, '✕'));
-}
 function render(quiet) {
   const app = $('#app'); app.innerHTML = ''; app.className = (quiet ? 'quiet ' : '') + ((UI.scene && UI.scene.compact) ? 'lite' : ''); UI.after = [];
   const sc = UI.scene; if (!sc) return;
@@ -153,13 +146,6 @@ function render(quiet) {
   if (!quiet) { try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { } }
   runAfter();
 }
-function tipEl() {
-  let seen = 0; try { seen = +localStorage.getItem('ne_tip') || 0; } catch (e) { } if (seen >= 1 || UI.tipHide) return null;
-  try { if (UI.tipShown !== G.wk) { UI.tipShown = G.wk; localStorage.setItem('ne_tip', seen + 1); } } catch (e) { }
-  return h('div', { class: 'tip' }, h('span', {}, '💡 Touche un choix pour avancer. ⚡ = menu d’actions (voyage, ville, faction). Barre du bas = fiche, sac, groupe.'), h('button', { class: 'x', onclick: () => { UI.tipHide = 1; try { localStorage.setItem('ne_tip', 9); } catch (e) { } render(true); } }, '✕'));
-}
-// Banderole unique : environnement de la ville, date, et l'actualité qui défile comme à la télé
-// Rail de progression : on voit toujours où l'on en est dans la boucle d'une destination.
 function railEl(sc) {
   const f = G.pc.flags; const st = f.stage || 'contrats'; const trav = sc && sc.kicker === 'Orbitrail';
   const idx = trav ? 3 : st === 'contrats' ? 0 : st === 'story' ? 1 : 2; const left = f.storyLeft == null ? 3 : f.storyLeft;
@@ -196,7 +182,6 @@ function fillSheet() {
   s.append(h('div', { class: 'sh-bg', onclick: closeSheet }), h('div', { class: 'sh-pan' }, h('div', { class: 'sh-head' }, h('b', {}, t[1] + ' ' + t[2]), h('button', { class: 'ibtn', onclick: closeSheet }, '✕')), h('div', { class: 'sh-body side' }, TABFN()[UI.tab]())));
   requestAnimationFrame(() => s.classList.add('open'));
 }
-function powerLine(p) { return h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut' }, `(${TYPENAME[p.type]} › ${p.cat}${p.sub && p.sub !== 'Éléments' ? ' › ' + p.sub : ''})`), h('div', {}, p.tags.map(t => h('span', { class: 'tag' }, TAGNAME[t] || t)))); }
 function tabPerso() {
   const pc = G.pc; const box = h('div'); const nxt = MERIT_STEPS[pc.grade + 1];
   box.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name, ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
@@ -284,14 +269,16 @@ function questList() {
 }
 function tabAide() {
   return h('div', { class: 'small', html: `<h3>Règles rapides</h3>
-<p><b>But :</b> obtenir le plus gros score. Victoire immédiate avec les <b>16 pierres antiques</b>. Tu peux aussi <b>prendre ta retraite</b> (bonus de score) — mourir divise ton score.</p>
-<p><b>Jets :</b> d20 + attribut + bonus (pouvoir, rôle, style, équipement, alliés) contre une difficulté. Le pourcentage est affiché.</p>
-<p><b>Grade :</b> 1 à 5 ★ (5 = chef de faction). Plus tu montes, plus tu es recherché (<b>prime</b> ⭐ à ⭐⭐⭐⭐), plus tu es puissant. Recrue : aucune voix dans les décisions.</p>
-<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Les captifs peuvent être interrogés, emprisonnés, vendus, exécutés — ou devenir Fallen.</p>
-<p><b>Pouvoirs :</b> alimentés par l’énergie (batterie). Sans énergie, la surcharge fait mal. L’Éveil (bouton en combat) est puissant mais risqué.</p>
-<p><b>Orbitrail :</b> 13 lignes. Chaque voyage est suivi par les autorités : faux papiers et brouilleurs aident.</p>
+<p><b>But :</b> obtenir le plus gros score. Victoire immédiate avec les <b>16 pierres antiques</b> (elles ne se cherchent qu’après l’Acte I de la trame). Tu peux aussi <b>prendre ta retraite</b> ; mourir divise ton score.</p>
+<p><b>Boucle d’une destination :</b> Contrats → Histoire (3 cartes) → Ville (une action) → Départ. Le rail en haut montre où tu en es.</p>
+<p><b>Jets :</b> d20 + attribut + bonus (pouvoir, rôle, style, équipement, équipe) contre une difficulté. Le pourcentage est affiché ; une option verrouillée 🔑 demande un attribut minimum.</p>
+<p><b>Étoiles ★ = Puissance</b> (1 à 10 💥) ; le <b>rang ▲</b> est ta position (Recrue → Chef). Le chef d’une faction est son membre le plus puissant. Plus tu montes en rang, plus tu es recherché (<b>prime</b> ⭐ à ⭐⭐⭐⭐).</p>
+<p><b>Combat :</b> 3 à 5 rounds. À chaque round, un geste parmi 3, adapté à ta catégorie de style (Offensif, Défensif, Technique, Soutien) ; le % est affiché. Ton pouvoir n’est utilisable qu’1 round sur 3 (2 sur 5). Gagne assez de rounds pour les battre ; perds-en trop et tu encaisses.</p>
+<p><b>Énergie ⚡ :</b> pour les pouvoirs, « Forcer » (+3) et « Se concentrer » (+3). Elle revient lentement. Les consommables du sac sont proposés quand ils servent.</p>
+<p><b>Prime :</b> ⭐ pays · ⭐⭐ État · ⭐⭐⭐ continent · ⭐⭐⭐⭐ monde. Un échec peut te faire capturer… ou tuer.</p>
+<p><b>Orbitrail :</b> 13 lignes, contrôles de la F.A. ; des stations peuvent fermer, des villes être confinées.</p>
 <p><b>Réputation :</b> aider une faction plaît à ses alliés, la trahir braque ses alliés.</p>
-<p class="mut">Choix verrouillés = visibles : argent, attribut, grade, rôle, lien ou pouvoir manquant.</p>` });
+<p class="mut">📊 Le menu ☰ ouvre le journal de partie (local) pour étudier l’équilibrage.</p>` });
 }
 
 // ───────── Carte de l'Orbitrail (SVG) ─────────
@@ -338,11 +325,6 @@ function drawRoute(parent, routeObj) {
   runs.forEach(r => { const pts = r.map(q => q.join(',')).join(' '); grp.append(svgEl('polyline', { points: pts, fill: 'none', stroke: '#0a0a14', 'stroke-width': 17, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: .55 }), svgEl('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-dasharray': '2 13', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'routeline' })); });
   const last = steps[steps.length - 1].to; [steps[0].from, last].forEach((id, k) => grp.append(svgEl('circle', { cx: OT_ST[id][0], cy: OT_ST[id][1], r: 16, fill: 'none', stroke: k ? '#ff2a6d' : '#fcee09', 'stroke-width': 4, class: 'pulse' })));
   parent.append(grp); return grp;
-}
-function wrapStub(a, b) { // point de sortie au bord de la carte pour la station a vers b
-  const L = OT_LINES[(OT_WRAP.find(w => (w[0] === a && w[1] === b) || (w[1] === a && w[0] === b)) || [0, 0, 1])[2]];
-  for (const path of L.p) { const i = path.indexOf(a); if (i < 0) continue; for (const d of [-1, 1]) for (let j = i + d; j >= 0 && j < path.length; j += d) { const it = path[j]; if (typeof it === 'string' && it.startsWith('@')) return it.slice(1).split('|').slice(1).map(Number); if (typeof it === 'string') break; } }
-  return [OT_ST[a][0], OT_ST[a][1]];
 }
 function mapBox(o = {}) {
   let moved = false; const o2 = Object.assign({}, o, { onPick: sid => { if (moved) return; o.onPick && o.onPick(sid); } });

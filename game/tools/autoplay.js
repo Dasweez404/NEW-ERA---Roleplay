@@ -1,30 +1,25 @@
-// Test de fumée : joue au hasard dans un vrai navigateur et signale toute erreur JavaScript.
-// usage : node autoplay.js <chemin new-era.html> [pas=600] [mode=custom|random|leader] [seed]
+// Test de fumée : lance une partie puis clique au hasard dans un vrai navigateur ; signale toute erreur JavaScript.
+// usage : node game/tools/autoplay.js <chemin new-era.html> [pas=600]
 const { chromium } = require('playwright');
 (async () => {
-  const file = process.argv[2], steps = +(process.argv[3] || 600), mode = process.argv[4] || 'custom';
-  const browser = await chromium.launch(); const page = await browser.newPage({ viewport: { width: 1300, height: 900 } });
+  const file = process.argv[2], steps = +(process.argv[3] || 600);
+  const browser = await chromium.launch(); const page = await browser.newPage({ viewport: { width: 430, height: 900 } });
   const errors = []; page.on('pageerror', e => errors.push('PAGEERROR ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 4).join('\n')));
   page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE ' + m.text()); });
   await page.goto('file://' + file);
-  const click = async (re) => { const b = page.locator('button.ch:not([disabled])', { hasText: re }).first(); if (await b.count()) { await b.click(); return true; } return false; };
-  await click(/Nouvelle partie/);
-  if (mode === 'custom') { await click(/Personnage customisé/); await click(/Tout|Suivant|Au hasard/); }
-  else if (mode === 'leader') { await click(/Choisir un personnage/); await click(/Vigilante/); await click(/^Ora/); await click(/^Jouer/); }
-  else { await click(/au hasard/); await click(/^Jouer/); }
-  let last = '';
-  for (let i = 0; i < steps && errors.length === 0; i++) {
-    const info = await page.evaluate(() => { const t = document.querySelector('.scene .title'); const bs = [...document.querySelectorAll('button.ch')]; return { title: t ? t.textContent : '', n: bs.length, en: bs.filter(b => !b.disabled).length, st: typeof G !== 'undefined' && G ? G.status : 'x' }; });
-    last = info.title;
-    if (info.st !== 'play' && info.title && /Retraite|LES 16|Fin de ta route/.test(info.title)) { console.log('FIN :', info.title, 'après', i, 'pas'); break; }
-    if (info.en === 0) { console.log('Aucun choix actif à', info.title); await page.screenshot({ path: '/tmp/stuck.png' }); break; }
-    // choix pondéré : éviter la retraite
-    const idx = await page.evaluate(() => { const bs = [...document.querySelectorAll('button.ch')].map((b, i) => [b, i]).filter(([b]) => !b.disabled && !/retraite|Quitter|Renvoyer|menu/i.test(b.textContent)); if (!bs.length) return -1; return bs[Math.floor(Math.random() * bs.length)][1]; });
-    if (idx < 0) { await page.locator('button.ch:not([disabled])').first().click(); continue; }
-    await page.locator('button.ch').nth(idx).click();
+  await page.evaluate(() => { startGame(charToSpec(DATA.chars[Math.floor(Math.random() * DATA.chars.length)])); G.fresh = false; hub(); });
+  let n = 0, last = '', idle = 0;
+  for (; n < steps; n++) {
+    const st = await page.evaluate(() => {
+      document.querySelectorAll('.splash,.coach,.vfx').forEach(e => e.remove());
+      if (typeof G === 'undefined' || !G || G.status !== 'play') return 'fin';
+      const bs = [...document.querySelectorAll('button.ch:not([disabled]), button.qgo, button.lvcard:not(.dim)')].filter(b => !/retraite|menu principal|Meilleurs/i.test(b.textContent));
+      if (!bs.length) return 'vide'; bs[Math.floor(Math.random() * bs.length)].click(); return (UI.scene && (UI.scene.kicker || UI.scene.title)) || '';
+    });
+    if (st === 'fin') { last = st; break; }
+    if (st === 'vide') { last = st; if (++idle > 12) break; await page.waitForTimeout(500); continue; } idle = 0; last = st;
   }
-  const st = await page.evaluate(() => (typeof G !== 'undefined' && G && G.pc) ? { wk: G.wk, grade: G.pc.grade, hp: G.pc.hp, money: G.pc.money, heat: G.pc.heat, stones: Object.keys(G.pc.stones).length, party: G.pc.party.length, faction: G.pc.faction, missions: G.pc.missions, status: G.status } : null);
-  console.log('Dernier écran :', last, JSON.stringify(st));
-  if (errors.length) { console.log('ERREURS :\n' + errors.join('\n')); await page.screenshot({ path: '/tmp/err.png' }); process.exitCode = 1; } else console.log('OK : aucune erreur JS');
-  await browser.close();
+  console.log(`${n} pas joués · dernier écran : ${last}`);
+  console.log(errors.length ? 'ERREURS :\n' + errors.join('\n') : 'OK : aucune erreur JS');
+  await browser.close(); process.exit(errors.length ? 1 : 0);
 })();
