@@ -1418,6 +1418,7 @@ function menuPop() {
   const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
   const ov = h('div', { class: 'popov', onclick: e => { if (e.target === ov) close(); } }, h('div', { class: 'popbox' },
     b(FX.mute ? '🔇  Son coupé : réactiver' : '🔊  Son activé : couper', () => { toggleMute(); close(); render(true); }),
+    b('📖  Journaux de bord', () => { close(); parkOpen(runsScreen); }),
     b('📊  Journal de partie', () => { close(); parkOpen(teleScreen); }),
     b('💾  Sauvegarder', () => { saveGame(); close(); toast('Partie sauvegardée'); }),
     b('🏠  Menu principal', () => { close(); saveGame(); titleScreen(); }),
@@ -5115,6 +5116,42 @@ function teleScreen() {
   show({ kicker: 'Journal de partie', title: TELE.on ? '⏺ Enregistrement actif' : '⏸ En pause', extra: h('div', {}, h('div', { class: 'small mut' }, 'Si « Copier » ne marche pas : touche la zone ci-dessous, sélectionne tout et copie.'), ta), text: ['<span class="mut">Tout reste sur cet appareil. Exporte ou copie le rapport pour l’étudier ou me le transmettre.</span>', ...rep.map(x => esc(x))], choices: L });
 }
 
+// ───────── Journaux de bord : archive des parties terminées + partie en cours + traces techniques ─────────
+const RUNS_KEY = 'newera.runs.v1';
+function runText(meta) {
+  const pc = G.pc; const L = [`JOURNAL DE BORD — ${pc.name} (${F[pc.faction] ? F[pc.faction].name : pc.faction})`, meta || '', `Grade ${pc.grade} · Puissance ${typeof pcPower === 'function' ? pcPower().toFixed(1) : '?'} · ${stoneCount()} pierre(s) · ${Math.floor(G.wk / 4)} mois · ₵ ${pc.money}`, ''];
+  (G.log || []).forEach(e => L.push(`${dateStr(e.wk)} — ${e.t}`));
+  if (G.world && G.world.news && G.world.news.length) { L.push('', 'DERNIÈRES NOUVELLES DU MONDE'); G.world.news.slice(0, 15).reverse().forEach(e => L.push(`${dateStr(e.wk)} — ${e.t}`)); }
+  return L.filter(x => x != null).join('\n').replace(/<[^>]+>/g, '');
+}
+function archiveRun(kind, cause) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(RUNS_KEY) || '[]'); const pc = G.pc;
+    arr.unshift({ at: Date.now(), name: pc.name, fac: F[pc.faction] ? F[pc.faction].name : pc.faction, kind, st: stoneCount(), mo: Math.floor(G.wk / 4), txt: runText(`Fin de partie : ${kind}${cause ? ' — ' + String(cause).replace(/<[^>]+>/g, '') : ''}`) });
+    localStorage.setItem(RUNS_KEY, JSON.stringify(arr.slice(0, 8)));
+  } catch (e) { }
+}
+(function () { const _e2 = endGame; endGame = function (kind, cause) { try { archiveRun(kind, cause); } catch (e) { } return _e2.apply(this, arguments); }; })();
+function traceOf(sid) {
+  const E = TELE.ev.filter(e => e.s === sid); const L = [`TRACE TECHNIQUE — session ${sid} (${E.length} événements)`, ''];
+  E.forEach(e => { if (e.k === 'scene') L.push(`sem. ${e.wk == null ? '—' : e.wk}${e.loc ? ' · ' + e.loc : ''} · ${e.kick ? e.kick + ' — ' : ''}${e.title || ''}`); else if (e.k === 'travel') L.push(`sem. ${e.wk} · voyage → ${e.to}`); else if (e.k === 'cb0') L.push(`sem. ${e.wk} · combat (${e.foes.length} ennemis)`); else if (e.k === 'cb1') L.push(`   issue : ${e.out}`); else if (e.k === 'end') L.push(`FIN : ${e.kind} ${e.cause || ''} (sem. ${e.wk}, ${e.stones} pierres)`); });
+  return L.join('\n');
+}
+function runView(title, txt, back) {
+  const ta = h('textarea', { readonly: 'readonly', rows: 14, style: 'width:100%;background:#05050c;color:#c8ccf0;border:1px solid #2a2a44;font:12px monospace;margin-top:8px', onclick: e => e.target.select() }); ta.value = txt;
+  show({ kicker: 'Journal de bord', title, extra: h('div', {}, h('div', { class: 'small mut' }, 'Touche la zone, sélectionne tout et copie (le téléchargement de fichier est bloqué ici).'), ta), choices: [C('📋 Copier', () => { try { navigator.clipboard.writeText(txt).then(() => toast('Journal copié'), () => { ta.select(); toast('Sélectionné : copie-le'); }); } catch (e) { ta.select(); toast('Sélectionné : copie-le'); } }, { cls: 'cta' }), C('← Retour', back || runsScreen)] });
+}
+function runsScreen() {
+  const L = []; let arr = []; try { arr = JSON.parse(localStorage.getItem(RUNS_KEY) || '[]'); } catch (e) { }
+  if (G && G.pc && G.status === 'play') L.push(C('📖 Partie en cours', () => runView('Partie en cours', runText('Partie en cours'), runsScreen), { ic: '▶' }));
+  arr.forEach((r, i) => L.push(C(`${r.name} · ${r.fac}`, () => runView(r.name, r.txt, runsScreen), { ic: r.kind === 'win' || /vic/i.test(r.kind) ? '🏆' : '💀', sub: `${new Date(r.at).toLocaleDateString('fr-FR')} · ${r.kind} · ${r.st} pierre(s) · ${r.mo} mois` })));
+  const sids = [...new Set(TELE.ev.map(e => e.s))].reverse().slice(0, 8);
+  sids.forEach(sid => { const n = TELE.ev.filter(e => e.s === sid && e.k === 'scene').length; if (n) L.push(C(`🧾 Trace technique · ${sid}`, () => runView('Trace technique', traceOf(sid), runsScreen), { sub: `${n} écrans · retrouvée dans le journal d’équilibrage (parties jouées avant cette version)` })); });
+  if (!L.length) L.push(Object.assign(C('Aucun journal pour l’instant', () => { }), { lock: 'Les journaux des parties terminées sont désormais conservés ici.' }));
+  L.push(C('← Retour', () => (G && G.pc ? resumeScene() : titleScreen()), { cls: 'back' }));
+  show({ kicker: 'Journaux', title: 'Journaux de bord', text: ['Chaque partie terminée est archivée. Les parties jouées avant cette mise à jour n’ont gardé qu’une trace technique (si leur journal d’équilibrage existe encore dans ce navigateur).'], choices: L });
+}
+
 // ───────── Écran titre, création de personnage, fin de partie ─────────
 const NAME_A = ['Ka', 'Mi', 'Ro', 'Ta', 'Ne', 'Sa', 'Lu', 'Vo', 'Ze', 'Ari', 'Bo', 'Cy', 'Da', 'El', 'Fa', 'Gi', 'Hy', 'Io', 'Ju', 'Ko', 'Le', 'Ma', 'No', 'Os', 'Pa', 'Qu', 'Ri', 'Su', 'Th', 'Un', 'Vi', 'Wa', 'Xe', 'Yu'];
 const NAME_B = ['ra', 'lo', 'mi', 'na', 'ko', 'ven', 'tis', 'sha', 'dor', 'ex', 'lun', 'ri', 'zan', 'bel', 'cio', 'dra', 'fin', 'gor', 'hex', 'jin', 'lax', 'mor', 'nyx', 'pho', 'rex', 'sol', 'tor', 'vik', 'zen'];
@@ -5127,7 +5164,7 @@ function titleScreen() {
   const btn = (n, t, sub, f, go) => h('button', { class: 'tbtn' + (go ? ' go' : ''), style: `--i:${n}`, onclick: () => { sfx('click'); f(); } }, h('span', { class: 'tn' }, String(n).padStart(2, '0')), h('span', { class: 'tt' }, h('b', {}, t), sub ? h('small', {}, sub) : null), h('span', { class: 'ta' }, '›'));
   const city = pick(DATA.states).id;
   const side = h('div', { class: 'tside' }, hero && hero.sp ? h('div', { class: 'tfloat' }, h('div', { class: 'tring' }), sprFit(hero.sp, wide ? 320 : 150, 'tspr'), h('div', { class: 'tcap' }, h('b', {}, hero.name), h('span', {}, `${hero.faction} · ${rankStr(hero.grade)}`))) : h('div', { class: 'tfloat emblem' }, h('div', { class: 'tring' }), atomSVG()));
-  const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Règles', 'But, jets, grades, primes', rulesScreen), btn(sc ? 5 : 4, 'À propos', 'Sources et libertés prises', aboutScreen));
+  const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Journaux de bord', 'Relire tes parties', runsScreen), btn(sc ? 5 : 4, 'Règles', 'But, jets, grades, primes', rulesScreen), btn(sc ? 6 : 5, 'À propos', 'Sources et libertés prises', aboutScreen));
   UI.scene = { bare: true, extra: h('div', { class: 'title2' }, h('div', { class: 'tbg' }, envBanner(city, 340, 'night')), h('div', { class: 'tgrid' }),
     h('div', { class: 'tmain' }, h('div', { class: 'tleft' }, h('div', { class: 'tkick' }, 'CRATÈS · 2071'), h('h1', { class: 'tlogo' }, h('img', { src: LOGO_TITLE, alt: 'NEW ERA', draggable: 'false' })), h('p', { class: 'tlore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Survis au protocole ANTI.'), menu), side),
     h('div', { class: 'tfoot' }, '52 États · 31 factions · 441 personnages')) };
@@ -5272,7 +5309,7 @@ function showEnding(kind, cause, sc) {
   if (kind === 'win') { splash({ title: '16 / 16', sub: 'LES PIERRES ANTIQUES', icon: '🏆', color: '#ffe83a', ms: 2800, force: true }); sfx('crit'); } else if (kind === 'dead') { splash({ title: 'FIN', sub: 'Ta route s’arrête ici', icon: '☠', color: '#ff3d7f', ms: 2200, force: true }); sfx('lose'); }
   const t = h('table', { class: 't' }); [['Pierres antiques', stoneCount() * 600], ['Grade', pc.grade * 400], ['Mérite', pc.merit * 2], ['Fortune', Math.round(pc.money / 25)], ['Alliés', pc.party.length * 60], ['Missions', (G.score.missions || 0) * 15], ['Territoires', (G.score.terr || 0) * 200], ['Combats gagnés', (G.score.wins || 0) * 25], ['Vies sauvées', (G.score.saved || 0) * 30], ['Durée (mois)', Math.floor(G.wk / 4) * 10]].forEach(([k, v]) => t.append(h('tr', {}, h('td', {}, k), h('td', {}, v))));
   const scores = loadScores(); const rank = scores.findIndex(s => s.score === sc && s.name === pc.name) + 1;
-  UI.scene = { kicker: dateStr(), title, text: [...txt, `<b>Score final : ${fmt(sc)}</b>${kind === 'dead' ? ' (×0,6)' : kind === 'retire' ? ' (×1,25)' : ' (+15 000)'} — ${rank ? 'classement : #' + rank : ''}`], extra: t, choices: [C('Meilleurs scores', () => { G = null; scoresScreen(); }), C('Menu principal', titleScreen)] };
+  UI.scene = { kicker: dateStr(), title, text: [...txt, `<b>Score final : ${fmt(sc)}</b>${kind === 'dead' ? ' (×0,6)' : kind === 'retire' ? ' (×1,25)' : ' (+15 000)'} — ${rank ? 'classement : #' + rank : ''}`], extra: t, choices: [C('Meilleurs scores', () => { G = null; scoresScreen(); }), C('📖 Journal de bord', runsScreen), C('Menu principal', titleScreen)] };
   render();
 }
 // ───────── Démarrage ─────────

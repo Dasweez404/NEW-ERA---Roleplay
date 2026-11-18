@@ -103,6 +103,7 @@ function menuPop() {
   const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
   const ov = h('div', { class: 'popov', onclick: e => { if (e.target === ov) close(); } }, h('div', { class: 'popbox' },
     b(FX.mute ? '🔇  Son coupé : réactiver' : '🔊  Son activé : couper', () => { toggleMute(); close(); render(true); }),
+    b('📖  Journaux de bord', () => { close(); parkOpen(runsScreen); }),
     b('📊  Journal de partie', () => { close(); parkOpen(teleScreen); }),
     b('💾  Sauvegarder', () => { saveGame(); close(); toast('Partie sauvegardée'); }),
     b('🏠  Menu principal', () => { close(); saveGame(); titleScreen(); }),

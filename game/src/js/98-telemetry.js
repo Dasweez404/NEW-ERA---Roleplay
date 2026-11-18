@@ -61,3 +61,39 @@ function teleScreen() {
   const ta = h('textarea', { readonly: 'readonly', rows: 6, style: 'width:100%;background:#05050c;color:#9aa0c8;border:1px solid #2a2a44;font:11px monospace;margin-top:8px', onclick: e => e.target.select() }); ta.value = rep.join('\n') + '\n\n' + JSON.stringify(TELE.ev.slice(-1500));
   show({ kicker: 'Journal de partie', title: TELE.on ? '⏺ Enregistrement actif' : '⏸ En pause', extra: h('div', {}, h('div', { class: 'small mut' }, 'Si « Copier » ne marche pas : touche la zone ci-dessous, sélectionne tout et copie.'), ta), text: ['<span class="mut">Tout reste sur cet appareil. Exporte ou copie le rapport pour l’étudier ou me le transmettre.</span>', ...rep.map(x => esc(x))], choices: L });
 }
+
+// ───────── Journaux de bord : archive des parties terminées + partie en cours + traces techniques ─────────
+const RUNS_KEY = 'newera.runs.v1';
+function runText(meta) {
+  const pc = G.pc; const L = [`JOURNAL DE BORD — ${pc.name} (${F[pc.faction] ? F[pc.faction].name : pc.faction})`, meta || '', `Grade ${pc.grade} · Puissance ${typeof pcPower === 'function' ? pcPower().toFixed(1) : '?'} · ${stoneCount()} pierre(s) · ${Math.floor(G.wk / 4)} mois · ₵ ${pc.money}`, ''];
+  (G.log || []).forEach(e => L.push(`${dateStr(e.wk)} — ${e.t}`));
+  if (G.world && G.world.news && G.world.news.length) { L.push('', 'DERNIÈRES NOUVELLES DU MONDE'); G.world.news.slice(0, 15).reverse().forEach(e => L.push(`${dateStr(e.wk)} — ${e.t}`)); }
+  return L.filter(x => x != null).join('\n').replace(/<[^>]+>/g, '');
+}
+function archiveRun(kind, cause) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(RUNS_KEY) || '[]'); const pc = G.pc;
+    arr.unshift({ at: Date.now(), name: pc.name, fac: F[pc.faction] ? F[pc.faction].name : pc.faction, kind, st: stoneCount(), mo: Math.floor(G.wk / 4), txt: runText(`Fin de partie : ${kind}${cause ? ' — ' + String(cause).replace(/<[^>]+>/g, '') : ''}`) });
+    localStorage.setItem(RUNS_KEY, JSON.stringify(arr.slice(0, 8)));
+  } catch (e) { }
+}
+(function () { const _e2 = endGame; endGame = function (kind, cause) { try { archiveRun(kind, cause); } catch (e) { } return _e2.apply(this, arguments); }; })();
+function traceOf(sid) {
+  const E = TELE.ev.filter(e => e.s === sid); const L = [`TRACE TECHNIQUE — session ${sid} (${E.length} événements)`, ''];
+  E.forEach(e => { if (e.k === 'scene') L.push(`sem. ${e.wk == null ? '—' : e.wk}${e.loc ? ' · ' + e.loc : ''} · ${e.kick ? e.kick + ' — ' : ''}${e.title || ''}`); else if (e.k === 'travel') L.push(`sem. ${e.wk} · voyage → ${e.to}`); else if (e.k === 'cb0') L.push(`sem. ${e.wk} · combat (${e.foes.length} ennemis)`); else if (e.k === 'cb1') L.push(`   issue : ${e.out}`); else if (e.k === 'end') L.push(`FIN : ${e.kind} ${e.cause || ''} (sem. ${e.wk}, ${e.stones} pierres)`); });
+  return L.join('\n');
+}
+function runView(title, txt, back) {
+  const ta = h('textarea', { readonly: 'readonly', rows: 14, style: 'width:100%;background:#05050c;color:#c8ccf0;border:1px solid #2a2a44;font:12px monospace;margin-top:8px', onclick: e => e.target.select() }); ta.value = txt;
+  show({ kicker: 'Journal de bord', title, extra: h('div', {}, h('div', { class: 'small mut' }, 'Touche la zone, sélectionne tout et copie (le téléchargement de fichier est bloqué ici).'), ta), choices: [C('📋 Copier', () => { try { navigator.clipboard.writeText(txt).then(() => toast('Journal copié'), () => { ta.select(); toast('Sélectionné : copie-le'); }); } catch (e) { ta.select(); toast('Sélectionné : copie-le'); } }, { cls: 'cta' }), C('← Retour', back || runsScreen)] });
+}
+function runsScreen() {
+  const L = []; let arr = []; try { arr = JSON.parse(localStorage.getItem(RUNS_KEY) || '[]'); } catch (e) { }
+  if (G && G.pc && G.status === 'play') L.push(C('📖 Partie en cours', () => runView('Partie en cours', runText('Partie en cours'), runsScreen), { ic: '▶' }));
+  arr.forEach((r, i) => L.push(C(`${r.name} · ${r.fac}`, () => runView(r.name, r.txt, runsScreen), { ic: r.kind === 'win' || /vic/i.test(r.kind) ? '🏆' : '💀', sub: `${new Date(r.at).toLocaleDateString('fr-FR')} · ${r.kind} · ${r.st} pierre(s) · ${r.mo} mois` })));
+  const sids = [...new Set(TELE.ev.map(e => e.s))].reverse().slice(0, 8);
+  sids.forEach(sid => { const n = TELE.ev.filter(e => e.s === sid && e.k === 'scene').length; if (n) L.push(C(`🧾 Trace technique · ${sid}`, () => runView('Trace technique', traceOf(sid), runsScreen), { sub: `${n} écrans · retrouvée dans le journal d’équilibrage (parties jouées avant cette version)` })); });
+  if (!L.length) L.push(Object.assign(C('Aucun journal pour l’instant', () => { }), { lock: 'Les journaux des parties terminées sont désormais conservés ici.' }));
+  L.push(C('← Retour', () => (G && G.pc ? resumeScene() : titleScreen()), { cls: 'back' }));
+  show({ kicker: 'Journaux', title: 'Journaux de bord', text: ['Chaque partie terminée est archivée. Les parties jouées avant cette mise à jour n’ont gardé qu’une trace technique (si leur journal d’équilibrage existe encore dans ce navigateur).'], choices: L });
+}
