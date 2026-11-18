@@ -1411,7 +1411,7 @@ function tabInv() {
     const it = ITEMS[id]; const row = h('div', { style: 'margin-top:8px;border-top:1px dashed var(--line);padding-top:6px' }, h('b', {}, it.n + (pc.inv[id] > 1 ? ' ×' + pc.inv[id] : '')), h('div', { class: 'small mut' }, it.desc));
     const btns = h('div', { class: 'row', style: 'margin-top:3px' });
     if (it.t === 'arme' || it.t === 'armure') { const slot = it.t === 'arme' ? 'arme' : 'armure'; btns.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(true); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
-    if (it.t === 'conso' && ['en8', 'hp15', 'hp40'].includes(it.use)) btns.append(h('button', { class: 'tab', onclick: () => { useItem(id); render(true); } }, 'Utiliser'));
+    if (it.t === 'conso') btns.append(h('span', { class: 'small acc' }, 'Proposé automatiquement quand tu en as besoin'));
     row.append(btns); box.append(row);
   });
   return box;
@@ -2353,6 +2353,8 @@ function combatChoices() {
   moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: m.kind === 'sig' || m.kind === 'heal' ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
   const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
   if (heal && !CB.noItems && pc.hp < pc.hpMax * 0.55) L.push(C(`Se soigner (${ITEMS[heal].n})`, () => play({ kind: 'item', item: heal, sev: 0.4 }), { ic: '💊', sub: 'Round nul', cls: 'back' }));
+  const pw = moves()[moves().length - 1]; if (hasItem('capsule') && !CB.noItems && (pc.en < pc.enMax * 0.4 || (pw && pw.lock))) L.push(C('Utiliser une Capsule OGEN', () => { takeItem('capsule'); pc.en = Math.min(pc.enMax, pc.en + 8); clog('Capsule OGEN : +8 énergie.', 'good'); sfx('win'); renderCombat(); }, { ic: '⚡', sub: 'Recharge 8 énergie · ne prend pas de round', cls: 'back' }));
+  if (hasItem('stimulant') && !CB.noItems && !CB.stimUsed && CB.round === 1) L.push(C('Utiliser un stimulant', () => { takeItem('stimulant'); CB.stimUsed = true; CB.hitBuff += 3; clog('Stimulant : +3 à tous tes jets.', 'good'); sfx('win'); renderCombat(); }, { ic: '💉', sub: '+3 à tous les jets de ce combat · ne prend pas de round', cls: 'back' }));
   if (CB.cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
   else if (CB.cfg.lethal !== 'death') L.push(C('Se rendre', () => { clog('Tu poses les armes.'); loseCombat(true); }, { cls: 'back' }));
   return L;
@@ -2392,6 +2394,7 @@ function cityMenu() {
     T.forEach(c => { if (c.label === rec) { c.sub = '★ Conseillé · ' + (c.sub || ''); c.cls = ((c.cls || '') + ' safe').trim(); } });
     T.forEach(c => { const g = c.go; c.go = () => { f.cityMark = cityMark(); f.cityActs--; g(); }; }); L.push(...T);
   }
+  { const q = []; const pcx = pc; const heal = ['nanosoin', 'kit'].find(id => hasItem(id)); if (heal && pcx.hp < pcx.hpMax * 0.7) q.push(C(`Utiliser ${ITEMS[heal].n}`, () => { useItem(heal); toast(`${ITEMS[heal].n} utilisé`); sfx('win'); cityMenu(); }, { ic: '💊', cls: 'safe', sub: `${ITEMS[heal].desc} · n’utilise pas ton action` })); if (hasItem('capsule') && pcx.en < pcx.enMax * 0.5) q.push(C('Utiliser une Capsule OGEN', () => { useItem('capsule'); toast('+8 énergie'); sfx('win'); cityMenu(); }, { ic: '⚡', cls: 'safe', sub: 'Recharge 8 énergie · n’utilise pas ton action' })); L.unshift(...q); }
   coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: 'Une action ici, puis tu repars', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
@@ -2439,11 +2442,14 @@ function travelList() {
 }
 function routeText(r) { return r.legs.map(l => `ligne ${l.line} : ${OT_ST[l.from][2]} → ${OT_ST[l.to][2]}`).join(' ; '); }
 function travelConfirm(to) { travelMenu(to); }
-const pc_hasFaux = () => G.pc.faux > 0;
+const haveFaux = () => (G.pc.inv.faux || 0) + (G.pc.faux || 0) > 0, haveBrouil = () => (G.pc.inv.brouilleur || 0) + (G.pc.brouil || 0) > 0;
+const pc_hasFaux = haveFaux;
+function spendFaux() { const pc = G.pc; if (pc.inv.faux) takeItem('faux'); else if (pc.faux > 0) pc.faux--; }
+function spendBrouil() { const pc = G.pc; if (pc.inv.brouilleur) takeItem('brouilleur'); else if (pc.brouil > 0) pc.brouil--; }
 function detectChance() {
   const pc = G.pc; if (pc.faction === 'fa' && !pc.flags.defected) return 0.02;
   let p = 0.04 + wantedStars() * 0.1 + ((pc.ptype !== 'zoologique' && pc.ptype !== 'aucun') ? 0.08 : 0) + (G.world.era === 'dark' ? 0.08 : 0);
-  if (pc.faux > 0) p -= 0.2; if (pc.brouil > 0) p -= 0.15; if (G.world.era === 'newera') p = 0.01;
+  if (G.world.era === 'newera') p = 0.01;
   p -= PK('travel') / 100;
   return clamp(p, 0.02, 0.75);
 }
@@ -2461,7 +2467,6 @@ function transferStop(r) { // changer de ligne : faible chance d'être arrêté 
 function travelGo(to, r, weeks) {
   const pc = G.pc; pc.money -= r.cost; const from = G.loc;
   const used = [];
-  if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
   const ctl = chance(detectChance());
   const stop = transferStop(r);
   if (stop) return transit(stop.r2, from, stop.state, () => {
@@ -3065,7 +3070,7 @@ function shopMenu() {
 function equipIfFree(id) { const pc = G.pc, it = ITEMS[id]; if ((it.t === 'arme' && !pc.eq.arme) || (it.t === 'armure' && !pc.eq.armure)) { pc.eq[it.t === 'arme' ? 'arme' : 'armure'] = id; return true; } return false; }
 function buy(id, price) {
   const pc = G.pc; pc.money -= price; giveItem(id); const it = ITEMS[id]; equipIfFree(id); sfx('coin');
-  if (it.use === 'faux') { pc.faux += 3; takeItem('faux'); } if (it.use === 'brouil') { pc.brouil += 3; takeItem('brouilleur'); }
+  
   if (!isBlackItem(id) && wantedStars() >= 2 && chance(0.12 * wantedStars())) return show({ kicker: 'Marché', title: 'Reconnu !', text: ['Un vendeur lève les yeux de son écran… puis vers la caméra. Il t’a reconnu.'], fx: fx({ heat: 5 }), choices: [C('Filer', hub)] });
   toast(`${it.n} acheté`); shopMenu();
 }
@@ -3198,7 +3203,7 @@ function approachChoices(o) {
 }
 function missionApproach(o) {
   const a = ARCH[o.arch];
-  show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), o.tchar && CH[o.tchar] ? `Cible désignée : <b>${esc(CH[o.tchar].name)}</b> (${esc(F[CH[o.tchar].faction].name)}, ${charPowerText(CH[o.tchar])}).` : '', ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? '<span class="badc">Sans retour : des gens en subiront les conséquences.</span>' : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`].filter(Boolean), choices: [...approachChoices(o), C('Renoncer', o.back || (o.feed ? hub : missionBoard), { cls: 'back' })] });
+  show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), o.tchar && CH[o.tchar] ? `Cible désignée : <b>${esc(CH[o.tchar].name)}</b> (${esc(F[CH[o.tchar].faction].name)}, ${charPowerText(CH[o.tchar])}).` : '', ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? '<span class="badc">Sans retour : des gens en subiront les conséquences.</span>' : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`].filter(Boolean), choices: [...approachChoices(o), ...(hasItem('stimulant') && !G.pc.stim ? [C('Utiliser un stimulant (+3 au prochain jet)', () => { useItem('stimulant'); toast('Stimulant : +3 au prochain jet'); sfx('win'); missionApproach(o); }, { ic: '💉', cls: 'back' })] : []), C('Renoncer', o.back || (o.feed ? hub : missionBoard), { cls: 'back' })] });
 }
 function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;
@@ -3924,6 +3929,8 @@ function controleFA(route) {
   L.push(C(`Corrompre l’agent (${price} ¢)`, () => { pc.money -= price; ctlRes({ ok: true, r: 0, mod: 0, total: 0, dc: 0, parts: [], crit: false, fumble: false }, 'Un billet glisse dans une main. « Bon voyage. »', ''); }, { req: { money: price }, sub: 'Réussite assurée' }));
   L.push(C('Te perdre dans la foule', () => ctlRes(check('agilite', dcOf(tier), ['stealth', 'mobility']), 'Tu t’éclipses derrière un groupe de voyageurs.', 'On t’a vu t’éloigner : « Halte ! »'), { odds: ['agilite', dcOf(tier), ['stealth', 'mobility']] }));
   if (pc.ptype !== 'aucun') L.push(C('Utiliser ton pouvoir pour passer', () => ctlRes(check('maitrise', dcOf(tier), ['stealth', 'control', 'mobility']), 'Ton pouvoir te couvre : le radar ne voit rien.', 'Ton pouvoir s’active et le radar hurle.'), { odds: ['maitrise', dcOf(tier), ['stealth', 'control', 'mobility']] }));
+  if (haveFaux()) L.unshift(C('📄 Présenter tes faux papiers', () => { spendFaux(); ctlRes({ ok: true, r: 0, mod: 0, total: 0, dc: 0, parts: [], crit: false, fumble: false }, 'Les faux papiers passent le scanner. « Bon voyage. »', ''); }, { cls: 'safe', sub: 'Consomme 1 faux papier · réussite assurée' }));
+  if (haveBrouil()) L.unshift(C('📡 Activer le brouilleur de radar', () => { spendBrouil(); ctlRes({ ok: true, r: 0, mod: 0, total: 0, dc: 0, parts: [], crit: false, fumble: false }, 'Le portique ne voit rien. Tu passes.', ''); }, { cls: 'safe', sub: 'Consomme 1 brouilleur · réussite assurée' }));
   L.push(C('Se battre', () => startCombat({ title: 'Contrôle de la F.A.', foes: foesFor('fa', Math.min(5, tier), 2), lethal: 'capture', intro: 'Les agents dégainent.', onWin: l => { show({ title: 'Voie libre', text: ['Les agents sont à terre, mais l’alerte est lancée.'], fx: [...l, ...fx({ heat: 6 })], choices: [C('Continuer', hub)] }); } }), { cls: 'danger' }));
   show({ kicker: 'Orbitrail — alerte', title: 'Contrôle de la Force d’Autorité', text: [`À ${esc(capName(G.loc))}, des agents et un portique à radar bloquent le quai. Le radar à géno réagit à l’ogénite que tu portes. ${st ? 'Ton signalement est connu.' : ''}`], choices: L });
 }

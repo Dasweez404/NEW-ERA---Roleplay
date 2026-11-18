@@ -32,6 +32,7 @@ function cityMenu() {
     T.forEach(c => { if (c.label === rec) { c.sub = '★ Conseillé · ' + (c.sub || ''); c.cls = ((c.cls || '') + ' safe').trim(); } });
     T.forEach(c => { const g = c.go; c.go = () => { f.cityMark = cityMark(); f.cityActs--; g(); }; }); L.push(...T);
   }
+  { const q = []; const pcx = pc; const heal = ['nanosoin', 'kit'].find(id => hasItem(id)); if (heal && pcx.hp < pcx.hpMax * 0.7) q.push(C(`Utiliser ${ITEMS[heal].n}`, () => { useItem(heal); toast(`${ITEMS[heal].n} utilisé`); sfx('win'); cityMenu(); }, { ic: '💊', cls: 'safe', sub: `${ITEMS[heal].desc} · n’utilise pas ton action` })); if (hasItem('capsule') && pcx.en < pcx.enMax * 0.5) q.push(C('Utiliser une Capsule OGEN', () => { useItem('capsule'); toast('+8 énergie'); sfx('win'); cityMenu(); }, { ic: '⚡', cls: 'safe', sub: 'Recharge 8 énergie · n’utilise pas ton action' })); L.unshift(...q); }
   coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: 'Une action ici, puis tu repars', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
 }
 function pendingEvents() {
@@ -79,11 +80,14 @@ function travelList() {
 }
 function routeText(r) { return r.legs.map(l => `ligne ${l.line} : ${OT_ST[l.from][2]} → ${OT_ST[l.to][2]}`).join(' ; '); }
 function travelConfirm(to) { travelMenu(to); }
-const pc_hasFaux = () => G.pc.faux > 0;
+const haveFaux = () => (G.pc.inv.faux || 0) + (G.pc.faux || 0) > 0, haveBrouil = () => (G.pc.inv.brouilleur || 0) + (G.pc.brouil || 0) > 0;
+const pc_hasFaux = haveFaux;
+function spendFaux() { const pc = G.pc; if (pc.inv.faux) takeItem('faux'); else if (pc.faux > 0) pc.faux--; }
+function spendBrouil() { const pc = G.pc; if (pc.inv.brouilleur) takeItem('brouilleur'); else if (pc.brouil > 0) pc.brouil--; }
 function detectChance() {
   const pc = G.pc; if (pc.faction === 'fa' && !pc.flags.defected) return 0.02;
   let p = 0.04 + wantedStars() * 0.1 + ((pc.ptype !== 'zoologique' && pc.ptype !== 'aucun') ? 0.08 : 0) + (G.world.era === 'dark' ? 0.08 : 0);
-  if (pc.faux > 0) p -= 0.2; if (pc.brouil > 0) p -= 0.15; if (G.world.era === 'newera') p = 0.01;
+  if (G.world.era === 'newera') p = 0.01;
   p -= PK('travel') / 100;
   return clamp(p, 0.02, 0.75);
 }
@@ -101,7 +105,6 @@ function transferStop(r) { // changer de ligne : faible chance d'être arrêté 
 function travelGo(to, r, weeks) {
   const pc = G.pc; pc.money -= r.cost; const from = G.loc;
   const used = [];
-  if (pc.faux > 0) { pc.faux--; used.push('faux papiers'); } if (pc.brouil > 0) { pc.brouil--; used.push('brouilleur'); }
   const ctl = chance(detectChance());
   const stop = transferStop(r);
   if (stop) return transit(stop.r2, from, stop.state, () => {
