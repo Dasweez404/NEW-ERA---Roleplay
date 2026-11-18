@@ -14,7 +14,7 @@ function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const
 function pcLevel() { return clamp(Math.round(pcPower()), 1, 8); }
 const rr = (a, b) => a + Math.random() * (b - a);
 const pcBase = () => { const w = weaponOf(); return 3.2 + 1.15 * pcPower() + (w ? w.dmg * 0.4 : 0) + PK('dmg') * 0.4; };
-const foeHit = f => Math.max(1, Math.round((3 + 2.3 * (f.tier || 1) + f.dmg * 0.1) * rr(0.9, 1.1)));
+const foeHit = f => Math.max(1, Math.round((2.6 + 2 * (f.tier || 1) + f.dmg * 0.09) * rr(0.9, 1.1)));
 const dmgMul = () => 1 + 0.1 * (CB.nextBonus || 0) + 0.05 * (CB.hitBuff || 0) + ((CB.boost || 1) - 1) + (CB.rage ? 0.3 : 0);
 function rollIntent(f) {
   if (f.stun > 0) return 'stn';

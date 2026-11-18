@@ -123,7 +123,11 @@ function loseCombat(surrender) {
 // Défaite : capture / pillage / mort
 function defeatOutcome(lethal, text) {
   const pc = G.pc; pc.hp = Math.max(1, pc.hp);
-  if (lethal === 'capture') return capturedScene(text);
+  if (lethal === 'capture') {
+    const st = wantedStars(); const p = clamp(0.05 + 0.06 * st, 0.05, 0.35);
+    if (chance(p)) { const d = pcDie('Abattu lors de ton arrestation.'); if (d) return show({ kicker: 'DÉFAITE', title: 'Tiré à bout portant', text: ['Un agent tire. Tout devient noir…', `${esc(d.rescued)} t’arrache à la mêlée, in extremis. Tu n’auras pas de seconde chance.`], choices: [C('Continuer', hub)] }); return; }
+    return capturedScene(text);
+  }
   if (lethal === 'robbed') {
     const lost = Math.round(pc.money * ((pc.base && pc.base.lvl >= 2) ? 0.25 : 0.5)); pc.money -= lost; advance(2); pc.hp = Math.max(1, Math.round(pc.hpMax * 0.3));
     return show({ kicker: 'DÉFAITE', title: 'Dépouillé et laissé pour mort', text: [text, `On te dépouille : <b>−${fmt(lost)} ¢</b>. Tu te réveilles deux semaines plus tard, à moitié mort.`], choices: [C('Continuer', hub)] });

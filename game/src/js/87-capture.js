@@ -22,6 +22,7 @@ function capturedMenu() {
 }
 function captiveMonth() {
   const pc = G.pc; const cap = pc.flags.cap; if (!cap) return;
+  if (cap.stars >= 2 && chance(0.02 + 0.015 * cap.stars)) { const d = pcDie('Mort en détention.'); if (!d) return; toast(d.rescued + ' t’a sauvé de justesse.'); }
   if (G.wk >= cap.deadline) {
     if (cap.stars >= 4) { if (chance(0.45) && (pc.party.length || pc.rep[pc.faction] > 30)) { return release('La veille de ton exécution, un commando de ta faction prend d’assaut le Tartare.', { [pc.faction]: 10 }); } return endGame('dead', 'Exécuté au Tartare.'); }
     if (cap.stars >= 3) { pc.flags.cap = null; return queueFallenForced(); }
@@ -37,7 +38,7 @@ function release(text, repFx, extra, interrogated) {
 }
 function escapeMenu() {
   const pc = G.pc; const cap = pc.flags.cap; if (!cap) return hub(); const tier = clamp(cap.stars + 1, 1, 5); const dc = dcOf(tier); const L = [];
-  const tryEsc = (k, a, tags, okT, koT) => () => { const r = check(a, dc + (cap.tartare ? 2 : 0), tags); advance(1); if (G.status !== 'play') return; if (!pc.flags.cap) return; if (r.ok) { addHeat(6); const L2 = fx({ xp: 40 + tier * 10 }); release(okT, null, L2); } else { const L2 = fx({ hp: -rint(4, 10), heat: 2 }); cap.deadline -= 2; show({ kicker: 'Évasion ratée', title: 'Rattrapé', text: [koT, checkLine(r), 'Ton verdict approche plus vite : −2 semaines.'], fx: L2, choices: [C('Continuer', hub)] }); } };
+  const tryEsc = (k, a, tags, okT, koT) => () => { const r = check(a, dc + (cap.tartare ? 2 : 0), tags); advance(1); if (G.status !== 'play') return; if (!pc.flags.cap) return; if (r.ok) { addHeat(6); const L2 = fx({ xp: 40 + tier * 10 }); release(okT, null, L2); } else { const L2 = fx({ hp: -rint(4, 10), heat: 2 }); cap.deadline -= 2; if (chance(0.06 + 0.04 * cap.stars)) { const d = pcDie('Abattu pendant une tentative d’évasion.'); if (!d) return; toast(d.rescued + ' t’a sauvé de justesse.'); } show({ kicker: 'Évasion ratée', title: 'Rattrapé', text: [koT, checkLine(r), 'Ton verdict approche plus vite : −2 semaines.'], fx: L2, choices: [C('Continuer', hub)] }); } };
   L.push(C('Briser les barreaux et te battre', tryEsc('force', 'corps', ['combat'], 'Tu enfonces la porte et fonces à travers les couloirs. Dehors !', 'Les gardes te maîtrisent.'), { odds: ['corps', dc, ['combat']], cls: 'danger' }));
   L.push(C('Te faufiler par les conduits', tryEsc('furtif', 'agilite', ['stealth', 'mobility'], 'Les conduits t’emportent loin du bloc.', 'Un conduit t’a trahi : cul-de-sac.'), { odds: ['agilite', dc, ['stealth', 'mobility']] }));
   L.push(C('Pirater les serrures et les caméras', tryEsc('hack', 'intellect', ['hack'], 'Les portes s’ouvrent en cascade. Tu es dehors avant que les caméras redémarrent.', 'La prison se verrouille.'), { odds: ['intellect', dc, ['hack']], req: { cap: 'hack' } }));

@@ -2067,7 +2067,11 @@ function loseCombat(surrender) {
 // Défaite : capture / pillage / mort
 function defeatOutcome(lethal, text) {
   const pc = G.pc; pc.hp = Math.max(1, pc.hp);
-  if (lethal === 'capture') return capturedScene(text);
+  if (lethal === 'capture') {
+    const st = wantedStars(); const p = clamp(0.05 + 0.06 * st, 0.05, 0.35);
+    if (chance(p)) { const d = pcDie('Abattu lors de ton arrestation.'); if (d) return show({ kicker: 'DÉFAITE', title: 'Tiré à bout portant', text: ['Un agent tire. Tout devient noir…', `${esc(d.rescued)} t’arrache à la mêlée, in extremis. Tu n’auras pas de seconde chance.`], choices: [C('Continuer', hub)] }); return; }
+    return capturedScene(text);
+  }
   if (lethal === 'robbed') {
     const lost = Math.round(pc.money * ((pc.base && pc.base.lvl >= 2) ? 0.25 : 0.5)); pc.money -= lost; advance(2); pc.hp = Math.max(1, Math.round(pc.hpMax * 0.3));
     return show({ kicker: 'DÉFAITE', title: 'Dépouillé et laissé pour mort', text: [text, `On te dépouille : <b>−${fmt(lost)} ¢</b>. Tu te réveilles deux semaines plus tard, à moitié mort.`], choices: [C('Continuer', hub)] });
@@ -2150,7 +2154,7 @@ function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const
 function pcLevel() { return clamp(Math.round(pcPower()), 1, 8); }
 const rr = (a, b) => a + Math.random() * (b - a);
 const pcBase = () => { const w = weaponOf(); return 3.2 + 1.15 * pcPower() + (w ? w.dmg * 0.4 : 0) + PK('dmg') * 0.4; };
-const foeHit = f => Math.max(1, Math.round((3 + 2.3 * (f.tier || 1) + f.dmg * 0.1) * rr(0.9, 1.1)));
+const foeHit = f => Math.max(1, Math.round((2.6 + 2 * (f.tier || 1) + f.dmg * 0.09) * rr(0.9, 1.1)));
 const dmgMul = () => 1 + 0.1 * (CB.nextBonus || 0) + 0.05 * (CB.hitBuff || 0) + ((CB.boost || 1) - 1) + (CB.rage ? 0.3 : 0);
 function rollIntent(f) {
   if (f.stun > 0) return 'stn';
@@ -3143,7 +3147,7 @@ function resolveApproach(o, k, dc) {
 function lethalOf(fid) { return { fa: 'capture', fallen: 'capture', arena: 'capture', check: 'robbed', noir: 'robbed', slummer: 'robbed', galleon: 'robbed', manacorp: 'capture', gamma: 'capture', saibogu: 'capture', omega: 'capture', necropunks: 'death', ragnaroks: 'death', optimum: 'death', committed: 'robbed' }[fid] || 'robbed'; }
 function missionFail(o, lines, f = {}) {
   const pc = G.pc; const L = [];
-  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(2, 5 + o.tier * 2) });
+  const L2 = fx({ rep: { [o.emp === 'civils' || o.emp === 'noir' ? (o.emp === 'noir' ? 'noir' : 'civils') : o.emp]: -3 }, xp: Math.round(o.xp * 0.25), heat: ARCH[o.arch].heat >= 3 ? 3 : 1, hp: -rint(2, 4 + Math.round(o.tier * 1.5)) });
   if (pc.hp <= 0) { pc.hp = 1; }
   pc.missions++; G.score.fails = (G.score.fails || 0) + 1;
   // loyauté des alliés
@@ -4026,6 +4030,7 @@ function capturedMenu() {
 }
 function captiveMonth() {
   const pc = G.pc; const cap = pc.flags.cap; if (!cap) return;
+  if (cap.stars >= 2 && chance(0.02 + 0.015 * cap.stars)) { const d = pcDie('Mort en détention.'); if (!d) return; toast(d.rescued + ' t’a sauvé de justesse.'); }
   if (G.wk >= cap.deadline) {
     if (cap.stars >= 4) { if (chance(0.45) && (pc.party.length || pc.rep[pc.faction] > 30)) { return release('La veille de ton exécution, un commando de ta faction prend d’assaut le Tartare.', { [pc.faction]: 10 }); } return endGame('dead', 'Exécuté au Tartare.'); }
     if (cap.stars >= 3) { pc.flags.cap = null; return queueFallenForced(); }
@@ -4041,7 +4046,7 @@ function release(text, repFx, extra, interrogated) {
 }
 function escapeMenu() {
   const pc = G.pc; const cap = pc.flags.cap; if (!cap) return hub(); const tier = clamp(cap.stars + 1, 1, 5); const dc = dcOf(tier); const L = [];
-  const tryEsc = (k, a, tags, okT, koT) => () => { const r = check(a, dc + (cap.tartare ? 2 : 0), tags); advance(1); if (G.status !== 'play') return; if (!pc.flags.cap) return; if (r.ok) { addHeat(6); const L2 = fx({ xp: 40 + tier * 10 }); release(okT, null, L2); } else { const L2 = fx({ hp: -rint(4, 10), heat: 2 }); cap.deadline -= 2; show({ kicker: 'Évasion ratée', title: 'Rattrapé', text: [koT, checkLine(r), 'Ton verdict approche plus vite : −2 semaines.'], fx: L2, choices: [C('Continuer', hub)] }); } };
+  const tryEsc = (k, a, tags, okT, koT) => () => { const r = check(a, dc + (cap.tartare ? 2 : 0), tags); advance(1); if (G.status !== 'play') return; if (!pc.flags.cap) return; if (r.ok) { addHeat(6); const L2 = fx({ xp: 40 + tier * 10 }); release(okT, null, L2); } else { const L2 = fx({ hp: -rint(4, 10), heat: 2 }); cap.deadline -= 2; if (chance(0.06 + 0.04 * cap.stars)) { const d = pcDie('Abattu pendant une tentative d’évasion.'); if (!d) return; toast(d.rescued + ' t’a sauvé de justesse.'); } show({ kicker: 'Évasion ratée', title: 'Rattrapé', text: [koT, checkLine(r), 'Ton verdict approche plus vite : −2 semaines.'], fx: L2, choices: [C('Continuer', hub)] }); } };
   L.push(C('Briser les barreaux et te battre', tryEsc('force', 'corps', ['combat'], 'Tu enfonces la porte et fonces à travers les couloirs. Dehors !', 'Les gardes te maîtrisent.'), { odds: ['corps', dc, ['combat']], cls: 'danger' }));
   L.push(C('Te faufiler par les conduits', tryEsc('furtif', 'agilite', ['stealth', 'mobility'], 'Les conduits t’emportent loin du bloc.', 'Un conduit t’a trahi : cul-de-sac.'), { odds: ['agilite', dc, ['stealth', 'mobility']] }));
   L.push(C('Pirater les serrures et les caméras', tryEsc('hack', 'intellect', ['hack'], 'Les portes s’ouvrent en cascade. Tu es dehors avant que les caméras redémarrent.', 'La prison se verrouille.'), { odds: ['intellect', dc, ['hack']], req: { cap: 'hack' } }));
