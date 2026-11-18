@@ -25,8 +25,8 @@ function skill(attrId, tags = []) {
   if (tags.includes(STYLES[pc.style].tag)) { parts.push(['style de combat', 1]); mod += 1; }
   const gt = gearTags(); const gm = Math.min(3, tags.filter(t => gt.has(t)).length * 2);
   if (gm) { parts.push(['équipement', gm]); mod += gm; }
-  if (tags.includes('ally') && pc.party.length) { const b = Math.min(3, pc.party.filter(a => a.inj <= 0).length); if (b) { parts.push(['alliés', b]); mod += b; } }
-  if (!tags.includes('ally') && pc.party.length) { const hl = pc.party.filter(a => a.inj <= 0).length; const b = Math.min(2, Math.floor(hl / 2)); if (b) { parts.push(['équipe', b]); mod += b; } }
+  if (tags.includes('ally') && pc.party.length) { const b = Math.round(4 * teamF(pc.party.filter(a => a.inj <= 0).length)); if (b) { parts.push(['alliés', b]); mod += b; } }
+  if (!tags.includes('ally') && pc.party.length) { const b = Math.round(3 * teamF(pc.party.filter(a => a.inj <= 0).length)); if (b) { parts.push(['équipe', b]); mod += b; } }
   const pb = perkChk(tags); if (pb) { parts.push(['particularité', pb]); mod += pb; }
   if (PK('night') && typeof envTime === 'function' && envTime() === 'night') { parts.push(['nuit', PK('night')]); mod += PK('night'); }
   if (pc.stim > 0) { parts.push(['stimulant', 3]); mod += 3; }

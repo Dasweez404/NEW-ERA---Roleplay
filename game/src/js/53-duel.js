@@ -12,6 +12,9 @@ const MATRIX = {
 // Puissance : UNE seule échelle (1 à 10) tirée de la somme des attributs (étoiles + progression + pierres) et un peu du matériel.
 function pcPower() { const pc = G.pc; const w = weaponOf(), a = armorOf(); const sum = ATTRS.reduce((t, x) => t + A(x.id), 0); return clamp(sum / 5.6 + 0.12 * ((w ? w.dmg : 0) + (a ? a.def : 0)), 1, 10); }
 function pcLevel() { return clamp(Math.round(pcPower()), 1, 8); }
+// Équipe : rendements décroissants. 0 allié = 0, 1 ≈ 0,30, 3 ≈ 0,66, 6 ≈ 0,88 : chaque équipier compte moins que le précédent.
+const teamF = n => 1 - Math.pow(0.7, Math.max(0, n));
+const teamK = n => teamF(n) / 0.657;
 const rr = (a, b) => a + Math.random() * (b - a);
 const pcBase = () => { const w = weaponOf(); return 3.2 + 1.15 * pcPower() + (w ? w.dmg * 0.4 : 0) + PK('dmg') * 0.4; };
 const foeHit = f => Math.max(1, Math.round((2.6 + 2 * (f.tier || 1) + f.dmg * 0.09) * rr(0.9, 1.1)));
@@ -105,7 +108,7 @@ function play(card) {
   else if (t && !t.dead && dmg <= 0 && card.mult > 0) clog('Ton geste ne touche rien.', 'log-miss');
   // alliés et drone
   const friends = pc.party.filter(a => a.inj <= 0);
-  let ex = 0; friends.forEach(a => { ex += 0.4 + ((CH[a.id] && CH[a.id].stars) || 0) * 0.25; }); ex = Math.min(ex, pcBase() * 0.3); if (CB.drone) ex += CB.drone * pcBase() * 0.08;
+  const qual = friends.length ? friends.reduce((t, a) => t + ((CH[a.id] && CH[a.id].stars) || 0), 0) / friends.length : 0; let ex = pcBase() * 0.18 * teamK(friends.length) * (0.85 + 0.075 * qual); if (CB.drone) ex += CB.drone * pcBase() * 0.08;
   const t2 = target(); if (ex > 0 && t2) { const e = Math.round(ex); t2.hp = Math.max(0, t2.hp - e); if (friends.length) clog(`Ton équipe frappe aussi : ${e}.`, 'good'); }
   CB.foes.forEach(f => { if (!f.dead && f.hp <= 0) { f.dead = true; clog(`${fname(f)} s’effondre.`, 'good'); vfx('K.O.', 'ko'); pop('f' + CB.foes.indexOf(f), 'K.O.', 'crit'); } });
   // dégâts reçus
@@ -121,14 +124,14 @@ function play(card) {
   CB.rerolled = false; rollIntents(); drawHand(); renderCombat();
 }
 function incoming(card, t, tm) {
-  const pc = G.pc; let total = 0; const friends = pc.party.filter(a => a.inj <= 0); const cover = Math.min(0.15, friends.length * 0.05);
+  const pc = G.pc; let total = 0; const friends = pc.party.filter(a => a.inj <= 0); const cover = 0.07 * teamK(friends.length) + 0.06 * Math.max(0, 1 - teamK(friends.length) * 1.5);
   CB.foes.forEach(f => {
     if (f.dead || f.stun > 0 || f.intent === 'grd' || f.intent === 'stn') return;
     let m; if (f === t) m = tm; else m = f.intent === 'atk' ? (card.type === 'grd' ? 0.4 : card.type === 'rus' ? 0.8 : 1.0) : (card.type === 'atk' ? 0 : 0.35);
     if (m <= 0) return;
     let d = foeHit(f) * m * (CB.weak > 0 ? 0.7 : 1) * (pc.hp < pc.hpMax * 0.4 ? 1.1 : 1) * (1 - cover) - PK('def') - Math.floor(pcArm() / 3) - (hasRole('gardien') ? 1 : 0);
     d = Math.max(1, Math.round(d));
-    if (friends.length && chance(0.12)) { const a = pick(friends); a.hp -= d; clog(`${fname(f)} blesse ${CH[a.id].name} (${d}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
+    if (friends.length && chance(0.03 + 0.05 * teamK(friends.length))) { const a = pick(friends); a.hp -= d; clog(`${fname(f)} blesse ${CH[a.id].name} (${d}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     total += d;
   });
   if (CB.dodge > 0 && total > 0) { CB.dodge--; total = 0; pop('pc', 'ESQUIVE', 'ok'); clog('Tu esquives tout !', 'good'); }
