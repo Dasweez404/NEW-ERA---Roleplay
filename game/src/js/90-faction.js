@@ -120,14 +120,24 @@ function assaultFA() {
   if (CB) CB.hitBuff = Math.floor(wf.power / 25);
 }
 function diplomacy() {
-  const pc = G.pc; const W = G.world; const me = pc.faction; const L = [];
-  Object.keys(F).filter(f => f !== me && !['civils', 'fallen', 'noir', 'own'].includes(f)).forEach(fid => {
-    const rel = relation(me, fid);
-    if (rel >= 2) L.push(C(`${F[fid].name} : allié`, () => { const r = check('charisme', dcOf(3), ['social']); if (r.ok) { setRel(me, fid, 0); show({ title: 'Alliance rompue', text: ['L’alliance est dissoute, à l’amiable.'], fx: fx({ rep: { [fid]: -10 } }), choices: [C('Continuer', diplomacy)] }); } else show({ title: 'Refusé', text: ['Ils ne veulent pas rompre.'], choices: [C('Continuer', diplomacy)] }); }, { sub: 'Rompre l’alliance' }));
-    else if (rel === 0) L.push(C(`Proposer une alliance à ${F[fid].name}`, () => { const dc = dcOf(3) - Math.floor((pc.rep[fid] || 0) / 10); const r = check('charisme', dc, ['social', 'strat']); advance(1); if (r.ok) { setRel(me, fid, 2); show({ kicker: 'Alliance', title: 'Alliance conclue', text: [`${esc(F[fid].name)} et ${esc(F[me].name)} s’allient.`, checkLine(r)], fx: fx({ rep: { [fid]: 12 }, xp: 25 }), choices: [C('Continuer', diplomacy)] }); } else show({ title: 'Refus poli', text: ['Pas maintenant.', checkLine(r)], choices: [C('Continuer', diplomacy)] }); }, { odds: ['charisme', dcOf(3) - Math.floor((pc.rep[fid] || 0) / 10), ['social', 'strat']], req: { ok: () => (pc.rep[fid] || 0) < -20 ? 'Ils te détestent' : null } }));
-    if (rel > -2) L.push(C(`Déclarer la guerre à ${F[fid].name}`, () => { setRel(me, fid, -2); show({ title: 'Guerre', text: [`${esc(F[fid].name)} est désormais ton ennemi juré.`], fx: fx({ rep: { [fid]: -40 }, xp: 10 }), choices: [C('Continuer', diplomacy)] }); }, { cls: 'danger' }));
+  const pc = G.pc; const W = G.world; const me = pc.faction; const left = Math.max(0, ACT_MAX.dipl - actsUsed('dipl')); const use = () => { const a = pc.flags.acts = pc.flags.acts || {}; a.dipl = (a.dipl || 0) + 1; };
+  const back = () => diplomacy();
+  const propose = fid => { use(); const dc = dcOf(3) - Math.floor((pc.rep[fid] || 0) / 10); const r = check('charisme', dc, ['social', 'strat']); advance(1); if (G.status !== 'play') return; if (r.ok) { setRel(me, fid, 2); show({ kicker: 'Alliance', title: 'Alliance conclue', text: [`${esc(F[fid].name)} et ${esc(F[me].name)} s’allient.`, checkLine(r)], fx: fx({ rep: { [fid]: 12 }, xp: 25 }), choices: [C('Continuer', back)] }); } else show({ title: 'Refus poli', text: ['Pas maintenant.', checkLine(r)], choices: [C('Continuer', back)] }); };
+  const breakAl = fid => { use(); const r = check('charisme', dcOf(3), ['social']); if (r.ok) { setRel(me, fid, 0); show({ title: 'Alliance rompue', text: ['L’alliance est dissoute, à l’amiable.'], fx: fx({ rep: { [fid]: -10 } }), choices: [C('Continuer', back)] }); } else show({ title: 'Refusé', text: ['Ils ne veulent pas rompre.'], choices: [C('Continuer', back)] }); };
+  const war = fid => { use(); setRel(me, fid, -2); show({ title: 'Guerre', text: [`${esc(F[fid].name)} est désormais ton ennemi juré.`], fx: fx({ rep: { [fid]: -40 }, xp: 10 }), choices: [C('Continuer', back)] }); };
+  // relations de base (canon) : ennemis et amis naturels de ta faction, mis en avant et placés en premier
+  const base = fid => { const A = F[me] || { allies: [], enemies: [] }, B = F[fid]; return (A.allies.includes(fid) || B.allies.includes(me)) ? 'friend' : (A.enemies.includes(fid) || B.enemies.includes(me)) ? 'foe' : ''; };
+  const ids = Object.keys(F).filter(f => f !== me && !['civils', 'fallen', 'noir', 'own'].includes(f)).sort((a, b) => ({ foe: 0, friend: 1, '': 2 }[base(a)] - { foe: 0, friend: 1, '': 2 }[base(b)]));
+  const cards = ids.map(fid => {
+    const rel = relation(me, fid); const rep = pc.rep[fid] || 0; const dc = dcOf(3) - Math.floor(rep / 10); const pct = Math.round(odds('charisme', dc, ['social', 'strat']) * 100);
+    const state = rel >= 2 ? ['🤝 Allié', 'ok'] : rel <= -2 ? ['⚔ En guerre', 'war'] : ['Neutre', 'neu'];
+    const lockAll = left <= 0 ? 'Assez pour cette ville' : null;
+    const mk = (cls, ic, txt, fn, why) => h('button', { class: 'dipb ' + cls, disabled: !!why, title: why || '', onclick: () => { sfx('click'); fn(); } }, h('span', { class: 'dic' }, ic), h('small', {}, txt));
+    const left1 = rel >= 2 ? mk('al', '💔', 'Rompre', () => breakAl(fid), lockAll) : mk('al', '🤝', `${pct}%`, () => propose(fid), lockAll || (rel <= -2 ? 'En guerre : impossible' : rep < -20 ? 'Ils te détestent' : null));
+    const right1 = mk('wr', '⚔', 'Guerre', () => war(fid), lockAll || (rel <= -2 ? 'Déjà en guerre' : null));
+    const bs = base(fid); return h('div', { class: 'dipcard ' + state[1] + (bs ? ' base-' + bs : ''), style: `--c:${facHue(fid)}` }, bs ? h('span', { class: 'dipflag ' + bs, title: bs === 'foe' ? 'Ennemi de base' : 'Ami de base' }, bs === 'foe' ? '🔥 Ennemi naturel' : '🌿 Ami naturel') : null, h('div', { class: 'dipn' }, F[fid].name), h('div', { class: 'dips' }, state[0]), h('div', { class: 'dipbs' }, left1, right1));
   });
-  L.push(C('← Retour', leaderMenu)); show({ kicker: 'Diplomatie', title: 'Alliances et guerres', text: ['Les alliés de tes alliés t’apprécient ; les alliés de tes ennemis te détestent.'], choices: L.slice(0, 40) });
+  show({ kicker: 'Diplomatie', title: 'Alliances et guerres', text: [`Les alliés de tes alliés t’apprécient ; les alliés de tes ennemis te détestent. <span class="mut">${left}/${ACT_MAX.dipl} actions ici</span>`], extra: h('div', { class: 'dipgrid' }, cards), choices: [C('← Retour', leaderMenu)] });
 }
 function setRel(a, b, v) { G.world.rel = G.world.rel || {}; G.world.rel[a + '|' + b] = v; G.world.rel[b + '|' + a] = v; }
 EVENT_FN.terrAttack = function () {

@@ -615,3 +615,15 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 .chip{border-radius:2px;box-shadow:0 0 10px rgba(255,255,255,.06)}.chip.good{box-shadow:0 0 12px rgba(5,255,161,.25)}.chip.badc{box-shadow:0 0 12px rgba(255,42,109,.25)}
 @media(prefers-reduced-motion:reduce){body::before,.card.scene,.card.scene::after,.ch.cta::after,.tiles .ch.cta,.hud .pill.wanted,.rail .rs.on::before{animation:none!important}}
 .modesw.three{grid-template-columns:repeat(3,minmax(0,1fr))}.modesw.three .mseg b{font-size:.95rem}
+
+/* diplomatie en mosaïque */
+.dipgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:8px 0}@media(min-width:700px){.dipgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(min-width:1100px){.dipgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.dipcard{position:relative;background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--c) 22%,transparent),rgba(10,9,28,.96) 70%);border:1px solid color-mix(in srgb,var(--c) 55%,#000);border-radius:2px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.dipcard.ok{box-shadow:0 0 16px rgba(5,255,161,.25)}.dipcard.war{box-shadow:0 0 16px rgba(255,42,109,.3)}
+.dipn{font:800 .9rem var(--fb);line-height:1.15}.dips{font:600 .68rem var(--fm);letter-spacing:.08em;color:var(--mut)}.dipcard.ok .dips{color:#5be3a0}.dipcard.war .dips{color:#ff6a8a}
+.dipbs{display:flex;gap:6px;width:100%;margin-top:4px}.dipb{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.3);transition:transform .15s,box-shadow .15s}
+.dipb .dic{font-size:1.25rem;line-height:1}.dipb small{font:700 .66rem var(--fm);color:#cfd3ee}.dipb.al:hover:not(:disabled){border-color:#05ffa1;box-shadow:0 0 12px rgba(5,255,161,.4);transform:translateY(-2px)}.dipb.wr:hover:not(:disabled){border-color:#ff2a6d;box-shadow:0 0 12px rgba(255,42,109,.4);transform:translateY(-2px)}.dipb:disabled{opacity:.35;cursor:not-allowed}
+
+.dipflag{position:absolute;top:-8px;left:50%;transform:translateX(-50%);white-space:nowrap;font:800 .6rem var(--fm);letter-spacing:.08em;padding:1px 7px;border-radius:2px;border:1px solid}
+.dipflag.foe{color:#ff8aa6;border-color:#ff2a6d;background:#2a0a16}.dipflag.friend{color:#8affc8;border-color:#05ffa1;background:#06251a}
+.dipcard.base-foe{border-width:2px;border-color:#ff2a6d;margin-top:6px}.dipcard.base-friend{border-width:2px;border-color:#05ffa1;margin-top:6px}
