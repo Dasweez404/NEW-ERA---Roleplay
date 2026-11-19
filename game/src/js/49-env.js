@@ -177,5 +177,9 @@ function envBanner(stateId, hpx, forceTime) {
   const svg = img ? `<img class="envimg" alt="" src="${img}">` : '';
   const st = S[stateId]; const el = h('div', { class: 'env' + (img ? ' hasimg' : ' px'), style: `height:${hpx}px`, html: svg });
   if (!img) { const src = ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)); pixelize(src, k, url => { if (url) el.insertAdjacentHTML('afterbegin', `<img class="envimg pxart" alt="" src="${url}">`); else el.insertAdjacentHTML('afterbegin', src); }); }
-  el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${ZSHORT(DATA.stateZone[stateId]) || st.continent}`))); return el;
+  el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${ZSHORT(DATA.stateZone[stateId]) || st.continent}`)));
+  // relation de la ville avec toi : réputation de la zone (emoji + libellé) et maître des lieux
+  try { if (typeof G !== 'undefined' && G && G.pc && typeof cityRep === 'function') { const v = cityRep(stateId); const lab = cityLabel(v); const ic = v >= 25 ? '💖' : v >= 10 ? '🙂' : v <= -25 ? '💢' : v <= -10 ? '😠' : '😐'; const ow = G.world.terr && G.world.terr[stateId]; const owner = ow === 'pc' ? 'ta faction' : ow === 'fa' ? 'la F.A.' : (F[ow] ? F[ow].name : '');
+    el.append(h('div', { class: 'envrel ' + (v >= 10 ? 'pos' : v <= -10 ? 'neg' : '') }, h('b', {}, `${ic} ${lab}`), owner ? h('span', {}, `🏴 ${owner}`) : null)); } } catch (e) { }
+  return el;
 }

@@ -754,3 +754,22 @@ img.spr,.cimg .spr{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) d
 /* contour blanc : très très léger (remplace le précédent) */
 img.spr,.cimg .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
 .sg.hit .spr,.sg.hit .emo{filter:brightness(2.4) saturate(0) drop-shadow(0 0 .6px rgba(255,255,255,.55))}
+
+/* Encyclopédie */
+.enc{display:flex;flex-direction:column;height:calc(100dvh - 14px);min-height:360px;gap:6px}
+.enchead{display:flex;align-items:center;gap:10px;font-size:1.05rem}.enchead b{flex:1}.enccount{font:600 .72rem var(--fm);color:var(--mut);letter-spacing:.06em}
+.encbar{display:flex;flex-wrap:wrap;gap:5px;padding:6px;background:linear-gradient(180deg,rgba(24,22,52,.96),rgba(14,14,32,.96));border:1px solid rgba(39,240,255,.22)}
+.encbar select,.encbar input{flex:1 1 150px;min-width:0;background:#0b0b16;color:var(--tx);border:1px solid #2a2a44;padding:5px 6px;font:inherit;font-size:.78rem}.encbar select.act{border-color:var(--acc);color:var(--acc)}.encbar .encq{flex:1 1 100%}
+.encgrid{flex:1;overflow:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;align-content:flex-start;padding:4px;border:1px solid #1d1d36;background:rgba(5,5,12,.6)}
+.enct{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-width:64px;background:rgba(255,255,255,.03);border:1px solid #23233d;padding:4px 4px 3px}.enct:hover,.enct:focus-visible{border-color:var(--acc);background:rgba(252,238,9,.06)}
+.enct .spr{image-rendering:pixelated;max-width:none}.encn{font:600 .62rem var(--fm);max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c8ccf0}.encs{font-size:.55rem;color:var(--acc);line-height:1}
+.encd{overflow:auto}.encdbody{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:center;padding:6px}.encbig{padding:10px;background:linear-gradient(160deg,#241547,#10102a);border:1px solid #34344f}.encinfo{flex:1 1 220px}.encrow{display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed #23233d;font-size:.9rem}.encrow span:first-child{flex:none;width:1.4em}
+
+/* bandeau de ville : plus lisible + relation avec toi */
+.env .envtag{background:linear-gradient(90deg,rgba(5,4,11,.9),rgba(5,4,11,.55) 75%,transparent);padding:3px 12px 3px 8px;border-left:3px solid var(--acc);max-width:75%}
+.env .envtag b{font-size:1rem;letter-spacing:.06em;color:#fff;text-shadow:0 1px 2px #000}.env .envtag span{font-size:.7rem;color:#e6eaff;letter-spacing:.1em;text-shadow:0 1px 2px #000}
+.envrel{position:absolute;right:6px;top:6px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;background:rgba(5,4,11,.82);border:1px solid #5b6076;padding:2px 8px;font:700 .72rem var(--fm);color:#e6eaff}.envrel.pos{border-color:#5be3a0;color:#5be3a0}.envrel.neg{border-color:#ff2a6d;color:#ff7aa8}.envrel span{font-weight:600;font-size:.62rem;color:#c8ccf0}
+
+.encsels{display:contents}.encfb{display:none}
+@media (max-width:700px){.encfb{display:block;flex:1 1 100%}.encsels{display:none;width:100%;flex-wrap:wrap;gap:5px}.encbar.open .encsels{display:flex}.encbar .encq{flex:1 1 55%}.encbar>select{flex:1 1 40%}}
+.cityrel{border-color:#5b6076}

@@ -766,6 +766,25 @@ img.spr,.cimg .spr{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) d
 /* contour blanc : très très léger (remplace le précédent) */
 img.spr,.cimg .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
 .sg.hit .spr,.sg.hit .emo{filter:brightness(2.4) saturate(0) drop-shadow(0 0 .6px rgba(255,255,255,.55))}
+
+/* Encyclopédie */
+.enc{display:flex;flex-direction:column;height:calc(100dvh - 14px);min-height:360px;gap:6px}
+.enchead{display:flex;align-items:center;gap:10px;font-size:1.05rem}.enchead b{flex:1}.enccount{font:600 .72rem var(--fm);color:var(--mut);letter-spacing:.06em}
+.encbar{display:flex;flex-wrap:wrap;gap:5px;padding:6px;background:linear-gradient(180deg,rgba(24,22,52,.96),rgba(14,14,32,.96));border:1px solid rgba(39,240,255,.22)}
+.encbar select,.encbar input{flex:1 1 150px;min-width:0;background:#0b0b16;color:var(--tx);border:1px solid #2a2a44;padding:5px 6px;font:inherit;font-size:.78rem}.encbar select.act{border-color:var(--acc);color:var(--acc)}.encbar .encq{flex:1 1 100%}
+.encgrid{flex:1;overflow:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;align-content:flex-start;padding:4px;border:1px solid #1d1d36;background:rgba(5,5,12,.6)}
+.enct{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-width:64px;background:rgba(255,255,255,.03);border:1px solid #23233d;padding:4px 4px 3px}.enct:hover,.enct:focus-visible{border-color:var(--acc);background:rgba(252,238,9,.06)}
+.enct .spr{image-rendering:pixelated;max-width:none}.encn{font:600 .62rem var(--fm);max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c8ccf0}.encs{font-size:.55rem;color:var(--acc);line-height:1}
+.encd{overflow:auto}.encdbody{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:center;padding:6px}.encbig{padding:10px;background:linear-gradient(160deg,#241547,#10102a);border:1px solid #34344f}.encinfo{flex:1 1 220px}.encrow{display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed #23233d;font-size:.9rem}.encrow span:first-child{flex:none;width:1.4em}
+
+/* bandeau de ville : plus lisible + relation avec toi */
+.env .envtag{background:linear-gradient(90deg,rgba(5,4,11,.9),rgba(5,4,11,.55) 75%,transparent);padding:3px 12px 3px 8px;border-left:3px solid var(--acc);max-width:75%}
+.env .envtag b{font-size:1rem;letter-spacing:.06em;color:#fff;text-shadow:0 1px 2px #000}.env .envtag span{font-size:.7rem;color:#e6eaff;letter-spacing:.1em;text-shadow:0 1px 2px #000}
+.envrel{position:absolute;right:6px;top:6px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;background:rgba(5,4,11,.82);border:1px solid #5b6076;padding:2px 8px;font:700 .72rem var(--fm);color:#e6eaff}.envrel.pos{border-color:#5be3a0;color:#5be3a0}.envrel.neg{border-color:#ff2a6d;color:#ff7aa8}.envrel span{font-weight:600;font-size:.62rem;color:#c8ccf0}
+
+.encsels{display:contents}.encfb{display:none}
+@media (max-width:700px){.encfb{display:block;flex:1 1 100%}.encsels{display:none;width:100%;flex-wrap:wrap;gap:5px}.encbar.open .encsels{display:flex}.encbar .encq{flex:1 1 55%}.encbar>select{flex:1 1 40%}}
+.cityrel{border-color:#5b6076}
 </style>
 </head>
 <body>
@@ -1495,7 +1514,7 @@ function hudEl() {
       h('div', { class: 'stat en' }, h('span', { class: 'lab ic' }, '⚡'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
       h('span', { class: 'pill cash', title: 'Crédits' }, '🪙 ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
-      h('span', { class: 'pill dim' }, '📍 ' + capName(G.loc))));
+      h('span', { class: 'pill dim cityrel', title: 'Ta réputation dans cette zone' }, '📍 ' + capName(G.loc) + (typeof cityRep === 'function' ? (() => { const v = cityRep(); return ' · ' + (v >= 25 ? '💖' : v >= 10 ? '🙂' : v <= -25 ? '💢' : v <= -10 ? '😠' : '😐') + ' ' + cityLabel(v); })() : ''))));
 }
 function menuPop() {
   const close = () => ov.remove(); const b = (t, f) => h('button', { class: 'pbtn', onclick: () => { sfx('click'); f(); } }, t);
@@ -2183,7 +2202,11 @@ function envBanner(stateId, hpx, forceTime) {
   const svg = img ? `<img class="envimg" alt="" src="${img}">` : '';
   const st = S[stateId]; const el = h('div', { class: 'env' + (img ? ' hasimg' : ' px'), style: `height:${hpx}px`, html: svg });
   if (!img) { const src = ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)); pixelize(src, k, url => { if (url) el.insertAdjacentHTML('afterbegin', `<img class="envimg pxart" alt="" src="${url}">`); else el.insertAdjacentHTML('afterbegin', src); }); }
-  el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${ZSHORT(DATA.stateZone[stateId]) || st.continent}`))); return el;
+  el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${ZSHORT(DATA.stateZone[stateId]) || st.continent}`)));
+  // relation de la ville avec toi : réputation de la zone (emoji + libellé) et maître des lieux
+  try { if (typeof G !== 'undefined' && G && G.pc && typeof cityRep === 'function') { const v = cityRep(stateId); const lab = cityLabel(v); const ic = v >= 25 ? '💖' : v >= 10 ? '🙂' : v <= -25 ? '💢' : v <= -10 ? '😠' : '😐'; const ow = G.world.terr && G.world.terr[stateId]; const owner = ow === 'pc' ? 'ta faction' : ow === 'fa' ? 'la F.A.' : (F[ow] ? F[ow].name : '');
+    el.append(h('div', { class: 'envrel ' + (v >= 10 ? 'pos' : v <= -10 ? 'neg' : '') }, h('b', {}, `${ic} ${lab}`), owner ? h('span', {}, `🏴 ${owner}`) : null)); } } catch (e) { }
+  return el;
 }
 
 // ───────── Combat tour par tour ─────────
@@ -5265,6 +5288,73 @@ Object.assign(CAMPS, {
   ], end: [['Les voix se sont tues, apaisées. Tu repars avec un savoir rare.', { xp: 70, rep: { artefactors: 5 }, merit: 2 }], ['Les voix murmurent encore. Quelqu’un finira par les entendre.', { xp: 26 }]] },
 });
 
+// ───────── Encyclopédie : tous les personnages en mosaïque, avec filtres et tris combinables ─────────
+// Un pixel de sprite a la même taille à l'écran pour tous les personnages, quelle que soit la taille de l'image.
+const ENC = { f: {}, sort: 'nom', q: '' };
+const ENC_AGES = ['10-15ans', '15-20ans', '20-25ans', '25-30ans', '30-35ans', '35-40ans', '40-45ans', '45-50ans', '50-55ans', '55-60ans', '60-65ans', '65-70ans', '70-75ans'];
+const encAge = c => { const m = String(c.age || '').match(/\d+/); return m ? +m[0] : 99; };
+const GENRES = { H: '♂ Homme', F: '♀ Femme', N: '⚧ Non-binaire', B: '⚧ Non-binaire' };
+function encFilters() {
+  const chars = DATA.chars; const uniq = f => [...new Set(chars.map(f).filter(x => x != null && x !== ''))];
+  const factions = uniq(c => c.faction).sort((a, b) => (F[a] ? F[a].name : a).localeCompare(F[b] ? F[b].name : b));
+  const powCats = uniq(c => (c.powers || []).map(p => PW[p] && PW[p].cat)[0]).sort();
+  return [
+    { k: 'faction', ic: '🏴', n: 'Faction', get: c => c.faction, opts: factions.map(f => [f, F[f] ? F[f].name : f]) },
+    { k: 'continent', ic: '🌍', n: 'Continent', get: c => c.continent, opts: uniq(c => c.continent).sort().map(x => [x, x]) },
+    { k: 'origin', ic: '📍', n: 'Origine', get: c => c.origin, opts: uniq(c => c.origin).sort((a, b) => stateName(a).localeCompare(stateName(b))).map(x => [x, stateName(x) + (S[x] ? ' · ' + S[x].capital : '')]) },
+    { k: 'zone', ic: '🗺', n: 'Zone', get: c => c.zone, opts: uniq(c => c.zone).sort().map(x => [x, x]) },
+    { k: 'style', ic: '🎭', n: 'Style de combat', get: c => c.style, opts: Object.keys(STYLES).map(x => [x, STYLES[x].name + ' · ' + STYLES[x].grp]) },
+    { k: 'grp', ic: '⚔', n: 'Catégorie de style', get: c => STYLES[c.style] && STYLES[c.style].grp, opts: ['Offensif', 'Défensif', 'Technique', 'Soutien'].map(x => [x, x]) },
+    { k: 'ptype', ic: '✨', n: 'Type de pouvoir', get: c => (c.ptypes && c.ptypes[0]) || 'aucun', opts: Object.keys(TYPENAME).map(x => [x, TYPENAME[x]]) },
+    { k: 'pcat', ic: '🧬', n: 'Famille de pouvoir', get: c => (c.powers || []).map(p => PW[p] && PW[p].cat)[0], opts: powCats.map(x => [x, cap(String(x))]) },
+    { k: 'gender', ic: '⚥', n: 'Genre', get: c => (c.gender === 'B' ? 'N' : c.gender), opts: [['H', GENRES.H], ['F', GENRES.F], ['N', GENRES.N]] },
+    { k: 'stars', ic: '⭐', n: 'Prestige', get: c => String(c.stars), opts: [0, 1, 2, 3, 4, 5].map(x => [String(x), x ? '★'.repeat(x) : 'Anonyme']) },
+    { k: 'age', ic: '🎂', n: 'Âge', get: c => c.age, opts: ENC_AGES.filter(a => chars.some(c => c.age === a)).map(a => [a, a.replace('ans', ' ans')]) },
+    { k: 'lead', ic: '👑', n: 'Rang', get: c => Object.values(F).some(f => f.leaders && f.leaders.includes(c.id)) ? 'chef' : 'membre', opts: [['chef', '👑 Chefs de faction'], ['membre', 'Membres']] },
+  ];
+}
+const ENC_SORTS = [['nom', '🔤 Nom'], ['prestige', '⭐ Prestige ↓'], ['age', '🎂 Âge ↑'], ['faction', '🏴 Faction'], ['origine', '📍 Origine'], ['puissance', '💥 Puissance ↓']];
+function encList() {
+  const FL = encFilters(); const q = ENC.q.trim().toLowerCase();
+  let L = DATA.chars.filter(c => FL.every(f => !ENC.f[f.k] || f.get(c) === ENC.f[f.k]) && (!q || c.name.toLowerCase().includes(q)));
+  const cmp = { nom: (a, b) => a.name.localeCompare(b.name), prestige: (a, b) => b.stars - a.stars || a.name.localeCompare(b.name), age: (a, b) => encAge(a) - encAge(b), faction: (a, b) => (F[a.faction] ? F[a.faction].name : '').localeCompare(F[b.faction] ? F[b.faction].name : '') || a.name.localeCompare(b.name), origine: (a, b) => stateName(a.origin).localeCompare(stateName(b.origin)) || a.name.localeCompare(b.name), puissance: (a, b) => (b.ratio || 0) - (a.ratio || 0) }[ENC.sort];
+  return L.sort(cmp);
+}
+const encK = () => (innerWidth < 700 ? 2 : 3); // pixels d'écran par pixel de sprite : identique pour tous
+function encTile(c) {
+  const s = SPR[c.id]; const k = encK();
+  return h('button', { class: 'enct', title: c.name, onclick: () => { sfx('click'); encDetail(c.id); } },
+    h('img', { class: 'spr', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false', loading: 'lazy' }),
+    h('span', { class: 'encn' }, c.name), c.stars ? h('span', { class: 'encs' }, '★'.repeat(c.stars)) : null);
+}
+function encyclopediaScreen() {
+  G = null; const FL = encFilters(); const grid = h('div', { class: 'encgrid' }); const count = h('div', { class: 'enccount' });
+  const refresh = () => { const L = encList(); grid.innerHTML = ''; L.forEach(c => grid.append(encTile(c))); if (!L.length) grid.append(h('div', { class: 'mut', style: 'padding:20px' }, 'Aucun personnage ne correspond à ces filtres.')); count.textContent = `${L.length} / ${DATA.chars.length} personnages`; grid.scrollTop = 0; bar.querySelectorAll('select').forEach(s => s.classList.toggle('act', !!s.value)); };
+  const sel = (ic, n, opts, val, on, all = 'Tous') => { const s = h('select', { title: n, 'aria-label': n, onchange: e => { sfx('click'); on(e.target.value); refresh(); } }, h('option', { value: '' }, `${ic} ${n} : ${all}`), ...opts.map(([v, l]) => h('option', { value: v }, `${ic} ${l}`))); s.value = val || ''; return s; };
+  const search = h('input', { class: 'encq', type: 'search', placeholder: '🔎 Nom…', value: ENC.q, oninput: e => { ENC.q = e.target.value; refresh(); } });
+  const sortSel = h('select', { title: 'Trier', 'aria-label': 'Trier', onchange: e => { ENC.sort = e.target.value; refresh(); } }, ENC_SORTS.map(([v, l]) => h('option', { value: v }, '↕ ' + l))); sortSel.value = ENC.sort;
+  const reset = h('button', { class: 'tab', onclick: () => { ENC.f = {}; ENC.q = ''; ENC.sort = 'nom'; sfx('click'); encyclopediaScreen(); } }, '🔄 Tout réinitialiser');
+  const nAct = () => Object.keys(ENC.f).length;
+  const tog = h('button', { class: 'tab encfb', onclick: () => { ENC.open = !ENC.open; sfx('click'); bar.classList.toggle('open', ENC.open); } }, '🎛 Filtres');
+  const sels = h('div', { class: 'encsels' }, ...FL.map(f => sel(f.ic, f.n, f.opts, ENC.f[f.k], v => { if (v) ENC.f[f.k] = v; else delete ENC.f[f.k]; tog.textContent = '🎛 Filtres' + (nAct() ? ` (${nAct()})` : ''); })), reset);
+  tog.textContent = '🎛 Filtres' + (nAct() ? ` (${nAct()})` : '');
+  const bar = h('div', { class: 'encbar' + (ENC.open ? ' open' : '') }, search, sortSel, tog, sels);
+  UI.scene = { bare: true, extra: h('div', { class: 'enc' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: titleScreen, title: 'Retour' }, '←'), h('b', {}, '📚 Encyclopédie'), count), bar, grid) }; render(); refresh();
+}
+function encDetail(id) {
+  const c = CH[id]; const s = SPR[id]; const k = encK() + 1; const lead = Object.values(F).find(f => f.leaders && f.leaders.includes(id));
+  const row = (ic, t) => h('div', { class: 'encrow' }, h('span', {}, ic), h('span', {}, t));
+  const pw = (c.powers || []).map(p => PW[p] ? PW[p].name : p);
+  UI.scene = { bare: true, extra: h('div', { class: 'enc encd' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: encyclopediaScreen, title: 'Retour' }, '←'), h('b', {}, c.name), lead ? h('span', { class: 'enccount' }, '👑 chef') : null),
+    h('div', { class: 'encdbody' }, s ? h('div', { class: 'encbig' }, h('img', { class: 'spr', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false' })) : null,
+      h('div', { class: 'encinfo' },
+        row('🏴', F[c.faction] ? F[c.faction].name : c.faction), row('📍', `${stateName(c.origin)}${S[c.origin] ? ' · ' + S[c.origin].capital : ''} — ${c.continent || ''}`), row('🗺', c.zone || '—'),
+        row('🎂', String(c.age || '—').replace('ans', ' ans')), row('⚥', GENRES[c.gender] || '—'), row('⭐', c.stars ? '★'.repeat(c.stars) : 'Anonyme'),
+        row('🎭', `${STYLES[c.style] ? STYLES[c.style].name + ' · ' + STYLES[c.style].grp : c.style}`), row('✨', (c.ptypes && c.ptypes.length ? c.ptypes.map(t => TYPENAME[t] || t).join(' + ') : 'Aucun pouvoir')), pw.length ? row('🧬', pw.join(' · ')) : null,
+        c.ratio ? row('💥', `Ratio de puissance : ${c.ratio}`) : null))) };
+  render();
+}
+
 // ───────── Autres fins que les 16 pierres ─────────
 // Chaque fin a ses conditions, visibles dans l'onglet Perso ; quand elles sont réunies, une tuile « Conclure » apparaît en ville.
 const ENDINGS = [
@@ -5405,7 +5495,7 @@ function titleScreen() {
   const btn = (n, t, sub, f, go) => h('button', { class: 'tbtn' + (go ? ' go' : ''), style: `--i:${n}`, onclick: () => { sfx('click'); f(); } }, h('span', { class: 'tn' }, String(n).padStart(2, '0')), h('span', { class: 'tt' }, h('b', {}, t), sub ? h('small', {}, sub) : null), h('span', { class: 'ta' }, '›'));
   const city = pick(DATA.states).id;
   const side = h('div', { class: 'tside' }, hero && hero.sp ? h('div', { class: 'tfloat' }, h('div', { class: 'tring' }), sprFit(hero.sp, wide ? 320 : 150, 'tspr'), h('div', { class: 'tcap' }, h('b', {}, hero.name), h('span', {}, `${hero.faction} · ${rankStr(hero.grade)}`))) : h('div', { class: 'tfloat emblem' }, h('div', { class: 'tring' }), atomSVG()));
-  const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Règles', 'But, jets, grades, primes', rulesScreen));
+  const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Encyclopédie', 'Les personnages, avec filtres', encyclopediaScreen), btn(sc ? 5 : 4, 'Règles', 'But, jets, grades, primes', rulesScreen));
   UI.scene = { bare: true, extra: h('div', { class: 'title2' }, h('div', { class: 'tbg' }, envBanner(city, 340, 'night')), h('div', { class: 'tgrid' }),
     h('div', { class: 'tmain' }, h('div', { class: 'tleft' }, h('div', { class: 'tkick' }, 'CRATÈS · 2071'), h('h1', { class: 'tlogo' }, h('img', { src: LOGO_TITLE, alt: 'NEW ERA', draggable: 'false' })), h('p', { class: 'tlore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Survis au protocole ANTI.'), menu), side),
     h('div', { class: 'tfoot' }, '52 États · 31 factions · 441 personnages')) };
