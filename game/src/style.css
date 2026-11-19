@@ -798,3 +798,9 @@ img.spr,.cimg .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
 .encbar select{transition:border-color .2s,box-shadow .2s,transform .12s}.encbar select:focus{box-shadow:0 0 12px rgba(252,238,9,.35)}.encbar select.act{box-shadow:0 0 10px rgba(252,238,9,.3)}
 .encbar .tab:active{transform:scale(.94)}
 @media(prefers-reduced-motion:reduce){.enct,.enct.in,.encbig,.encbigimg,.encring,.encscan,.encrow,.encgrid.swap{animation:none!important}}
+
+/* cases carrées identiques */
+.encgrid{display:grid;grid-template-columns:repeat(auto-fill,var(--S,176px));justify-content:center;gap:6px;align-items:stretch;align-content:start}
+.enct{width:var(--S,176px);height:var(--S,176px);min-width:0;padding:4px;display:grid;grid-template-rows:1fr auto;justify-items:center;align-items:center;gap:0}
+.enct .encimg{display:grid;place-items:center;width:100%;height:100%;min-height:0;overflow:hidden}.enct .encn{max-width:100%;text-align:center}.enct .encs{position:absolute;top:4px;right:6px}.enct{position:relative}
+.enct{grid-template-columns:minmax(0,1fr)}

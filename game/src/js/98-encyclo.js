@@ -30,16 +30,20 @@ function encList() {
   const cmp = { nom: (a, b) => a.name.localeCompare(b.name), prestige: (a, b) => b.stars - a.stars || a.name.localeCompare(b.name), age: (a, b) => encAge(a) - encAge(b), faction: (a, b) => (F[a.faction] ? F[a.faction].name : '').localeCompare(F[b.faction] ? F[b.faction].name : '') || a.name.localeCompare(b.name), origine: (a, b) => stateName(a.origin).localeCompare(stateName(b.origin)) || a.name.localeCompare(b.name), puissance: (a, b) => (b.ratio || 0) - (a.ratio || 0) }[ENC.sort];
   return L.sort(cmp);
 }
-const encK = () => (innerWidth < 700 ? 2 : 3); // pixels d'écran par pixel de sprite : identique pour tous
+// Cases carrées de même taille pour tous ; un pixel de sprite garde la même taille partout (échelle commune, calée sur le plus grand sprite : 98 px de large)
+const ENC_MAXW = 98;
+const encS = () => innerWidth < 700 ? Math.floor((Math.min(innerWidth, 1240) - 40) / 2) : 176;
+const encK = () => Math.round(((encS() - 14) / ENC_MAXW) * 20) / 20;
+const encKBig = () => (innerWidth < 700 ? 3 : 4); // fiche détaillée
 function encTile(c, i) {
   const s = SPR[c.id]; const k = encK(); const col = facHue(c.faction); const anim = i != null && i < 70;
   const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => encDetail(c.id), 140); } },
-    h('img', { class: 'spr', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false', loading: 'lazy' }),
+    h('span', { class: 'encimg' }, h('img', { class: 'spr', src: s[2], width: Math.round(s[0] * k), height: Math.round(s[1] * k), alt: c.name, draggable: 'false', loading: 'lazy' })),
     h('span', { class: 'encn' }, c.name), c.stars ? h('span', { class: 'encs' }, '★'.repeat(c.stars)) : null);
   return t;
 }
 function encyclopediaScreen() {
-  G = null; const FL = encFilters(); const grid = h('div', { class: 'encgrid' }); const count = h('div', { class: 'enccount' });
+  G = null; const FL = encFilters(); const grid = h('div', { class: 'encgrid', style: `--S:${encS()}px` }); const count = h('div', { class: 'enccount' });
   const refresh = () => { const L = encList(); ENC.list = L.map(c => c.id); grid.innerHTML = ''; grid.classList.remove('swap'); void grid.offsetWidth; grid.classList.add('swap'); L.forEach((c, i) => grid.append(encTile(c, i))); if (!L.length) grid.append(h('div', { class: 'mut', style: 'padding:20px' }, 'Aucun personnage ne correspond à ces filtres.')); { const from = ENC.shown == null ? 0 : ENC.shown; ENC.shown = L.length; const num = h('b', { class: 'encnum' }, String(from)); count.innerHTML = ''; count.append(num, ` / ${DATA.chars.length} personnages`); countUp(num, from, L.length, 450); } grid.scrollTop = 0; bar.querySelectorAll('select').forEach(s => s.classList.toggle('act', !!s.value)); };
   const sel = (ic, n, opts, val, on, all = 'Tous') => { const s = h('select', { title: n, 'aria-label': n, onchange: e => { sfx('click'); on(e.target.value); refresh(); } }, h('option', { value: '' }, `${ic} ${n} : ${all}`), ...opts.map(([v, l]) => h('option', { value: v }, `${ic} ${l}`))); s.value = val || ''; return s; };
   const search = h('input', { class: 'encq', type: 'search', placeholder: '🔎 Nom…', value: ENC.q, oninput: e => { ENC.q = e.target.value; refresh(); } });
@@ -53,7 +57,7 @@ function encyclopediaScreen() {
   UI.scene = { bare: true, extra: h('div', { class: 'enc' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: titleScreen, title: 'Retour' }, '←'), h('b', {}, '📚 Encyclopédie'), count), bar, grid) }; render(); refresh();
 }
 function encDetail(id) {
-  const c = CH[id]; const s = SPR[id]; const k = encK() + 1; const lead = Object.values(F).find(f => f.leaders && f.leaders.includes(id)); const col = facHue(c.faction);
+  const c = CH[id]; const s = SPR[id]; const k = encKBig(); const lead = Object.values(F).find(f => f.leaders && f.leaders.includes(id)); const col = facHue(c.faction);
   const list = (ENC.list && ENC.list.includes(id)) ? ENC.list : [id]; const pos = list.indexOf(id);
   const go = d => { sfx('click'); encDetail(list[(pos + d + list.length) % list.length]); };
   let n = 0; const row = (ic, t) => h('div', { class: 'encrow', style: `--i:${n++}` }, h('span', {}, ic), h('span', {}, t));
