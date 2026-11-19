@@ -816,3 +816,5 @@ img.spr,.cimg .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
 body::after{display:none!important}
 .env,.env .cityart{image-rendering:auto}
 .title2 .tbg{opacity:.9}
+
+.cityart .otrain{animation:cdrift 26s ease-in-out infinite alternate}

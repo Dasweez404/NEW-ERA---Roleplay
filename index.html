@@ -828,6 +828,8 @@ img.spr,.cimg .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
 body::after{display:none!important}
 .env,.env .cityart{image-rendering:auto}
 .title2 .tbg{opacity:.9}
+
+.cityart .otrain{animation:cdrift 26s ease-in-out infinite alternate}
 </style>
 </head>
 <body>
@@ -2187,20 +2189,30 @@ const CITY_CLIM = { saha: 'desert', machrek: 'desert', khora: 'desert', levant: 
   isgarde: 'cold', scandor: 'cold', polaris: 'cold', slavo: 'cold', baltovi: 'cold', carpodav: 'cold',
   gallica: 'temperate', albion: 'temperate', mitropa: 'temperate', benelux: 'temperate', atlante: 'temperate', aotea: 'temperate', australis: 'temperate', koryo: 'temperate', ubunye: 'temperate', andina: 'temperate', caucase: 'temperate',
   alpomare: 'med', iberico: 'med', balka: 'med', aymaro: 'med', meso: 'med', bengal: 'med', yamato: 'sakura', nubie: 'savanna', swahilis: 'savanna', nyasa: 'savanna', sinotan: 'red' };
+// ── Orbitrail, bateaux et vaisseaux futuristes ──
+const FUT = {
+  train: (x, y, s, P, lit) => { let o = `<g transform="translate(${x} ${y}) scale(${s})">`; for (let i = 0; i < 4; i++) { const cx = i * 66; o += `<path d="M${cx},0 h${i === 3 ? 48 : 62} ${i === 3 ? 'q22,0 34,-12 v-14 q0,-8 -10,-8 h-72 q-8,0 -8,8 v26z' : 'v-34 h-62z'}" fill="${P.light}"/><rect x="${cx}" y="-12" width="${i === 3 ? 56 : 62}" height="5" fill="${P.accent}"/>${[0, 1, 2, 3].map(w => `<rect x="${cx + 6 + w * 13}" y="-27" width="9" height="9" rx="2" fill="${lit ? '#ffe9a8' : P.sky2}"/>`).join('')}`; } return o + `<rect x="-6" y="0" width="290" height="5" fill="${P.dark}"/><circle cx="276" cy="-12" r="3" fill="${lit ? '#fff7c2' : P.sun}"/></g>`; },
+  ship: (x, y, s, P, lit) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M0,0 h120 l16,-16 h-148z" fill="${P.light}"/><rect x="-6" y="-26" width="60" height="12" fill="${P.b3}"/><rect x="2" y="-38" width="38" height="12" fill="${P.light}"/><rect x="62" y="-24" width="14" height="10" fill="${P.accent}"/><rect x="78" y="-24" width="14" height="10" fill="${P.b4}"/><rect x="94" y="-24" width="14" height="10" fill="${P.b3}"/><path d="M0,0 h120" stroke="${P.accent}" stroke-width="4"/></g>`,
+  cat: (x, y, s, P, lit) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M0,0 h96 q12,0 18,-10 h-124q4,10 10,10z" fill="${P.light}"/><path d="M-8,-10 q40,-26 108,-2 l8,2 z" fill="${P.accent}" opacity=".9"/><path d="M8,-6 q40,-16 80,-2" stroke="${lit ? '#9ff' : P.sky2}" stroke-width="4" fill="none"/><path d="M-10,4 h130" stroke="${lit ? '#7ef' : P.light}" stroke-width="2" opacity=".6"/></g>`,
+  airship: (x, y, s, P, lit) => `<g transform="translate(${x} ${y}) scale(${s})"><ellipse cx="0" cy="0" rx="54" ry="16" fill="${P.light}"/><ellipse cx="-8" cy="-4" rx="40" ry="6" fill="#fff" opacity=".35"/><path d="M40,0 l22,-14 v28z" fill="${P.accent}"/><rect x="-16" y="14" width="30" height="8" rx="3" fill="${P.dark}"/><path d="M-30,-10 h40" stroke="${P.b4}" stroke-width="3"/></g>`,
+  shuttle: (x, y, s, P, lit) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-70,6 q50,-10 124,-2 q24,2 40,8 q-16,6 -40,8 q-74,8 -124,-2z" fill="${P.light}"/><path d="M-60,0 l-26,-14 l16,18z" fill="${P.accent}"/><path d="M-30,6 q40,-10 90,2" stroke="${P.sky2}" stroke-width="5" fill="none"/><path d="M-72,14 q-60,2 -140,14" stroke="${lit ? '#9ff' : P.sun}" stroke-width="5" fill="none" opacity=".45" stroke-linecap="round"/><circle cx="-74" cy="12" r="5" fill="${lit ? '#fff' : P.sun}"/></g>`,
+  drone: (x, y, s, P) => `<g transform="translate(${x} ${y}) scale(${s})"><ellipse cx="0" cy="0" rx="14" ry="5" fill="${P.dark}"/><path d="M-22,-5 h44" stroke="${P.dark}" stroke-width="2"/><circle cx="0" cy="6" r="2.4" fill="${P.accent}"/></g>`,
+};
 const cityPal = (id, t) => { const n = t === 'night', d = t === 'dusk'; const L = n ? -34 : d ? -8 : 0; const sat = n ? .8 : 1; const base = CLIM_PAL[CITY_CLIM[id] || 'temperate']; const j = (cityRng('pal' + id)() - .5) * 14; const P = {};
   Object.entries(base).forEach(([k, [h, ss, l]]) => { const lk = ['sky1', 'light'].includes(k) ? L * .6 : k === 'dark' ? L * .4 : k === 'sun' ? (n ? 8 : 0) : ['sky2', 'far', 'water'].includes(k) ? L : L * .6; P[k] = hsl(h + j * (k === 'green' ? .4 : 1), ss * sat, Math.max(8, l + lk)); });
   P.glow = d ? hsl(base.sun[0] + 6, 85, 74) : null; return P; };
 function cityArt(id, t, aspect) {
   const cfg = CITY_ART[id] || [0, ['dome', 'skyscrapers'], 'none mix trees river']; const lms = cfg[1]; const tok = new Set(cfg[2].split(' ')); const has = k => tok.has(k);
   const P = cityPal(id, t); const r = cityRng(id); const Hh = 340, W = Math.round(Hh * Math.max(1.4, Math.min(9, aspect || 2.9))); let s = '';
-  const sea = has('sea'), river = has('river'), none = has('none') && !sea && !river; const gy = sea ? 226 : river ? 258 : 272;
+  const lit = t === 'night' || t === 'dusk'; const sea = has('sea'), river = has('river'), none = has('none') && !sea && !river; const gy = sea ? 226 : river ? 258 : 272;
   const style = ['modern', 'old', 'adobe', 'colorful', 'stilts', 'blocks', 'mix'].find(has) || 'mix'; const back = ['mountains', 'snowpeaks', 'hills', 'volcanoes', 'dunes'].find(has) || 'none'; const fore = ['trees', 'palms', 'pines', 'cacti', 'jungle', 'bare', 'acacia'].find(has) || 'trees';
-  const lit = t === 'night' || t === 'dusk';
   s += `<defs><linearGradient id="sk${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky2}"/><stop offset="1" stop-color="${P.sky1}"/></linearGradient><filter id="lm${id}" x="-15%" y="-15%" width="130%" height="130%"><feDropShadow dx="0" dy="0" stdDeviation="1.7" flood-color="${P.dark}" flood-opacity=".8"/></filter><linearGradient id="wt${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.water}"/><stop offset="1" stop-color="${P.mid}"/></linearGradient></defs><rect width="${W}" height="${Hh}" fill="url(#sk${id})"/>`;
   if (t === 'night') for (let i = 0; i < 40; i++) s += `<circle cx="${r() * W}" cy="${r() * 150}" r="${.7 + r() * 1.5}" fill="#fff" opacity="${.35 + r() * .5}"/>`;
   const sx = 120 + r() * (W - 240), sy = t === 'dusk' ? 130 : 56 + r() * 30; s += `<circle cx="${sx}" cy="${sy}" r="${t === 'night' ? 22 : 30}" fill="${P.sun}"/>` + (t !== 'night' ? `<circle cx="${sx}" cy="${sy}" r="48" fill="${P.sun}" opacity=".25"/>` : '');
   if (has('aurora')) for (let k = 0; k < 3; k++) { const y0 = 40 + k * 30; s += `<path d="M0,${y0} ${[...Array(9)].map((_, i) => `Q${W * (i + .5) / 9},${y0 + (i % 2 ? -26 : 26)} ${W * (i + 1) / 9},${y0}`).join(' ')} V${y0 + 46} H0Z" fill="${['#7af0c8', '#8fb8ff', '#c79bff'][k]}" opacity="${t === 'night' ? .34 : .16}"/>`; }
   for (let k = 0; k < 2 + Math.floor(W / 900); k++) s += `<path d="M${r() * W},${36 + r() * 60} h${90 + r() * 60} a20,9 0 0 0 0,-18 h-30 a26,12 0 0 0 -50,4 a14,8 0 0 0 -40,14z" fill="#fff" opacity="${.4 + r() * .25}"/>`;
+  // vaisseaux dans le ciel
+  { const kinds = ['airship', 'shuttle', 'drone', 'airship', 'shuttle']; const nS = 2 + Math.floor(W / 1100); for (let k = 0; k < nS; k++) { const kd = kinds[Math.floor(r() * kinds.length)]; const sc = kd === 'drone' ? .8 : .42 + r() * .25; s += `<g class="${k % 2 ? 'hov' : 'cart'}" style="--dx:${Math.round(100 + r() * 360) * (k % 2 ? -1 : 1)}px;opacity:${(.78 + r() * .2).toFixed(2)}">${FUT[kd](W * (.1 + r() * .8), 46 + r() * 70, sc, P, lit)}</g>`; } }
   // décor de fond (relief)
   const ridge = (base, amp, col, op, n) => { let d = `M0,${gy}`; for (let i = 0; i <= n; i++) d += ` L${(W * i) / n},${base - (r() * amp + (i % 2 ? amp * .3 : 0))}`; return `<path d="${d} L${W},${gy} Z" fill="${col}" opacity="${op}"/>`; };
   if (back === 'mountains' || back === 'snowpeaks') { s += ridge(gy - 92, 90, P.far, .8, 11) + ridge(gy - 62, 70, P.rock, .85, 9); if (back === 'snowpeaks' || tok.has('snowground')) for (let i = 0; i < 6; i++) { const x = r() * W, h = 40 + r() * 30; s += `<polygon points="${x},${gy - 70 - h} ${x - 22},${gy - 70 - h + 30} ${x},${gy - 70 - h + 20} ${x + 22},${gy - 70 - h + 30}" fill="#fff" opacity=".85"/>`; } }
@@ -2231,6 +2243,11 @@ function cityArt(id, t, aspect) {
     }
     x += w + (style === 'colorful' ? 2 : 4 + r() * 8) / dens;
   }
+  { // Orbitrail : viaduc surélevé avec rames futuristes qui glissent
+    const yR = gy - 62 - r() * 34; s += `<g opacity="${t === 'night' ? .95 : .92}"><rect x="0" y="${yR}" width="${W}" height="7" fill="${P.dark}"/><rect x="0" y="${yR + 7}" width="${W}" height="3" fill="${P.accent}" opacity=".8"/>`;
+    for (let x = 30; x < W; x += 110 + r() * 30) s += `<rect x="${x}" y="${yR + 10}" width="7" height="${gy - yR - 8}" fill="${P.dark}" opacity=".85"/>`;
+    s += `</g>`; for (let k = 0; k < (W > 1500 ? 2 : 1); k++) s += `<g class="otrain" style="--dx:${Math.round(260 + r() * 520) * (k ? -1 : 1)}px">${FUT.train(60 + r() * (W - 420), yR + 1, k ? .8 : 1.05, P, lit)}</g>`;
+    if (W > 900) s += `<g opacity=".9"><rect x="${W * .62}" y="${yR - 30}" width="120" height="6" fill="${P.accent}"/><rect x="${W * .62 + 8}" y="${yR - 24}" width="6" height="24" fill="${P.dark}"/><rect x="${W * .62 + 106}" y="${yR - 24}" width="6" height="24" fill="${P.dark}"/></g>`; }
   s += `<g filter="url(#lm${id})">${lmSvg}</g>`;
   if (has('cranes')) for (let k = 0; k < Math.floor(W / 420); k++) { const x = 100 + r() * (W - 200); s += `<g stroke="${P.dark}" stroke-width="4" fill="none"><path d="M${x},${gy} V${gy - 110} H${x + 80} M${x + 40},${gy - 110} L${x + 40},${gy - 70}"/></g><rect x="${x + 70}" y="${gy - 24}" width="40" height="24" fill="${[P.accent, P.b4, P.b3][k % 3]}"/>`; }
   // sol et eau
@@ -2250,6 +2267,7 @@ function cityArt(id, t, aspect) {
     else s += `<ellipse cx="${x}" cy="${y + 10}" rx="${20 + r() * 20}" ry="${6 + r() * 5}" fill="${P.rock}" opacity=".7"/>`; }
   // véhicules, bateau
   s += `<g class="cart" style="--dx:${Math.round(r() * 300 + 120)}px"><ellipse cx="${100 + r() * (W * .4)}" cy="${40 + r() * 40}" rx="22" ry="6" fill="${P.light}"/></g>`;
+  if (sea || river) { const nb = 1 + Math.floor(W / 800); for (let k = 0; k < nb; k++) { const kd = ['ship', 'cat', 'ship', 'cat'][Math.floor(r() * 4)]; const by2 = gy + (sea ? 34 : 56) + (k % 2) * 14; s += `<g class="boat" style="--dx:${Math.round(140 + r() * 260) * (k % 2 ? -1 : 1)}px">${FUT[kd](120 + r() * (W - 360), by2, .62 + r() * .26, P, lit)}</g>`; } }
   if (sea || river) { const bx = 120 + r() * (W - 400), by = (sea ? gy + 40 : gy + 62); s += `<g class="boat" style="--dx:${Math.round(180 + r() * 200)}px">${sea && r() > .4 ? `<path d="M${bx},${by} h60 l-30,-52 z" fill="${P.light}"/><path d="M${bx + 30},${by} v-58" stroke="${P.dark}" stroke-width="2"/><path d="M${bx - 6},${by} h72 l-8,10 h-56z" fill="${P.b4}"/>` : `<path d="M${bx},${by} h92 q10,0 6,8 h-96 q-8,0 -2,-8z" fill="${P.light}"/><rect x="${bx + 16}" y="${by - 8}" width="46" height="9" rx="3" fill="${P.accent}"/>`}</g>`; }
   const cx2 = W * .55 + r() * (W * .3), cy2 = 34 + r() * 40; s += `<g class="hov" style="--dx:-${Math.round(120 + r() * 200)}px"><ellipse cx="${cx2}" cy="${cy2}" rx="22" ry="6" fill="${P.light}"/><ellipse cx="${cx2 - 6}" cy="${cy2 - 5}" rx="10" ry="4" fill="${P.accent}"/></g>`;
   if (t === 'dusk') s += `<rect width="${W}" height="${Hh}" fill="${P.glow}" opacity=".16"/>`; else if (t === 'night') s += `<rect width="${W}" height="${Hh}" fill="#0a1030" opacity=".28"/>`;
