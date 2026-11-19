@@ -763,6 +763,9 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
 /* mini contour blanc : détache les sprites du décor */
 img.spr,.cimg .spr{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)}
 .sg.hit .spr,.sg.hit .emo{filter:brightness(2.4) saturate(0) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)}
+/* contour blanc : très très léger (remplace le précédent) */
+img.spr,.cimg .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
+.sg.hit .spr,.sg.hit .emo{filter:brightness(2.4) saturate(0) drop-shadow(0 0 .6px rgba(255,255,255,.55))}
 </style>
 </head>
 <body>
