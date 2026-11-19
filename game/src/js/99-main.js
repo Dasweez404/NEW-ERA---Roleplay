@@ -10,7 +10,7 @@ function titleScreen() {
   const btn = (n, t, sub, f, go) => h('button', { class: 'tbtn' + (go ? ' go' : ''), style: `--i:${n}`, onclick: () => { sfx('click'); f(); } }, h('span', { class: 'tn' }, String(n).padStart(2, '0')), h('span', { class: 'tt' }, h('b', {}, t), sub ? h('small', {}, sub) : null), h('span', { class: 'ta' }, '›'));
   const city = pick(DATA.states).id;
   const side = h('div', { class: 'tside' }, hero && hero.sp ? h('div', { class: 'tfloat' }, h('div', { class: 'tring' }), sprFit(hero.sp, wide ? 320 : 150, 'tspr'), h('div', { class: 'tcap' }, h('b', {}, hero.name), h('span', {}, `${hero.faction} · ${rankStr(hero.grade)}`))) : h('div', { class: 'tfloat emblem' }, h('div', { class: 'tring' }), atomSVG()));
-  const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Journaux de bord', 'Relire tes parties', runsScreen), btn(sc ? 5 : 4, 'Règles', 'But, jets, grades, primes', rulesScreen), btn(sc ? 6 : 5, 'À propos', 'Sources et libertés prises', aboutScreen));
+  const menu = h('div', { class: 'tmenu' }, ...(sc ? [btn(1, 'Continuer', hero ? `${hero.name} · semaine ${hero.wk}` : 'Reprendre ta partie', () => { if (loadGame()) { restoreOwn(); G.fresh = true; hub(); } }, true)] : []), btn(sc ? 2 : 1, 'Nouvelle partie', 'Libre ou canon, ton personnage ou un des 441', newGameMenu, !sc), btn(sc ? 3 : 2, 'Meilleurs scores', '', scoresScreen), btn(sc ? 4 : 3, 'Règles', 'But, jets, grades, primes', rulesScreen));
   UI.scene = { bare: true, extra: h('div', { class: 'title2' }, h('div', { class: 'tbg' }, envBanner(city, 340, 'night')), h('div', { class: 'tgrid' }),
     h('div', { class: 'tmain' }, h('div', { class: 'tleft' }, h('div', { class: 'tkick' }, 'CRATÈS · 2071'), h('h1', { class: 'tlogo' }, h('img', { src: LOGO_TITLE, alt: 'NEW ERA', draggable: 'false' })), h('p', { class: 'tlore' }, 'Les météorites, la génotite, l’ogénite… et le Nouveau Régime qui traque les géno-porteurs. Choisis ton camp. Survis au protocole ANTI.'), menu), side),
     h('div', { class: 'tfoot' }, '52 États · 31 factions · 441 personnages')) };
@@ -28,7 +28,7 @@ function aboutScreen() {
 function scoresScreen() {
   const s = loadScores(); const t = h('table', { class: 't' }, h('tr', {}, ['#', 'Nom', 'Faction', 'Score', 'Fin', 'Pierres', 'Mois'].map(x => h('th', {}, x))));
   s.forEach((r, i) => t.append(h('tr', {}, h('td', {}, i + 1), h('td', {}, r.name), h('td', {}, r.faction), h('td', {}, fmt(r.score)), h('td', {}, { win: '🏆 16 pierres', retire: '🌴 Retraite', dead: '☠ Mort' }[r.kind]), h('td', {}, r.stones), h('td', {}, r.months))));
-  show({ kicker: 'Hall of fame', title: 'Meilleurs scores', text: s.length ? [] : ['Aucune partie terminée pour le moment.'], extra: s.length ? t : null, choices: [C('← Retour', titleScreen)] });
+  show({ kicker: 'Hall of fame', title: 'Meilleurs scores', text: s.length ? [] : ['Aucune partie terminée pour le moment.'], extra: s.length ? t : null, choices: [C('📖 Journaux de bord', runsScreen, { ic: '📖', sub: 'Relire tes parties terminées.' }), C('← Retour', titleScreen)] });
 }
 function newGameMenu() {
   const canon = UI.mode === 'canon';

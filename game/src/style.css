@@ -740,3 +740,14 @@ body::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;
   .cstage{min-height:48px}.cstage img{max-height:48px}.intent{padding:2px 8px}.rpips{display:none}
   .mapscroll{height:min(30vh,240px);min-height:150px}
 }
+/* barre de progression de destination */
+.rail2{display:flex;align-items:center;gap:8px;margin:5px 0 6px}.rail2 .rtrack{flex:1;height:6px;background:#1a1a2e;border:1px solid #2a2a44;border-radius:4px;overflow:hidden}.rail2 .rtrack i{display:block;height:100%;background:linear-gradient(90deg,#5be3a0,#fcee09);transition:width .6s cubic-bezier(.3,1,.3,1);box-shadow:0 0 8px rgba(252,238,9,.5)}
+.rail2 .remo{font-size:1.05rem;line-height:1;filter:grayscale(.7) opacity(.6);transition:filter .4s}.rail2 .remo.go{filter:none;animation:railp 1.2s ease-in-out infinite}
+
+/* barres de vie / énergie : un seul quadrillage propre (10 segments), plus de moiré */
+.bar::after{background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 2px),rgba(5,4,11,.9) calc(10% - 2px),rgba(5,4,11,.9) 10%)!important}
+.stat .bar>i::after{display:none!important}.bar.mini::after{background:none!important}
+
+/* mini contour blanc : détache les sprites du décor */
+img.spr,.cimg .spr{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)}
+.sg.hit .spr,.sg.hit .emo{filter:brightness(2.4) saturate(0) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)}

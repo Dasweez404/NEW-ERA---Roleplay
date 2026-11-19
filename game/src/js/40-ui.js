@@ -162,10 +162,10 @@ function render(quiet) {
   runAfter(); fitScreen();
 }
 function railEl(sc) {
-  const f = G.pc.flags; const st = f.stage || 'contrats'; const trav = sc && sc.kicker === 'Orbitrail';
-  const idx = trav ? 3 : st === 'contrats' ? 0 : st === 'story' ? 1 : 2; const left = f.storyLeft == null ? LEN().c : f.storyLeft;
-  const steps = ['Contrats', left > 0 || st !== 'story' ? 'Histoire' : 'Histoire', 'Ville', 'Départ'];
-  return h('div', { class: 'rail' }, steps.map((n, i) => h('span', { class: 'rs' + (i < idx ? ' done' : i === idx ? ' on' : '') }, n + (i === 1 && st === 'story' ? ` ${Math.max(0, LEN().c - left)}/${LEN().c}` : ''))));
+  // Barre de progression de la destination : Contrats → Histoire → Ville → Départ, avec un train à l'arrivée
+  const f = G.pc.flags; const st = f.stage || 'contrats'; const trav = sc && sc.kicker === 'Orbitrail'; const tot = Math.max(1, LEN().c); const left = f.storyLeft == null ? tot : f.storyLeft;
+  const pct = trav ? 100 : st === 'contrats' ? 8 : st === 'story' ? 18 + 50 * Math.min(1, Math.max(0, tot - left) / tot) : 82;
+  return h('div', { class: 'rail2', title: 'Progression de la destination' }, h('div', { class: 'rtrack' }, h('i', { style: `width:${pct}%` })), h('span', { class: 'remo' + (trav ? ' go' : '') }, '🚆'));
 }
 function stripEl() {
   if (!G.world.news.length && typeof monthNews === 'function') { monthNews(); monthNews(); }

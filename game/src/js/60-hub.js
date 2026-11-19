@@ -105,7 +105,7 @@ function travelGo(to, r, weeks) {
   });
   transit(r, from, to, () => {
     G.loc = to; pc.flags.stage = 'contrats'; pc.flags.acts = {}; pc.flags.cityActs = null; advance(weeks); if (G.status !== 'play') return;
-    logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`);
+    logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`); if (chance(0.4)) { const tl = Math.max(1, Math.min(Math.round(pc.hpMax * rr(0.03, 0.07)), pc.hp - 1)); pc.hp -= tl; toast(`🥱 Voyage éprouvant : −${tl} PV`); }
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();
     contractCard(used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : 'Le train glisse sans histoire.');
@@ -168,6 +168,8 @@ function meetNpc(cid) {
   const L = [];
   L.push(C(`Lui proposer de rejoindre ton groupe (${price} ¢)`, () => recruit(cid, price, false), { req: { money: price, ok: () => lead ? 'C’est un chef de faction : il ne quittera pas ses responsabilités' : pc.party.length >= partyMax() ? 'Groupe complet (monte en grade ou prends le rôle de Leader)' : (c.faction !== pc.faction && rep < 20) ? `Sa faction ne te fait pas assez confiance (réputation ${rep}/20)` : null } }));
   L.push(C('Le convaincre par le charisme (gratuit)', () => recruit(cid, 0, true), { odds: ['charisme', 12 + c.stars * 2, ['social']], req: { ok: () => lead ? 'C’est un chef de faction' : pc.party.length >= partyMax() ? 'Groupe complet' : null } }));
+  if (lead && lead.id === pc.faction && G.world.leader[pc.faction] === cid) { const ct = pc.flags.chiefWk; const cool = ct != null && G.wk - ct < 8; const here = G.world.npc[cid].loc === G.loc; const ac = pc.flags.chiefTemp;
+    L.push(C('Lui demander son aide (temporaire)', () => chiefHelp(cid), { ic: '🆘', sub: `Il t’accompagne ${CHIEF_DESTS} destinations, puis retourne à ses devoirs. Une fois toutes les 8 semaines.`, req: { ok: () => ac ? 'Il est déjà à tes côtés' : !here ? 'Il n’est pas ici (' + capName(G.world.npc[cid].loc) + ')' : cool ? 'Il t’a déjà aidé récemment' : G.world.npc[cid].st === 'captured' ? 'Il est captif' : null } })); }
   L.push(C('Parler et se renseigner', () => { const L2 = fx({ rep: { [c.faction]: 1 }, spill: false }); show({ kicker: c.name, title: 'Une conversation', text: [`${esc(c.name)} te parle de ${esc(F[c.faction].name)} : « ${esc(F[c.faction].goal)} »`, G.world.stoneClue && lead ? '' : `Il te glisse une rumeur : ${rumor()}`], fx: L2, choices: [C('Continuer', cityMenu)] }); }));
   if (isAnti(c.faction) && c.stars && pc.faction !== c.faction) L.push(C('Le dénoncer à la Force d’Autorité (récompense)', () => betray(cid), { cls: 'danger', sub: 'Trahison : sa faction et ses alliés t’en voudront.' }));
   L.push(C('← Retour', recruitMenu));
@@ -257,4 +259,18 @@ function antiMenu() {
   const pc = G.pc; const L = Object.keys(ANTI_IC).map(id => { const known = hasAnti(id); const [ic, d] = ANTI_IC[id];
     return C(`${known ? '✔ ' : ''}${ANTI[id].n}`, () => { if (known) return; pc.money -= 300; advance(1); if (G.status !== 'play') return; pc.flags.anti = pc.flags.anti || {}; pc.flags.anti[id] = true; logEntry(`Technique anti-géno : ${ANTI[id].n}.`); toast(`${ic} ${ANTI[id].n} apprise`); sfx('win'); cityMenu(); }, { ic, sub: d, cls: known ? 'safe' : '', req: known ? { ok: () => 'Déjà apprise' } : { money: 300 } }); });
   L.push(C('← Retour', cityBack)); show({ kicker: 'Techniques anti-géno', title: `${antiKnown().length}/7 maîtrisées`, text: ['Enseignées à la F.A., accessibles à toutes. Une seule par séance.'], choices: L, tiles: true });
+}
+
+// ───────── Demander l'aide de son propre chef : il ne rejoint pas ton groupe, il intervient quelques destinations ─────────
+const CHIEF_DESTS = 2;
+function chiefHelp(cid) {
+  const pc = G.pc; const c = CH[cid]; const nm = esc(c.name);
+  if (!allyData(cid)) { addAlly(cid, 90); const a = allyData(cid); if (a) { a.temp = true; a.hp = a.hpMax; } }
+  pc.flags.chiefTemp = { id: cid, left: CHIEF_DESTS }; pc.flags.chiefWk = G.wk; logEntry(`${c.name}, chef de ta faction, t’accompagne quelque temps.`);
+  show({ extra: portrait(cid, 130), kicker: 'APPUI DU CHEF', title: `${nm} te rejoint`, text: [`« Je te prête mon aide, mais ne compte pas sur moi plus longtemps. » ${nm} t’accompagne pour ${CHIEF_DESTS} destinations, puis reprendra ses responsabilités.`], fx: fx({ xp: 6 }), choices: [C('Continuer', cityMenu, { cls: 'cta' })] });
+}
+function chiefTick() {
+  const pc = G.pc, t = pc.flags.chiefTemp; if (!t) return; t.left--;
+  if (t.left > 0) return;
+  pc.flags.chiefTemp = null; if (allyData(t.id)) { removeAlly(t.id, 'free'); toast(`${CH[t.id].name} retourne à ses devoirs`); logEntry(`${CH[t.id].name} te quitte pour reprendre la direction de la faction.`); }
 }
