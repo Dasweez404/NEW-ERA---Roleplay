@@ -818,3 +818,11 @@ body::after{display:none!important}
 .title2 .tbg{opacity:.9}
 
 .cityart .otrain{animation:cdrift 26s ease-in-out infinite alternate}
+/* dégâts : on secoue sans éclaircir la silhouette ; KO : silhouette noire */
+.cfoe.hurt,.cme.hurt{filter:none!important}
+.sg.hit .spr,.sg.hit .emo{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))!important}
+.cfoe.hurt img,.cfoe.hurt .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
+@keyframes koFall{0%{transform:none}100%{transform:translateY(14px) rotate(14deg);opacity:.92}}
+.cfoe.ko,.cfoe.ko .spr,.cfoe.ko img{filter:brightness(0) drop-shadow(0 0 .8px rgba(255,255,255,.35))!important}
+.sg.dead{opacity:.9;filter:none!important}.sg.dead .spr,.sg.dead img{filter:brightness(0) drop-shadow(0 0 .8px rgba(255,255,255,.35))!important}
+.fchip.dead .foeico img,.fchip.dead .spr{filter:brightness(0)!important}
