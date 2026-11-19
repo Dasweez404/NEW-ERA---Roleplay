@@ -148,36 +148,12 @@ function buildEnv(stateId, time) {
 }
 
 function envTime() { return G ? ['night', 'dusk', 'day', 'dusk'][Math.floor(G.wk / 3) % 4] : 'night'; }
-// Rendu pixel art monochrome (vert sapin → vert pomme) du décor vectoriel, mis en cache par ville et moment
-const ENV_PX = {}; const PX_RAMP = ['#07140f', '#0d2a1d', '#14452c', '#1f6b3a', '#3c9a3f', '#7cc24a', '#c3ec6e'];
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-function pixelize(svg, k, done) {
-  if (ENV_PX[k]) return done(ENV_PX[k]);
-  try {
-    const clean = svg.replace(/<g class="fly"[^>]*>.*?<\/g>/g, ''); const cw = 200, ch = 55;
-    const im = new Image(); im.onload = () => {
-      try {
-        const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const cx = cv.getContext('2d', { willReadFrequently: true });
-        cx.imageSmoothingEnabled = true; cx.drawImage(im, 0, 0, cw, ch); const d = cx.getImageData(0, 0, cw, ch); const px = d.data;
-        const rgb = PX_RAMP.map(c => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]);
-        const ls = []; for (let i = 0; i < px.length; i += 4) ls.push(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]); const so = ls.slice().sort((a, b) => a - b); const lo = so[Math.floor(so.length * 0.03)], hi = Math.max(lo + 30, so[Math.floor(so.length * 0.985)]);
-        for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
-          const i = (y * cw + x) * 4; const l = clamp((ls[y * cw + x] - lo) / (hi - lo), 0, 1); const v = Math.pow(l, 0.8) * (rgb.length - 1);
-          const t = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - 0.5) * 0.7; const idx = clamp(Math.round(v + t), 0, rgb.length - 1); const c = rgb[idx];
-          px[i] = c[0]; px[i + 1] = c[1]; px[i + 2] = c[2]; px[i + 3] = 255;
-        }
-        cx.putImageData(d, 0, 0); ENV_PX[k] = cv.toDataURL('image/png'); done(ENV_PX[k]);
-      } catch (e) { done(null); }
-    };
-    im.onerror = () => done(null); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(clean);
-  } catch (e) { done(null); }
-}
 function envBanner(stateId, hpx, forceTime) {
   const t = forceTime || envTime(); const k = stateId + t; const img = (typeof ENV_IMG !== 'undefined') && (ENV_IMG[stateId + '_' + t] || ENV_IMG[stateId]);
   const asp = Math.round(Math.max(1.4, Math.min(9, (Math.min(innerWidth, 1240) - 30) / hpx)) * 4) / 4; const art = typeof cityArt === 'function' ? (CITYART_CACHE[k + asp] || (CITYART_CACHE[k + asp] = cityArt(stateId, t, asp))) : null;
   const svg = art ? art : img ? `<img class="envimg" alt="" src="${img}">` : '';
   const st = S[stateId]; const el = h('div', { class: 'env' + (art ? ' hasart' : img ? ' hasimg' : ' px'), style: `height:${hpx}px`, html: svg });
-  if (!img && !art) { const src = ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)); pixelize(src, k, url => { if (url) el.insertAdjacentHTML('afterbegin', `<img class="envimg pxart" alt="" src="${url}">`); else el.insertAdjacentHTML('afterbegin', src); }); }
+  if (!img && !art) el.insertAdjacentHTML('afterbegin', ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)));
   el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${ZSHORT(DATA.stateZone[stateId]) || st.continent}`)));
   // relation de la ville avec toi : réputation de la zone (emoji + libellé) et maître des lieux
   try { if (typeof G !== 'undefined' && G && G.pc && typeof cityRep === 'function') { const v = cityRep(stateId); const lab = cityLabel(v); const ic = v >= 25 ? '💖' : v >= 10 ? '🙂' : v <= -25 ? '💢' : v <= -10 ? '😠' : '😐'; const ow = G.world.terr && G.world.terr[stateId]; const owner = ow === 'pc' ? 'ta faction' : ow === 'fa' ? 'la F.A.' : (F[ow] ? F[ow].name : '');

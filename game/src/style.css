@@ -811,3 +811,8 @@ img.spr,.cimg .spr{filter:drop-shadow(0 0 .6px rgba(255,255,255,.55))}
 @keyframes cdrift{from{transform:translateX(0)}to{transform:translateX(var(--dx,200px))}}
 .cityart .blades{animation:cspin 14s linear infinite;transform-box:fill-box;transform-origin:center}@keyframes cspin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.cityart *{animation:none!important}}
+
+/* plus d'effet pixel art ni de lignes de balayage sur les visuels de ville */
+body::after{display:none!important}
+.env,.env .cityart{image-rendering:auto}
+.title2 .tbg{opacity:.9}
