@@ -174,9 +174,10 @@ function pixelize(svg, k, done) {
 }
 function envBanner(stateId, hpx, forceTime) {
   const t = forceTime || envTime(); const k = stateId + t; const img = (typeof ENV_IMG !== 'undefined') && (ENV_IMG[stateId + '_' + t] || ENV_IMG[stateId]);
-  const svg = img ? `<img class="envimg" alt="" src="${img}">` : '';
-  const st = S[stateId]; const el = h('div', { class: 'env' + (img ? ' hasimg' : ' px'), style: `height:${hpx}px`, html: svg });
-  if (!img) { const src = ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)); pixelize(src, k, url => { if (url) el.insertAdjacentHTML('afterbegin', `<img class="envimg pxart" alt="" src="${url}">`); else el.insertAdjacentHTML('afterbegin', src); }); }
+  const asp = Math.round(Math.max(1.4, Math.min(9, (Math.min(innerWidth, 1240) - 30) / hpx)) * 4) / 4; const art = typeof cityArt === 'function' ? (CITYART_CACHE[k + asp] || (CITYART_CACHE[k + asp] = cityArt(stateId, t, asp))) : null;
+  const svg = art ? art : img ? `<img class="envimg" alt="" src="${img}">` : '';
+  const st = S[stateId]; const el = h('div', { class: 'env' + (art ? ' hasart' : img ? ' hasimg' : ' px'), style: `height:${hpx}px`, html: svg });
+  if (!img && !art) { const src = ENV_CACHE[k] || (ENV_CACHE[k] = buildEnv(stateId, t)); pixelize(src, k, url => { if (url) el.insertAdjacentHTML('afterbegin', `<img class="envimg pxart" alt="" src="${url}">`); else el.insertAdjacentHTML('afterbegin', src); }); }
   el.append(h('div', { class: 'envtag' }, h('b', {}, capName(stateId)), h('span', {}, `${st.name} · ${ZSHORT(DATA.stateZone[stateId]) || st.continent}`)));
   // relation de la ville avec toi : réputation de la zone (emoji + libellé) et maître des lieux
   try { if (typeof G !== 'undefined' && G && G.pc && typeof cityRep === 'function') { const v = cityRep(stateId); const lab = cityLabel(v); const ic = v >= 25 ? '💖' : v >= 10 ? '🙂' : v <= -25 ? '💢' : v <= -10 ? '😠' : '😐'; const ow = G.world.terr && G.world.terr[stateId]; const owner = ow === 'pc' ? 'ta faction' : ow === 'fa' ? 'la F.A.' : (F[ow] ? F[ow].name : '');
