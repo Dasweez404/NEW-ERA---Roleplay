@@ -13,9 +13,9 @@ const rr = (a, b) => a + Math.random() * (b - a);
 const foeHit = f => Math.max(1, Math.round((2.6 + 2 * (f.tier || 1) + f.dmg * 0.09) * rr(0.9, 1.1)));
 function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return; const el = h('div', { class: 'vfx ' + cls }, text); document.body.append(el); setTimeout(() => el.remove(), 950); }
 function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise' ? 'corps' : a; }
-const hitBonus = () => (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
+const hitBonus = () => (CB.rageLeft > 0 ? 4 : 0) + (CB.swarm > 0 ? 2 : 0) + (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
-const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)); };
+const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)) - (CB.hexLeft > 0 ? 4 : 0); };
 const pwMax = () => Math.floor((CB.N + 1) / 3); // pouvoir : 1 round sur 3, 2 sur 5
 const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
 
@@ -23,6 +23,7 @@ const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une vi
 const INTENTS = {
   charge: { ic: '💥', n: 'Charge', tip: 'Gros coup en approche : esquive ou encaisse', mul: 1.4, counter: m => !!m.dodge || (m.sev != null && m.sev <= 0.6 && m.cat !== 'pw') },
   garde: { ic: '🛡', n: 'Garde haute', tip: 'Il se couvre : vise la faille, ne fonce pas', mul: 1, counter: m => m.cat === 'pw' || (m.tags || []).some(t => ['scout', 'social', 'tech', 'ranged', 'control'].includes(t)), penal: m => m.cat === 'mv' && (m.tags || []).includes('combat') && (m.sev || 1) >= 1 && !(m.tags || []).some(t => ['scout', 'tech'].includes(t)) },
+  special: { ic: '☄', n: 'Pouvoir', tip: 'Un adversaire utilise son pouvoir : esquive ou garde prudente', mul: 1.3, counter: m => !!m.dodge || m.cat === 'pw' || (m.sev != null && m.sev <= 0.6) },
   rafale: { ic: '🌪', n: 'Rafale', tip: 'Coups rapides : couvre-toi ou coordonne-toi', mul: 1.15, counter: m => (m.tags || []).some(t => ['defense', 'ally'].includes(t)) || !!m.dodge },
 };
 function nextIntent() {
@@ -30,7 +31,9 @@ function nextIntent() {
   const hostile = aliveFoes(); if (!hostile.length) return CB.intent = null;
   const heavy = hostile.some(f => f.m || (f.tier || 1) >= 4); const keys = Object.keys(INTENTS).filter(k => k !== (CB.intent && CB.intent.k));
   const w = { charge: heavy ? 3 : 2, garde: 2, rafale: hostile.length >= 2 ? 3 : 1 }; const bag = []; keys.forEach(k => { for (let i = 0; i < w[k]; i++) bag.push(k); });
-  CB.intent = { k: pick(bag) }; return CB.intent;
+  CB.intent = { k: pick(bag) };
+  const named = hostile.filter(f => foePowerOf(f)); if (named.length && chance(0.34)) { const f = pick(named); CB.intent = { k: 'special', foe: f, ab: foePowerOf(f) }; }
+  return CB.intent;
 }
 const intentOf = () => (CB && CB.intent) ? INTENTS[CB.intent.k] : null;
 function intentBonus(m) { const it = intentOf(); if (!it || !m || !m.attr) return 0; if (it.counter(m)) return 4; if (it.penal && it.penal(m)) return -2; return 0; }
@@ -81,13 +84,14 @@ function dealHand() {
   for (let k = 0; k < 3; k++) { const cand = pool.filter(c => !hand.some(h => h.id === c.id) && !(last.includes(c.id) && Math.random() < 0.75)); const c = wpick(cand.length ? cand : pool.filter(c => !hand.some(h => h.id === c.id)), x => x.w); hand.push(c); }
   if (CB) CB.hand = hand; return hand;
 }
+function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: 3, cls: 'safe', ab: a }; }
 function powerMove() {
   const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
   const base = { ic: '✦', cat: 'pw', sev: 1.0 };
   if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
   if (spent) return Object.assign({}, base, { id: 'spent', kind: 'tech', label: 'Pouvoir', sub: `Déjà utilisé (${CB.pwUsed}/${pwMax()} ce combat)`, lock: 'Utilisé', cost: 0 });
   if (tags.includes('heal') && pc.hp < pc.hpMax * 0.5 && pc.en >= POWER_FX.heal.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'heal', kind: 'heal', ic: '💚', label: `${powName('heal')} : te régénérer`, sub: `Tu récupères ~25 % de PV · ${POWER_FX.heal.cost}⚡ · round nul`, cost: POWER_FX.heal.cost, sev: 0.4 });
-  const sg = pc.ptype !== 'aucun' ? sigMove() : null; if (ok(sg)) return Object.assign({}, base, sg, { label: sg.label.replace('Signature : ', 'Pouvoir : '), sub: `Round gagné d’office · ${sg.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, cost: sg.cost + 1 });
+  const ab = pc.ptype !== 'aucun' ? abilMove() : null; if (ok(ab)) return Object.assign({}, base, ab, { sub: `${ab.ab.txt} · ${ab.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant` });
   if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'power', kind: 'hit', label: `Pouvoir : ${powName('combat')}`, sub: `+4 au jet · ${POWER_FX.combat.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: 'maitrise', tags: ['combat'], bonus: 4, cost: POWER_FX.combat.cost });
   const st = STYLES[pc.style]; const fin = Object.assign({}, base, { id: 'tech', kind: 'tech', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: primAttr(), tags: ['combat'], bonus: 3, cost: st.tech.cost + 1 });
   if (ok(fin)) return fin; fin.lock = 'Énergie insuffisante'; fin.sub = 'Pas assez d’énergie'; return fin;
@@ -147,17 +151,23 @@ function play(m) {
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   if (m.cat === 'pw' && m.kind !== 'awaken') CB.pwUsed = (CB.pwUsed || 0) + 1;
   let res = 'loss', sev = m.sev == null ? 1 : m.sev; const nb = CB.nextBonus; CB.nextBonus = 0; let r = null;
-  if (m.kind === 'sig') { sigDo(m); res = 'win'; }
+  if (m.kind === 'abil') { CB.abil = CB.abil || {}; CB.abil[m.pid] = 1; pxGain(m.pid, 1); abilityApply(m.ab); res = m.ab.fam === 'rewind' ? 'draw' : 'win'; if (res === 'draw') sev = 0; pop('f0', res === 'win' ? m.ab.name.toUpperCase() : 'FAILLE', 'crit'); }
+  else if (m.kind === 'sig') { sigDo(m); res = 'win'; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + Math.round(a.hpMax * 0.25)); }); res = 'draw'; }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); res = 'draw'; sev = 0.4; }
   else {
-    const cnt = isCounter(m); r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); CB.lastR = r; const crit = r.crit || (PK('crit') && r.r >= 19);
+    const cnt = isCounter(m); r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); if (CB.adv > 0) { if (!r.ok) { const r2 = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); if (r2.ok) { r = r2; clog('🍀 Seconde chance : le jet est repris.', 'good'); } } CB.adv--; } CB.lastR = r; const crit = r.crit || (PK('crit') && r.r >= 19);
     if (r.ok) { res = 'win'; if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken(); if (m.weak) CB.weak = m.weak; if (m.en) pc.en = Math.min(pc.enMax, pc.en + m.en); if (crit) { CB.nextBonus += 2; clog('Coup remarquable : +2 au prochain jet.', 'good'); } }
     else { res = 'loss'; if (r.fumble) sev *= 1.5; if (m.dodge && chance(m.dodge)) { res = 'draw'; sev = 0; clog('Tu esquives tout !', 'good'); pop('pc', 'ESQUIVE', 'ok'); } else if (m.kind === 'awaken') clog('L’Éveil ne vient pas.', 'log-miss'); if (PK('thorns') && chance(Math.min(0.6, PK('thorns') * 0.12))) { res = 'draw'; sev = 0.3; clog('Ta riposte contrebalance : round nul.', 'good'); } }
   }
   if (res === 'win' && hasAnti('shock') && !CB.shockUsed) { CB.shockUsed = true; CB.nextBonus += 2; clog('Onde de choc : +2 au prochain jet.', 'good'); }
   if (res === 'win') { CB.W++; vfx(r && r.crit ? 'CRITIQUE !' : 'ROUND GAGNÉ', 'good'); sfx('hit'); clog(pick(['Tu prends l’avantage.', 'Ton geste fait mouche.', 'Ils reculent d’un pas.']), 'good'); if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - PK('weaken') * 2); }); clog('Tes ennemis faiblissent.', 'warnc'); } if (PK('stun') && chance(PK('stun') / 100)) { CB.nextBonus += 2; clog('Sidérés, ils vacillent : +2 au prochain round.', 'warnc'); } if (PK('drain')) { const g = Math.min(PK('drain') * 2, pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } } }
   else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(pick(['Ils lisent ton geste et ripostent.', 'Ton geste échoue.', 'Tu perds le rythme.']), 'log-miss'); }
+  if (res === 'loss' && CB.mirror) { CB.mirror = 0; res = 'draw'; sev = 0; clog('🪞 Ta défaite est renvoyée : round nul.', 'good'); }
+  if (res === 'loss' && CB.foeStun) { CB.foeStun = 0; res = 'draw'; sev = 0; clog('💫 Leur coup est annulé : round nul.', 'good'); }
+  if (res === 'loss' && CB.rageLeft > 0) sev *= 1.25;
+  if (res === 'win' && CB.venom > 0) { CB.venom--; CB.W = Math.min(CB.N, CB.W + 1); clog('☠ Le poison achève : un round de plus compté.', 'good'); }
+  if (res === 'loss' && CB.intent && CB.intent.k === 'special' && CB.intent.ab) foeAbilityHit(CB.intent.ab);
   if (res === 'loss' && r) { const it = intentOf(); if (it && !(isCounter(m))) { sev *= it.mul; if (it.mul > 1.2) clog(`${it.ic} ${it.n} : tu prends de plein fouet.`, 'log-dmg'); } else if (it && isCounter(m)) sev *= 0.75; }
   if (r && r.ok && isCounter(m)) { CB.combo = (CB.combo || 0) + 1; clog(`${intentOf().ic} Bien lu : tu contres ${intentOf().n}.`, 'good'); if (CB.combo >= 2) { CB.nextBonus += 2; CB.combo = 0; clog('Enchaînement : +2 au prochain jet.', 'good'); } } else if (r) CB.combo = 0;
   if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
@@ -167,6 +177,7 @@ function play(m) {
   if (PK('allyheal')) pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
   if (hasAnti('restore')) { if (pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + 1); if (CB.round % 2 === 0) pc.en = Math.min(pc.enMax, pc.en + 1); }
   if (CB.weak > 0) CB.weak--;
+  if (CB.rageLeft > 0) CB.rageLeft--; if (CB.hexLeft > 0) CB.hexLeft--; if (CB.swarm > 0) CB.swarm--;
   syncFoes();
   CB.round++; nextIntent();
   if (pc.hp <= 0) return loseCombat(false);
@@ -190,6 +201,7 @@ function hurtPc(sev) {
     if (friends.length && chance(0.03 + 0.05 * teamK(friends.length))) { const a = pick(friends); a.hp -= d; clog(`${fname(f)} blesse ${CH[a.id].name} (${d}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     tot += d;
   });
+  if (CB.swarm > 0 && tot > 0) { const ab = Math.min(3, tot); tot -= ab; clog(`🐝 Tes alliés invoqués encaissent ${ab}.`, 'good'); }
   if (CB.shield > 0 && tot > 0) { const ab = Math.min(CB.shield, tot); CB.shield -= ab; tot -= ab; clog(`Ton bouclier absorbe ${ab}.`, 'good'); }
   if (tot > 0) { pc.hp = Math.max(0, pc.hp - tot); CB.hurt = true; pop('pc', `−${tot}`, 'dmg'); clog(`Tu encaisses ${tot}.`, 'log-dmg'); if (pc.hp <= 0 && CB.lb) { CB.lb = false; pc.hp = 1; clog('Dernier souffle : tu t’accroches à 1 PV !', 'good'); } }
 }
@@ -224,7 +236,7 @@ function teamStrip() {
   const spark = fx.pc === 'atk' ? h('i', { class: 'spark r' }, '💥') : fx.pc === 'power' ? h('i', { class: 'spark r pw' }, '✦') : fx.foe === 'atk' ? h('i', { class: 'spark l' }, '💢') : null;
   return h('div', { class: 'cstage' }, left, spark, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '🗡' : ''), right);
 }
-function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, 'Il prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
+function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Il prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
   if (CB && CB.auto) return;
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
@@ -252,6 +264,8 @@ function renderCombat() {
 function combatChoices() {
   const pc = G.pc; const L = [];
   moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: (isCounter(m) ? '✔ Contre ce qu’il prépare · ' : '') + m.sub, odds: m.kind === 'sig' || m.kind === 'heal' ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
+  CB.allyUsed = CB.allyUsed || {}; pc.party.filter(a => a.inj <= 0 && CH[a.id] && !CB.allyUsed[a.id]).slice(0, 2).forEach(a => { const c = CH[a.id]; const ab = (c.powers || []).length ? powerAbility(c.powers[0]) : null; if (!ab) return;
+    L.push(C(`${c.name} : ${ab.name}`, () => { CB.allyUsed[a.id] = 1; abilityApply(ab, c.name); sfx('win'); burst(innerWidth / 2, 200, '#27f0ff', 18); syncFoes(); if (CB.W >= needW()) return conclude(); renderCombat(); }, { ic: ab.ic, sub: `${ab.txt} · allié, 1×/combat, sans coûter de round`, cls: 'back' })); });
   const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
   if (heal && !CB.noItems && pc.hp < pc.hpMax * 0.55) L.push(C(`Se soigner (${ITEMS[heal].n})`, () => play({ kind: 'item', item: heal, sev: 0.4 }), { ic: '💊', sub: 'Round nul', cls: 'back' }));
   const pw = moves()[moves().length - 1]; if (hasItem('capsule') && !CB.noItems && (pc.en < pc.enMax * 0.4 || (pw && pw.lock))) L.push(C('Utiliser une Capsule OGEN', () => { takeItem('capsule'); pc.en = Math.min(pc.enMax, pc.en + 8); clog('Capsule OGEN : +8 énergie.', 'good'); sfx('win'); renderCombat(); }, { ic: '⚡', sub: 'Recharge 8 énergie · ne prend pas de round', cls: 'back' }));

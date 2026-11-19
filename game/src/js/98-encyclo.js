@@ -70,7 +70,7 @@ function encDetail(id) {
       h('div', { class: 'encinfo' },
         row('🏴', F[c.faction] ? F[c.faction].name : c.faction), row('📍', `${stateName(c.origin)}${S[c.origin] ? ' · ' + S[c.origin].capital : ''} — ${c.continent || ''}`), row('🗺', c.zone || '—'),
         row('🎂', String(c.age || '—').replace('ans', ' ans')), row('⚥', GENRES[c.gender] || '—'), row('⭐', c.stars ? '★'.repeat(c.stars) : 'Anonyme'),
-        row('🎭', `${STYLES[c.style] ? STYLES[c.style].name + ' · ' + STYLES[c.style].grp : c.style}`), row('✨', (c.ptypes && c.ptypes.length ? c.ptypes.map(t => TYPENAME[t] || t).join(' + ') : 'Aucun pouvoir')), pw.length ? row('🧬', pw.join(' · ')) : null,
+        row('🎭', `${STYLES[c.style] ? STYLES[c.style].name + ' · ' + STYLES[c.style].grp : c.style}`), row('✨', (c.ptypes && c.ptypes.length ? c.ptypes.map(t => TYPENAME[t] || t).join(' + ') : 'Aucun pouvoir')), pw.length ? row('🧬', pw.join(' · ')) : null, ...((c.powers || []).slice(0, 2).flatMap(pid => { const ab = powerAbility(pid); return ab ? [row(ab.ic, `${ab.power} — ${ab.name} : ${ab.txt}`), row('🧭', `${ab.q.n} : ${ab.q.d}`)] : []; })),
         c.ratio ? row('💥', `Ratio de puissance : ${c.ratio}`) : null))) };
   render(); setTimeout(() => { const b = document.querySelector('.encbig'); if (b) burstAt(b, col, 20); }, 260);
 }

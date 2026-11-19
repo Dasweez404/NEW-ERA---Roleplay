@@ -119,6 +119,7 @@ function approachChoices(o) {
     const price = d.money ? ` (${40 * o.tier} ¢)` : '';
     L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' ? 2 : 0), tags, d.money ? 4 : 0], req: rq, cls: d.cls, sub }));
   });
+  { const qa = questAbility(); if (qa && questReady(qa) && questFits(qa, ARCH[o.arch].ptags)) L.push(C(`✨ ${qa.q.n}`, () => { questUse(); advance(o.weeks); if (G.status !== 'play') return; finishMission(o, 'ok', [qa.q.line, `✨ ${qa.q.n} (${qa.power}) · 2⚡`]); }, { ic: '✨', cls: 'safe', sub: `${qa.q.d} · réussite assurée · 2⚡ · 1×/destination` })); }
   return L;
 }
 function missionApproach(o) {

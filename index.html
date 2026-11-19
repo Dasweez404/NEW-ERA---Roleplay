@@ -1666,7 +1666,7 @@ function tabPerso() {
   { const fp = factionPerk(); if (fp) P1.append(h('div', { class: 'fperk' }, h('span', { class: 'fpi' }, fp[0]), h('div', {}, h('b', {}, fp[1]), h('div', { class: 'small mut' }, fp[2])))); }
   P1.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) P2.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => { const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
+  pcPowers().forEach(p => { const ab = powerAbility(p.id); if (ab) P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, `${ab.ic} ${ab.power} : ${ab.name}`)), h('div', { class: 'small' }, `⚔ Combat : ${ab.txt}`), h('div', { class: 'small' }, `🧭 Quêtes : ${ab.q.n} — ${ab.q.d} (réussite assurée, 2⚡, 1×/destination)`))); const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
   if (pc.ptype !== 'aucun') P2.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); P1.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
@@ -2453,14 +2453,15 @@ function foesFor(fid, tier, n = 2) {
   if (fid !== 'civils') { if (n >= 2 && tier >= 2 && chance(0.6)) { n++; if (tier >= 4 && chance(0.4)) n++; } else if (n === 1 && tier >= 2 && chance(0.5)) n++; }
   const n0 = Math.min(n, 2); n = Math.min(4, n);
   const out = []; const pool = FOE_BY_FAC[fid]; const used = new Set();
-  const mem = pool ? null : shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(1, tier) && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
+  // Les adversaires sont, le plus souvent, de vrais personnages de la faction (avec leur sprite et leur pouvoir) ; la F.A. garde ses machines
+  const isLead = c => Object.values(F).some(f => f.leaders && f.leaders.includes(c.id));
+  const mem = shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(1, tier) + (chance(0.3) ? 1 : 0) && G.world.npc[c.id] && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !isLead(c)));
+  const pReal = pool ? (fid === 'fa' ? 0.4 : 0.8) : 1;
   for (let i = 0; i < n; i++) {
-    if (pool) { const left = pool.filter(t => !used.has(t)); const tid = pick(left.length ? left : pool); used.add(tid); out.push(mkFoe(tid, i >= n0 ? Math.max(1, tier - 1) : tier)); }
-    else { const c = mem[i] || null; out.push(mkFoe('porteur', tier, c ? c.name + ' (' + F[fid].name + ')' : 'Membre de ' + F[fid].name, c ? { cid: c.id } : {})); }
-  }
-  if (pool && n >= 2 && G.world && G.world.npc && F[fid] && chance(0.4)) {
-    const cs = shuffle(DATA.chars.filter(c => c.faction === fid && c.stars <= Math.max(0, tier - 1) && G.world.npc[c.id] && G.world.npc[c.id].alive && G.world.npc[c.id].st !== 'ally' && !Object.values(F).some(f => f.leaders.includes(c.id))));
-    if (cs.length) { const c = cs[0]; const k = out.length - 1; out[k] = mkFoe(out[k].tid, tier, c.name + ' (' + F[fid].name + ')', { cid: c.id }); }
+    const lv = i >= n0 ? Math.max(1, tier - 1) : tier; const c = mem.length && chance(pReal) ? mem.shift() : null;
+    const tid = pool ? (() => { const left = pool.filter(t => !used.has(t)); const t = pick(left.length ? left : pool); used.add(t); return t; })() : 'porteur';
+    if (c) out.push(mkFoe(tid, lv, c.name + ' (' + F[fid].name + ')', { cid: c.id }));
+    else out.push(mkFoe(tid, lv, pool ? undefined : 'Membre de ' + F[fid].name));
   }
   return out;
 }
@@ -2624,6 +2625,132 @@ function sigDo(m) {
 function foeIcon(f, px) { return (f.cid && typeof hasSpr === 'function' && hasSpr(f.cid)) ? h('span', { class: 'foeico' }, sprFit(f.cid, px)) : null; }
 function foeSpecialChips(f) { return (f.sp || []).map(s => ANTI[s] ? h('span', { class: 'tag', title: ANTI[s].d }, ANTI[s].n) : null).filter(Boolean); }
 
+// ───────── Capacités de pouvoir : chaque pouvoir a un effet de combat qui lui est propre ET une capacité utilisable en quête ─────────
+// 15 familles d'effets de combat (aucune ne se résume à « gagner un round »), et une capacité de quête par sous-catégorie de super-pouvoir.
+const FAMS = {
+  rush: { ic: '⚡', verbs: ['Frénésie', 'Assaut', 'Charge furieuse'], txt: 'Round gagné et un second round compté en plus' },
+  ambush: { ic: '🎯', verbs: ['Embuscade', 'Frappe en traître', 'Piqué'], txt: 'Round gagné · +5 au prochain jet' },
+  guard: { ic: '🛡', verbs: ['Carapace', 'Rempart', 'Peau d’acier'], txt: 'Round gagné · bouclier et une esquive' },
+  regen: { ic: '💚', verbs: ['Souffle de vie', 'Régénération', 'Sève vitale'], txt: 'Round gagné · tu et ton équipe récupérez des PV' },
+  drain: { ic: '🩸', verbs: ['Pillage', 'Siphon', 'Morsure vitale'], txt: 'Round gagné · tu voles des PV et de l’énergie' },
+  stun: { ic: '💫', verbs: ['Onde de choc', 'Sidération', 'Éclair paralysant'], txt: 'Round gagné · leur prochain coup est annulé' },
+  hex: { ic: '🌀', verbs: ['Confusion', 'Mauvais œil', 'Brouillard'], txt: 'Round gagné · leurs jets sont plombés 2 rounds' },
+  mirror: { ic: '🪞', verbs: ['Miroir', 'Réflexion', 'Contre-sort'], txt: 'Round gagné · ta prochaine défaite devient un nul' },
+  reveal: { ic: '👁', verbs: ['Prescience', 'Œil perçant', 'Lecture'], txt: 'Round gagné · nouvelle main de cartes et +3 au jet' },
+  swarm: { ic: '🐝', verbs: ['Essaim', 'Légion', 'Meute'], txt: 'Round gagné · des alliés invoqués t’aident 2 rounds' },
+  gravity: { ic: '⚖', verbs: ['Pesanteur', 'Écrasement', 'Affaiblissement'], txt: 'Round gagné · leurs coups faiblissent durablement' },
+  lucky: { ic: '🍀', verbs: ['Coup de chance', 'Fortune', 'Destin'], txt: 'Round gagné · les 2 prochains jets se lancent deux fois' },
+  rewind: { ic: '⏪', verbs: ['Retour en arrière', 'Pas de côté', 'Faille'], txt: 'Le round est annulé sans dégâts · nouvelle main · +2 ⚡' },
+  venom: { ic: '☠', verbs: ['Venin', 'Corrosion', 'Toxine'], txt: 'Round gagné · les 2 prochains rounds gagnés comptent double' },
+  rage: { ic: '🔥', verbs: ['Fureur', 'Brasier', 'Rage sauvage'], txt: 'Round gagné · +4 aux jets pendant 2 rounds (mais plus risqué)' },
+};
+// sous-catégorie → [famille de combat, capacité de quête [nom, description, tags, texte de réussite]]
+const SUBFAM = {
+  "Oiseaux d'eau & de mer": ['ambush', ['Cap sur l’horizon', 'Tu survoles la côte et repères un passage sûr', ['scout', 'mobility'], 'Du haut du ciel, tu repères un chemin que personne ne voyait.']],
+  'Oiseaux colorés & passereaux': ['hex', ['Chant envoûtant', 'Ton chant apaise ou charme la foule', ['social'], 'Ton chant se pose sur la foule : tout le monde t’écoute.']],
+  'Rapaces & charognards': ['ambush', ['Vue d’aigle', 'Tu repères ce qui est caché de très loin', ['scout'], 'Ta vue perçante découvre ce qui était dissimulé.']],
+  'Coureurs, oiseaux du froid & atypiques': ['rush', ['Course folle', 'Tu distances n’importe qui', ['mobility'], 'Tu files plus vite que le vent : personne ne te rattrape.']],
+  'Géants & raies': ['guard', ['Passage sous-marin', 'Tu traverses l’eau sans être vu', ['mobility', 'stealth'], 'Tu glisses sous la surface et ressors de l’autre côté.']],
+  'Poissons de récif & curiosités': ['swarm', ['Banc de diversion', 'Des centaines de poissons détournent les regards', ['stealth'], 'Le banc attire tous les regards : tu passes inaperçu.']],
+  'Grands prédateurs': ['rage', ['Flair du sang', 'Tu pistes une cible à l’odeur', ['scout', 'combat'], 'Ton flair te mène droit à la proie.']],
+  'Crustacés': ['guard', ['Carapace', 'Tu encaisses ce qui devrait te briser', ['defense'], 'Ta carapace encaisse tout : tu tiens bon.']],
+  'Insectes volants': ['swarm', ['Essaim espion', 'Un essaim écoute et observe pour toi', ['scout', 'stealth'], 'Tes insectes se glissent partout : tu sais déjà tout.']],
+  'Arachnides & myriapodes': ['venom', ['Toile piégeuse', 'Tu piégeas une zone ou une cible', ['control'], 'Ta toile immobilise ce qui s’approche.']],
+  'Insectes terrestres': ['swarm', ['Colonie ouvrière', 'Une colonie fait le travail à ta place', ['tech', 'logi'], 'La colonie accomplit le travail en un rien de temps.']],
+  'Tortues': ['guard', ['Patience millénaire', 'Tu tiens et tu attends, rien ne t’use', ['defense'], 'Ta patience épuise tout le monde autour de toi.']],
+  'Amphibiens': ['venom', ['Saut de gué', 'Tu franchis rivières, marais et gouffres', ['mobility'], 'D’un bond, tu es de l’autre côté.']],
+  'Lézards & crocodiliens': ['rage', ['Mue camouflage', 'Tu te fonds dans le décor', ['stealth', 'disguise'], 'Ta peau change : tu deviens quelqu’un d’autre.']],
+  'Serpents': ['venom', ['Regard hypnotique', 'Tu fascines et tu questionnes', ['control', 'social'], 'Ton regard fixe l’autre : il répond sans résister.']],
+  'Céphalopodes': ['hex', ['Camouflage chromatique', 'Ta peau imite n’importe quel décor', ['disguise', 'stealth'], 'Tu t’effaces dans le décor, nuance après nuance.']],
+  'Cnidaires & coraux': ['venom', ['Récif curatif', 'Tu soignes avec ton récif vivant', ['heal'], 'Le récif cicatrise les blessures en quelques minutes.']],
+  'Autres invertébrés': ['regen', ['Repousse', 'Tu régénères ce qui est brisé', ['heal', 'tech'], 'Ce qui était cassé repousse sous tes yeux.']],
+  'Primates': ['lucky', ['Agilité de singe', 'Tu escalades et te faufiles partout', ['mobility'], 'Tu grimpes là où personne n’ose aller.']],
+  'Marsupiaux': ['ambush', ['Poche cachée', 'Tu transportes et dissimules du matériel', ['stealth', 'logi'], 'Rien ne dépasse : ton butin est invisible.']],
+  'Pinnipèdes & siréniens': ['guard', ['Nage polaire', 'Tu traverses eaux glacées et banquises', ['mobility'], 'L’eau glacée ne te retient pas.']],
+  'Cétacés': ['stun', ['Sonar', 'Tu cartographies tout autour de toi', ['scout'], 'Ton sonar dessine les lieux dans ton esprit.']],
+  'Fouisseurs & insectivores': ['rewind', ['Tunnel', 'Tu creuses un passage sous l’obstacle', ['stealth', 'mobility'], 'Tu surgis de terre de l’autre côté du mur.']],
+  'Rongeurs & lagomorphes': ['swarm', ['Passage de souris', 'Tu te glisses par les plus petits trous', ['stealth'], 'Un trou grand comme le poing te suffit.']],
+  'Chauves-souris': ['reveal', ['Écholocation', 'Tu vois dans le noir complet', ['scout'], 'Dans l’obscurité totale, tu vois tout.']],
+  'Pachydermes & suidés': ['guard', ['Force de colosse', 'Tu déplaces ou retiens ce qui est trop lourd', ['defense', 'combat'], 'Ce qui était trop lourd cède sous tes mains.']],
+  'Cervidés & girafidés': ['rush', ['Sens de la forêt', 'Tu devines les dangers du terrain', ['scout'], 'Le terrain n’a plus de secret pour toi.']],
+  'Bovidés': ['rush', ['Charge de troupeau', 'Tu fonces à travers l’obstacle', ['combat'], 'Rien ne résiste à ta charge.']],
+  'Équidés & camélidés': ['rush', ['Galop', 'Tu avales les distances', ['mobility'], 'Tu files au galop à travers tout.']],
+  'Canidés': ['ambush', ['Flair de la meute', 'Tu pistes et coordonnes les tiens', ['scout', 'ally'], 'Ton flair et ta meute ne se trompent jamais.']],
+  'Félins': ['ambush', ['Chasse silencieuse', 'Tu approches sans un bruit', ['stealth'], 'Un pas de velours, et tu y es.']],
+  'Mustélidés & autres carnivores': ['drain', ['Glissement', 'Tu te faufiles et t’échappes', ['stealth', 'mobility'], 'Tu t’écoules comme de l’eau entre leurs mains.']],
+  'Ours & pandas': ['regen', ['Hibernation', 'Tu récupères intensément en un instant', ['heal', 'defense'], 'Tu t’endors une minute : tout ton corps se répare.']],
+  'Matières liquides & chimiques': ['venom', ['Flux', 'Tu fais couler, dissoudre ou noyer', ['control'], 'Le liquide obéit : il coule où tu veux.']],
+  'Matières minérales & solides': ['guard', ['Peau de roche', 'Ta peau devient pierre ou métal', ['defense'], 'Ta peau devient pierre : plus rien ne te blesse.']],
+  'Énergies': ['rage', ['Surcharge', 'Tu alimentes ou grilles les machines', ['tech'], 'L’énergie afflue : la machine repart (ou grille).']],
+  'Mobilité': ['rewind', ['Pas de côté', 'Tu te déplaces instantanément', ['mobility'], 'Tu disparais ici, tu réapparais là.']],
+  'Sens, émotions & métamorphoses': ['lucky', ['Lecture des émotions', 'Tu sens ce que ressentent les autres', ['social'], 'Tu lis les émotions comme un livre ouvert.']],
+  'Résistance, souffle & régénération': ['regen', ['Second souffle', 'Tu te soignes sur place', ['heal'], 'Tu reprends ton souffle : tes blessures se referment.']],
+  'Membres & morphologie': ['rush', ['Membre sur mesure', 'Ton corps s’adapte à la situation', ['combat', 'tech'], 'Ton corps se transforme, juste ce qu’il fallait.']],
+  'Illusion & contrôle': ['hex', ['Illusion', 'Tu fais voir ce qui n’existe pas', ['disguise', 'social'], 'Ils voient ce que tu veux qu’ils voient.']],
+  'Perception & analyse': ['reveal', ['Analyse', 'Tu comprends une situation d’un coup d’œil', ['scout'], 'En un regard, tu comprends tout le montage.']],
+  'Esprit, mémoire & rêves': ['mirror', ['Lecture d’esprit', 'Tu lis ce que l’autre pense', ['social', 'scout'], 'Ses pensées te parviennent, claires.']],
+  'Technologie & réseaux': ['stun', ['Piratage mental', 'Tu prends le contrôle des systèmes', ['hack'], 'Le système est à toi, sans un seul mot de passe.']],
+  'Matière & réalité': ['gravity', ['Réalité malléable', 'Tu modifies la matière autour de toi', ['tech', 'control'], 'La matière se plie à ce que tu veux.']],
+  'Espace-temps & gravité': ['rewind', ['Saut spatial', 'Tu te déplaces d’un point à un autre', ['mobility'], 'Tu traverses l’espace sans un pas.']],
+  'Forces & champs': ['guard', ['Champ de force', 'Tu bloques ce qui vient vers toi', ['defense'], 'Un champ invisible arrête tout.']],
+  'Ondes & environnement': ['stun', ['Brouillage', 'Tu perturbes signaux et systèmes', ['hack', 'control'], 'Tous les signaux se brouillent autour de toi.']],
+  'Chance & destin': ['lucky', ['Coup de chance', 'Le hasard tourne en ta faveur', ['social', 'scout'], 'Le hasard fait bien les choses : tout s’aligne.']],
+  "Transformation d'objets": ['swarm', ['Transmutation', 'Tu transformes un objet en autre chose', ['tech'], 'L’objet devient exactement ce dont tu avais besoin.']],
+  'Contrôle & soutien': ['drain', ['Soutien', 'Tu renforces ton équipe', ['ally', 'heal'], 'Ton équipe se sent invincible.']],
+  'Aura & anti-matière': ['gravity', ['Aura', 'Ta présence impose le respect', ['social'], 'Ta présence écrase toute discussion.']],
+  'Vie & mort': ['regen', ['Souffle de vie', 'Tu soignes, ou tu rappelles un mourant', ['heal'], 'Tu rappelles la vie dans un corps qui s’éteignait.']],
+  'Création': ['swarm', ['Création', 'Tu fabriques ce dont tu as besoin', ['tech', 'logi'], 'Ce dont tu avais besoin existe désormais.']],
+  'Éléments': ['rage', ['Maîtrise élémentaire', 'Tu façonnes l’élément à ta guise', ['control', 'defense'], 'L’élément t’obéit : il fait exactement ce que tu demandes.']],
+};
+const ELEM_FAM = [[/feu|lave|magma|braise|plasma|soleil/i, 'rage'], [/eau|glace|neige|givre|mer/i, 'regen'], [/terre|roche|sable|m[ée]tal|bois|plante|cristal/i, 'guard'], [/air|vent|temp[êe]te|nuage|son/i, 'rewind'], [/foudre|[ée]clair|[ée]lectri|tonnerre/i, 'stun'], [/ombre|nuit|t[ée]n[èe]bre|poison|acide/i, 'venom'], [/lumi[èe]re|[ée]toile|lune/i, 'reveal']];
+const abilCache = {};
+const hashN = str => { let x = 7; for (const ch of String(str)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; };
+function powerAbility(pid) {
+  if (abilCache[pid]) return abilCache[pid]; const p = PW[pid]; if (!p) return null;
+  let e = SUBFAM[p.sub]; if (!e) e = ['ambush', ['Talent', 'Ton pouvoir t’aide d’une façon qui lui est propre', ['scout'], 'Ton pouvoir vient à ton secours.']];
+  let fam = e[0]; if (p.type === 'elementaire') { const m = ELEM_FAM.find(([re]) => re.test(p.name + ' ' + p.desc)); if (m) fam = m[1]; else fam = ['rage', 'guard', 'regen', 'stun', 'rewind'][hashN(p.id) % 5]; }
+  const F = FAMS[fam]; const h = hashN(p.id); const mag = 1 + (h % 3); const verb = F.verbs[h % F.verbs.length];
+  const RID = [['', ''], [' · +1 ⚡', 'en'], [' · une esquive', 'dodge'], [' · bouclier 3', 'shield'], [' · +5 % PV', 'hp']]; const rid = RID[(h >>> 3) % 5]; const q = e[1]; return abilCache[pid] = { pid, fam, ic: F.ic, name: `${verb}`, power: p.name, mag, rider: rid[1], txt: F.txt + rid[0], q: { n: q[0], d: q[1], tags: q[2], line: q[3] } };
+}
+const pcAbility = () => { const ps = pcPowers(); if (!ps.length) return null; CB && (CB.abil = CB.abil || {}); const p = ps.find(x => !(CB && CB.abil && CB.abil[x.id])) || ps[0]; return powerAbility(p.id); };
+// ── Effets en combat ──
+function abilityApply(a, who) {
+  const pc = G.pc, F = FAMS[a.fam], m = a.mag; const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
+  const nm = who || pc.name; clog(`${F.ic} ${nm} : ${a.name} (${a.power}) !`, 'acc');
+  if (a.rider === 'en') pc.en = Math.min(pc.enMax, pc.en + 1); else if (a.rider === 'dodge') CB.dodge += 1; else if (a.rider === 'shield') CB.shield += 3; else if (a.rider === 'hp') { pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * .05)); }
+  switch (a.fam) {
+    case 'rush': CB.W = Math.min(CB.N, CB.W + 1); clog('Un second round est compté !', 'good'); break;
+    case 'ambush': CB.nextBonus += 4 + m; clog(`Prochain jet : +${4 + m}.`, 'good'); break;
+    case 'guard': CB.shield += 6 + m * 2; CB.dodge += 1; clog(`Bouclier +${6 + m * 2} et une esquive.`, 'good'); break;
+    case 'regen': heal(0.2 + m * 0.04); pc.party.forEach(x => { if (x.inj <= 0) x.hp = Math.min(x.hpMax, x.hp + Math.round(x.hpMax * 0.25)); }); break;
+    case 'drain': heal(0.1 + m * 0.03); pc.en = Math.min(pc.enMax, pc.en + 2 + m); clog('Énergie volée.', 'good'); break;
+    case 'stun': CB.foeStun = 1; CB.nextBonus += 1 + m; clog('Leur prochain coup est annulé.', 'good'); break;
+    case 'hex': CB.hexLeft = 2; clog('Leurs jets sont plombés pendant 2 rounds.', 'good'); break;
+    case 'mirror': CB.mirror = 1; CB.nextBonus += 1 + m; clog('Ta prochaine défaite deviendra un nul.', 'good'); break;
+    case 'reveal': dealHand(); CB.nextBonus += 2 + m; clog('Nouvelle main de cartes !', 'good'); break;
+    case 'swarm': CB.swarm = 2; clog('Des alliés invoqués te couvrent 2 rounds.', 'good'); break;
+    case 'gravity': aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - (1 + m)); }); CB.weak = Math.max(CB.weak || 0, 3); clog('Leurs coups faiblissent.', 'good'); break;
+    case 'lucky': CB.adv = 2; clog('Les 2 prochains jets se lancent deux fois.', 'good'); break;
+    case 'rewind': pc.en = Math.min(pc.enMax, pc.en + 2); dealHand(); clog('Le temps se replie : nouvelle main.', 'good'); break;
+    case 'venom': CB.venom = 2; clog('Les 2 prochains rounds gagnés comptent double.', 'good'); break;
+    case 'rage': CB.rageLeft = 2; CB.nextBonus += 2; clog('Fureur : +4 aux jets pendant 2 rounds.', 'good'); break;
+  }
+}
+// Effet des pouvoirs de personnages adverses (nommés) : utilisé quand ils déclenchent leur pouvoir
+function foePowerOf(f) { const c = f.cid && CH[f.cid]; if (!c || !c.powers || !c.powers.length) return null; return powerAbility(c.powers[0]); }
+function foeAbilityHit(a) {
+  const pc = G.pc; const F = FAMS[a.fam];
+  if (['drain', 'venom', 'regen'].includes(a.fam)) { const d = Math.min(3 + a.mag, pc.en); pc.en -= d; clog(`${F.ic} Ton énergie est siphonnée (−${d}).`, 'log-dmg'); }
+  else if (['stun', 'hex', 'gravity', 'mirror'].includes(a.fam)) { CB.nextBonus -= 3; clog(`${F.ic} Tu es déstabilisé : −3 au prochain jet.`, 'log-dmg'); }
+  else if (['rage', 'rush', 'ambush'].includes(a.fam)) clog(`${F.ic} Coup redoutable.`, 'log-dmg');
+  else { CB.hitBuff -= 1; clog(`${F.ic} Tes gestes se font moins sûrs (−1).`, 'log-dmg'); }
+}
+// ── Capacités de quête : une fois par destination, 2 énergie, réussite automatique quand elle correspond à la situation ──
+function questAbility() { const ps = pcPowers(); for (const p of ps) { const a = powerAbility(p.id); if (a) return a; } return null; }
+const questReady = a => !!(a && G.pc.en >= 2 && G.pc.flags.qaDest !== (G.pc.flags.dest || 0));
+const questFits = (a, tags) => !!(a && (a.q.tags || []).some(t => (tags || []).includes(t)));
+function questUse() { const pc = G.pc; pc.en -= 2; pc.flags.qaDest = pc.flags.dest || 0; const a = questAbility(); pxGain(a.pid, 1); return a; }
+
 // ───────── Combat V3 : 3 à 5 rounds, 3 choix simples selon ta catégorie de style, un % affiché ─────────
 // Chaque round : tu choisis ENTRE 3 gestes (principal, prudent, pouvoir). Un dé contre un pourcentage décide.
 // Round gagné : l'adversaire recule. Round perdu : tu encaisses. Le bilan dépend des rounds gagnés et perdus.
@@ -2639,9 +2766,9 @@ const rr = (a, b) => a + Math.random() * (b - a);
 const foeHit = f => Math.max(1, Math.round((2.6 + 2 * (f.tier || 1) + f.dmg * 0.09) * rr(0.9, 1.1)));
 function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return; const el = h('div', { class: 'vfx ' + cls }, text); document.body.append(el); setTimeout(() => el.remove(), 950); }
 function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise' ? 'corps' : a; }
-const hitBonus = () => (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
+const hitBonus = () => (CB.rageLeft > 0 ? 4 : 0) + (CB.swarm > 0 ? 2 : 0) + (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
-const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)); };
+const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)) - (CB.hexLeft > 0 ? 4 : 0); };
 const pwMax = () => Math.floor((CB.N + 1) / 3); // pouvoir : 1 round sur 3, 2 sur 5
 const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
 
@@ -2649,6 +2776,7 @@ const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une vi
 const INTENTS = {
   charge: { ic: '💥', n: 'Charge', tip: 'Gros coup en approche : esquive ou encaisse', mul: 1.4, counter: m => !!m.dodge || (m.sev != null && m.sev <= 0.6 && m.cat !== 'pw') },
   garde: { ic: '🛡', n: 'Garde haute', tip: 'Il se couvre : vise la faille, ne fonce pas', mul: 1, counter: m => m.cat === 'pw' || (m.tags || []).some(t => ['scout', 'social', 'tech', 'ranged', 'control'].includes(t)), penal: m => m.cat === 'mv' && (m.tags || []).includes('combat') && (m.sev || 1) >= 1 && !(m.tags || []).some(t => ['scout', 'tech'].includes(t)) },
+  special: { ic: '☄', n: 'Pouvoir', tip: 'Un adversaire utilise son pouvoir : esquive ou garde prudente', mul: 1.3, counter: m => !!m.dodge || m.cat === 'pw' || (m.sev != null && m.sev <= 0.6) },
   rafale: { ic: '🌪', n: 'Rafale', tip: 'Coups rapides : couvre-toi ou coordonne-toi', mul: 1.15, counter: m => (m.tags || []).some(t => ['defense', 'ally'].includes(t)) || !!m.dodge },
 };
 function nextIntent() {
@@ -2656,7 +2784,9 @@ function nextIntent() {
   const hostile = aliveFoes(); if (!hostile.length) return CB.intent = null;
   const heavy = hostile.some(f => f.m || (f.tier || 1) >= 4); const keys = Object.keys(INTENTS).filter(k => k !== (CB.intent && CB.intent.k));
   const w = { charge: heavy ? 3 : 2, garde: 2, rafale: hostile.length >= 2 ? 3 : 1 }; const bag = []; keys.forEach(k => { for (let i = 0; i < w[k]; i++) bag.push(k); });
-  CB.intent = { k: pick(bag) }; return CB.intent;
+  CB.intent = { k: pick(bag) };
+  const named = hostile.filter(f => foePowerOf(f)); if (named.length && chance(0.34)) { const f = pick(named); CB.intent = { k: 'special', foe: f, ab: foePowerOf(f) }; }
+  return CB.intent;
 }
 const intentOf = () => (CB && CB.intent) ? INTENTS[CB.intent.k] : null;
 function intentBonus(m) { const it = intentOf(); if (!it || !m || !m.attr) return 0; if (it.counter(m)) return 4; if (it.penal && it.penal(m)) return -2; return 0; }
@@ -2707,13 +2837,14 @@ function dealHand() {
   for (let k = 0; k < 3; k++) { const cand = pool.filter(c => !hand.some(h => h.id === c.id) && !(last.includes(c.id) && Math.random() < 0.75)); const c = wpick(cand.length ? cand : pool.filter(c => !hand.some(h => h.id === c.id)), x => x.w); hand.push(c); }
   if (CB) CB.hand = hand; return hand;
 }
+function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: 3, cls: 'safe', ab: a }; }
 function powerMove() {
   const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
   const base = { ic: '✦', cat: 'pw', sev: 1.0 };
   if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
   if (spent) return Object.assign({}, base, { id: 'spent', kind: 'tech', label: 'Pouvoir', sub: `Déjà utilisé (${CB.pwUsed}/${pwMax()} ce combat)`, lock: 'Utilisé', cost: 0 });
   if (tags.includes('heal') && pc.hp < pc.hpMax * 0.5 && pc.en >= POWER_FX.heal.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'heal', kind: 'heal', ic: '💚', label: `${powName('heal')} : te régénérer`, sub: `Tu récupères ~25 % de PV · ${POWER_FX.heal.cost}⚡ · round nul`, cost: POWER_FX.heal.cost, sev: 0.4 });
-  const sg = pc.ptype !== 'aucun' ? sigMove() : null; if (ok(sg)) return Object.assign({}, base, sg, { label: sg.label.replace('Signature : ', 'Pouvoir : '), sub: `Round gagné d’office · ${sg.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, cost: sg.cost + 1 });
+  const ab = pc.ptype !== 'aucun' ? abilMove() : null; if (ok(ab)) return Object.assign({}, base, ab, { sub: `${ab.ab.txt} · ${ab.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant` });
   if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'power', kind: 'hit', label: `Pouvoir : ${powName('combat')}`, sub: `+4 au jet · ${POWER_FX.combat.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: 'maitrise', tags: ['combat'], bonus: 4, cost: POWER_FX.combat.cost });
   const st = STYLES[pc.style]; const fin = Object.assign({}, base, { id: 'tech', kind: 'tech', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: primAttr(), tags: ['combat'], bonus: 3, cost: st.tech.cost + 1 });
   if (ok(fin)) return fin; fin.lock = 'Énergie insuffisante'; fin.sub = 'Pas assez d’énergie'; return fin;
@@ -2773,17 +2904,23 @@ function play(m) {
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   if (m.cat === 'pw' && m.kind !== 'awaken') CB.pwUsed = (CB.pwUsed || 0) + 1;
   let res = 'loss', sev = m.sev == null ? 1 : m.sev; const nb = CB.nextBonus; CB.nextBonus = 0; let r = null;
-  if (m.kind === 'sig') { sigDo(m); res = 'win'; }
+  if (m.kind === 'abil') { CB.abil = CB.abil || {}; CB.abil[m.pid] = 1; pxGain(m.pid, 1); abilityApply(m.ab); res = m.ab.fam === 'rewind' ? 'draw' : 'win'; if (res === 'draw') sev = 0; pop('f0', res === 'win' ? m.ab.name.toUpperCase() : 'FAILLE', 'crit'); }
+  else if (m.kind === 'sig') { sigDo(m); res = 'win'; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + Math.round(a.hpMax * 0.25)); }); res = 'draw'; }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); res = 'draw'; sev = 0.4; }
   else {
-    const cnt = isCounter(m); r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); CB.lastR = r; const crit = r.crit || (PK('crit') && r.r >= 19);
+    const cnt = isCounter(m); r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); if (CB.adv > 0) { if (!r.ok) { const r2 = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); if (r2.ok) { r = r2; clog('🍀 Seconde chance : le jet est repris.', 'good'); } } CB.adv--; } CB.lastR = r; const crit = r.crit || (PK('crit') && r.r >= 19);
     if (r.ok) { res = 'win'; if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken(); if (m.weak) CB.weak = m.weak; if (m.en) pc.en = Math.min(pc.enMax, pc.en + m.en); if (crit) { CB.nextBonus += 2; clog('Coup remarquable : +2 au prochain jet.', 'good'); } }
     else { res = 'loss'; if (r.fumble) sev *= 1.5; if (m.dodge && chance(m.dodge)) { res = 'draw'; sev = 0; clog('Tu esquives tout !', 'good'); pop('pc', 'ESQUIVE', 'ok'); } else if (m.kind === 'awaken') clog('L’Éveil ne vient pas.', 'log-miss'); if (PK('thorns') && chance(Math.min(0.6, PK('thorns') * 0.12))) { res = 'draw'; sev = 0.3; clog('Ta riposte contrebalance : round nul.', 'good'); } }
   }
   if (res === 'win' && hasAnti('shock') && !CB.shockUsed) { CB.shockUsed = true; CB.nextBonus += 2; clog('Onde de choc : +2 au prochain jet.', 'good'); }
   if (res === 'win') { CB.W++; vfx(r && r.crit ? 'CRITIQUE !' : 'ROUND GAGNÉ', 'good'); sfx('hit'); clog(pick(['Tu prends l’avantage.', 'Ton geste fait mouche.', 'Ils reculent d’un pas.']), 'good'); if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - PK('weaken') * 2); }); clog('Tes ennemis faiblissent.', 'warnc'); } if (PK('stun') && chance(PK('stun') / 100)) { CB.nextBonus += 2; clog('Sidérés, ils vacillent : +2 au prochain round.', 'warnc'); } if (PK('drain')) { const g = Math.min(PK('drain') * 2, pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } } }
   else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(pick(['Ils lisent ton geste et ripostent.', 'Ton geste échoue.', 'Tu perds le rythme.']), 'log-miss'); }
+  if (res === 'loss' && CB.mirror) { CB.mirror = 0; res = 'draw'; sev = 0; clog('🪞 Ta défaite est renvoyée : round nul.', 'good'); }
+  if (res === 'loss' && CB.foeStun) { CB.foeStun = 0; res = 'draw'; sev = 0; clog('💫 Leur coup est annulé : round nul.', 'good'); }
+  if (res === 'loss' && CB.rageLeft > 0) sev *= 1.25;
+  if (res === 'win' && CB.venom > 0) { CB.venom--; CB.W = Math.min(CB.N, CB.W + 1); clog('☠ Le poison achève : un round de plus compté.', 'good'); }
+  if (res === 'loss' && CB.intent && CB.intent.k === 'special' && CB.intent.ab) foeAbilityHit(CB.intent.ab);
   if (res === 'loss' && r) { const it = intentOf(); if (it && !(isCounter(m))) { sev *= it.mul; if (it.mul > 1.2) clog(`${it.ic} ${it.n} : tu prends de plein fouet.`, 'log-dmg'); } else if (it && isCounter(m)) sev *= 0.75; }
   if (r && r.ok && isCounter(m)) { CB.combo = (CB.combo || 0) + 1; clog(`${intentOf().ic} Bien lu : tu contres ${intentOf().n}.`, 'good'); if (CB.combo >= 2) { CB.nextBonus += 2; CB.combo = 0; clog('Enchaînement : +2 au prochain jet.', 'good'); } } else if (r) CB.combo = 0;
   if (res === 'loss' || (res === 'draw' && sev > 0)) hurtPc(sev);
@@ -2793,6 +2930,7 @@ function play(m) {
   if (PK('allyheal')) pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + PK('allyheal')); });
   if (hasAnti('restore')) { if (pc.hp < pc.hpMax) pc.hp = Math.min(pc.hpMax, pc.hp + 1); if (CB.round % 2 === 0) pc.en = Math.min(pc.enMax, pc.en + 1); }
   if (CB.weak > 0) CB.weak--;
+  if (CB.rageLeft > 0) CB.rageLeft--; if (CB.hexLeft > 0) CB.hexLeft--; if (CB.swarm > 0) CB.swarm--;
   syncFoes();
   CB.round++; nextIntent();
   if (pc.hp <= 0) return loseCombat(false);
@@ -2816,6 +2954,7 @@ function hurtPc(sev) {
     if (friends.length && chance(0.03 + 0.05 * teamK(friends.length))) { const a = pick(friends); a.hp -= d; clog(`${fname(f)} blesse ${CH[a.id].name} (${d}).`, 'log-dmg'); if (a.hp <= 0) { a.hp = 0; a.inj = 4; clog(`${CH[a.id].name} est mis hors combat !`, 'log-dmg'); } return; }
     tot += d;
   });
+  if (CB.swarm > 0 && tot > 0) { const ab = Math.min(3, tot); tot -= ab; clog(`🐝 Tes alliés invoqués encaissent ${ab}.`, 'good'); }
   if (CB.shield > 0 && tot > 0) { const ab = Math.min(CB.shield, tot); CB.shield -= ab; tot -= ab; clog(`Ton bouclier absorbe ${ab}.`, 'good'); }
   if (tot > 0) { pc.hp = Math.max(0, pc.hp - tot); CB.hurt = true; pop('pc', `−${tot}`, 'dmg'); clog(`Tu encaisses ${tot}.`, 'log-dmg'); if (pc.hp <= 0 && CB.lb) { CB.lb = false; pc.hp = 1; clog('Dernier souffle : tu t’accroches à 1 PV !', 'good'); } }
 }
@@ -2850,7 +2989,7 @@ function teamStrip() {
   const spark = fx.pc === 'atk' ? h('i', { class: 'spark r' }, '💥') : fx.pc === 'power' ? h('i', { class: 'spark r pw' }, '✦') : fx.foe === 'atk' ? h('i', { class: 'spark l' }, '💢') : null;
   return h('div', { class: 'cstage' }, left, spark, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '🗡' : ''), right);
 }
-function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, 'Il prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
+function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Il prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
   if (CB && CB.auto) return;
   const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
@@ -2878,6 +3017,8 @@ function renderCombat() {
 function combatChoices() {
   const pc = G.pc; const L = [];
   moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: (isCounter(m) ? '✔ Contre ce qu’il prépare · ' : '') + m.sub, odds: m.kind === 'sig' || m.kind === 'heal' ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
+  CB.allyUsed = CB.allyUsed || {}; pc.party.filter(a => a.inj <= 0 && CH[a.id] && !CB.allyUsed[a.id]).slice(0, 2).forEach(a => { const c = CH[a.id]; const ab = (c.powers || []).length ? powerAbility(c.powers[0]) : null; if (!ab) return;
+    L.push(C(`${c.name} : ${ab.name}`, () => { CB.allyUsed[a.id] = 1; abilityApply(ab, c.name); sfx('win'); burst(innerWidth / 2, 200, '#27f0ff', 18); syncFoes(); if (CB.W >= needW()) return conclude(); renderCombat(); }, { ic: ab.ic, sub: `${ab.txt} · allié, 1×/combat, sans coûter de round`, cls: 'back' })); });
   const heal = ['nanosoin', 'kit', 'bandage'].find(id => hasItem(id));
   if (heal && !CB.noItems && pc.hp < pc.hpMax * 0.55) L.push(C(`Se soigner (${ITEMS[heal].n})`, () => play({ kind: 'item', item: heal, sev: 0.4 }), { ic: '💊', sub: 'Round nul', cls: 'back' }));
   const pw = moves()[moves().length - 1]; if (hasItem('capsule') && !CB.noItems && (pc.en < pc.enMax * 0.4 || (pw && pw.lock))) L.push(C('Utiliser une Capsule OGEN', () => { takeItem('capsule'); pc.en = Math.min(pc.enMax, pc.en + 8); clog('Capsule OGEN : +8 énergie.', 'good'); sfx('win'); renderCombat(); }, { ic: '⚡', sub: 'Recharge 8 énergie · ne prend pas de round', cls: 'back' }));
@@ -3781,6 +3922,7 @@ function approachChoices(o) {
     const price = d.money ? ` (${40 * o.tier} ¢)` : '';
     L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' ? 2 : 0), tags, d.money ? 4 : 0], req: rq, cls: d.cls, sub }));
   });
+  { const qa = questAbility(); if (qa && questReady(qa) && questFits(qa, ARCH[o.arch].ptags)) L.push(C(`✨ ${qa.q.n}`, () => { questUse(); advance(o.weeks); if (G.status !== 'play') return; finishMission(o, 'ok', [qa.q.line, `✨ ${qa.q.n} (${qa.power}) · 2⚡`]); }, { ic: '✨', cls: 'safe', sub: `${qa.q.d} · réussite assurée · 2⚡ · 1×/destination` })); }
   return L;
 }
 function missionApproach(o) {
@@ -4815,7 +4957,11 @@ function arenaTournament(rounds, forced) {
   const pc = G.pc; const tier = clamp(pc.grade + 1, 1, 5); let won = 0;
   const next = (i) => {
     if (i > rounds) { const prize = rounds * 300 * tier + 500; const L = fx({ money: prize, xp: 60 * rounds, rep: { arena: 6 }, heat: forced ? -10 : 2 }); if (forced) { return release(`Tu as survécu aux trois combats. L’ARENA te rend ta liberté et la foule t’acclame (prise ${prize} ¢).`, null, L); } return show({ kicker: 'ARENA', title: 'Champion !', text: [`Tu as battu ${rounds} adversaire(s). La foule scande ton nom.`], fx: L, choices: [C('Continuer', hub)] }); }
-    const foes = [mkFoe('gladiateur', tier + (i === rounds && rounds > 1 ? 1 : 0), 'Gladiateur ' + pick(['Mastodonte', 'Spectre', 'Faucheuse', 'Typhon', 'Écume', 'Dynamo', 'Basalte']))];
+    const finale = i === rounds && rounds > 1; const lvF = tier + (finale ? 1 : 0); const taken = (pc.flags.arenaSeen = pc.flags.arenaSeen || []);
+    // les adversaires sont de vrais personnages (ARENA en priorité), plus prestigieux pour la finale
+    let cand = DATA.chars.filter(c => G.world.npc[c.id] && G.world.npc[c.id].alive && G.world.npc[c.id].st === 'free' && !taken.includes(c.id) && c.stars >= Math.max(1, lvF - 1) && c.stars <= Math.min(5, lvF + 1) && !Object.values(F).some(f => f.leaders && f.leaders.includes(c.id) && f.id === pc.faction));
+    const arenaMem = cand.filter(c => c.faction === 'arena'); const pool0 = arenaMem.length && chance(0.6) ? arenaMem : cand; const c = pool0.length ? pick(pool0) : null; if (c) { taken.push(c.id); if (taken.length > 40) taken.shift(); }
+    const foes = [c ? mkFoe('gladiateur', lvF, c.name + (F[c.faction] ? ' (' + F[c.faction].name + ')' : ''), { cid: c.id }) : mkFoe('gladiateur', lvF, 'Gladiateur ' + pick(['Mastodonte', 'Spectre', 'Faucheuse', 'Typhon', 'Écume', 'Dynamo', 'Basalte']))];
     startCombat({ title: `ARENA — combat ${i}/${rounds}`, foes, lethal: 'death', canFlee: false, intro: 'Les portes de l’arène s’ouvrent. Des milliards de spectateurs retiennent leur souffle.', onWin: L => { won++; if (i < rounds) show({ kicker: 'ARENA', title: 'Un de moins', text: ['Tu reprends ton souffle. Le prochain gladiateur entre.'], fx: L, choices: [C('Continuer', () => next(i + 1))] }); else next(i + 1); }, onLose: () => { if (chance(0.4)) { pc.hp = 1; const lost = Math.round(pc.money * 0.5); pc.money -= lost; advance(3); return show({ kicker: 'ARENA', title: 'Épargné par la foule', text: ['Le pouce de la foule se lève. Tu es épargné, brisé, et on te prend la moitié de ta bourse.'], choices: [C('Continuer', () => { if (forced && pc.flags.cap) capturedMenu(); else hub(); })] }); } const d = pcDie('Tué dans l’ARENA.'); if (d) show({ title: 'Sauvé', text: [`${esc(d.rescued)} saute dans l’arène et t’arrache à la mort.`], choices: [C('Continuer', hub)] }); } });
   };
   if (!forced) return show({ kicker: 'ARENA', title: `Tournoi : ${rounds} combat(s)`, text: ['L’ARENA paie bien, mais on y meurt. Les adversaires sont des gladiateurs, souvent des Fallen ou des soldats d’élite.', `<b>Adversaires de niveau ${'★'.repeat(tier)}</b> (ton grade : ${pc.grade}). Une défaite est <b>mortelle</b> la plupart du temps ; sans allié pour te sauver, la foule ne pardonne guère. Gains estimés : ${rounds * 300 * tier + 500} ¢.`], choices: [C('Entrer dans l’arène', () => next(1), { cls: 'danger' }), C('Renoncer', hub)] });
@@ -5359,6 +5505,8 @@ function runStory(s, roleId) {
       show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
     }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: (extra.includes(o) ? '🎭 Rôle · ' : '') + (gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '') });
   });
+  { const qa = questAbility(); const m = qa && questReady(qa) ? opts.find(o => questFits(qa, o[2])) : null;
+    if (m) L.push(C(`✨ ${qa.q.n}`, () => { questUse(); if (m[7]) addKarma(m[7]); const rw = Object.assign({}, m[5]); if (rw.xp) rw.xp += 4 * t; show({ chainTitle: s[1], kicker: s[0], title: 'Pouvoir utilisé', text: [qa.q.line, `✨ ${qa.q.n} (${qa.power}) · 2⚡`], fx: fx(rw), choices: [C('Continuer', hub)] }); }, { ic: '✨', cls: 'safe', sub: `${qa.q.d} · réussite assurée · 2⚡ · 1×/destination` })); }
   L.push(C('Passer ton chemin', hub, { cls: 'back' }));
   show({ kicker: s[0] + ' · ' + capName(G.loc).toUpperCase(), title: s[1], text: [s[2](place)], choices: L });
 }
@@ -5571,7 +5719,7 @@ function encDetail(id) {
       h('div', { class: 'encinfo' },
         row('🏴', F[c.faction] ? F[c.faction].name : c.faction), row('📍', `${stateName(c.origin)}${S[c.origin] ? ' · ' + S[c.origin].capital : ''} — ${c.continent || ''}`), row('🗺', c.zone || '—'),
         row('🎂', String(c.age || '—').replace('ans', ' ans')), row('⚥', GENRES[c.gender] || '—'), row('⭐', c.stars ? '★'.repeat(c.stars) : 'Anonyme'),
-        row('🎭', `${STYLES[c.style] ? STYLES[c.style].name + ' · ' + STYLES[c.style].grp : c.style}`), row('✨', (c.ptypes && c.ptypes.length ? c.ptypes.map(t => TYPENAME[t] || t).join(' + ') : 'Aucun pouvoir')), pw.length ? row('🧬', pw.join(' · ')) : null,
+        row('🎭', `${STYLES[c.style] ? STYLES[c.style].name + ' · ' + STYLES[c.style].grp : c.style}`), row('✨', (c.ptypes && c.ptypes.length ? c.ptypes.map(t => TYPENAME[t] || t).join(' + ') : 'Aucun pouvoir')), pw.length ? row('🧬', pw.join(' · ')) : null, ...((c.powers || []).slice(0, 2).flatMap(pid => { const ab = powerAbility(pid); return ab ? [row(ab.ic, `${ab.power} — ${ab.name} : ${ab.txt}`), row('🧭', `${ab.q.n} : ${ab.q.d}`)] : []; })),
         c.ratio ? row('💥', `Ratio de puissance : ${c.ratio}`) : null))) };
   render(); setTimeout(() => { const b = document.querySelector('.encbig'); if (b) burstAt(b, col, 20); }, 260);
 }

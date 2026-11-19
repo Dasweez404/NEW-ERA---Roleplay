@@ -94,6 +94,8 @@ function runStory(s, roleId) {
       show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
     }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: (extra.includes(o) ? '🎭 Rôle · ' : '') + (gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '') });
   });
+  { const qa = questAbility(); const m = qa && questReady(qa) ? opts.find(o => questFits(qa, o[2])) : null;
+    if (m) L.push(C(`✨ ${qa.q.n}`, () => { questUse(); if (m[7]) addKarma(m[7]); const rw = Object.assign({}, m[5]); if (rw.xp) rw.xp += 4 * t; show({ chainTitle: s[1], kicker: s[0], title: 'Pouvoir utilisé', text: [qa.q.line, `✨ ${qa.q.n} (${qa.power}) · 2⚡`], fx: fx(rw), choices: [C('Continuer', hub)] }); }, { ic: '✨', cls: 'safe', sub: `${qa.q.d} · réussite assurée · 2⚡ · 1×/destination` })); }
   L.push(C('Passer ton chemin', hub, { cls: 'back' }));
   show({ kicker: s[0] + ' · ' + capName(G.loc).toUpperCase(), title: s[1], text: [s[2](place)], choices: L });
 }
