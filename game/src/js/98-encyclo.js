@@ -32,9 +32,9 @@ function encList() {
 }
 // Cases carrées de même taille pour tous ; un pixel de sprite garde la même taille partout (échelle commune, calée sur le plus grand sprite : 98 px de large)
 const ENC_MAXW = 98;
-const encS = () => innerWidth < 700 ? Math.floor((Math.min(innerWidth, 1240) - 40) / 2) : 176;
-const encK = () => Math.round(((encS() - 14) / ENC_MAXW) * 20) / 20;
-const encKBig = () => (innerWidth < 700 ? 3 : 4); // fiche détaillée
+const encS = () => innerWidth < 700 ? Math.floor((Math.min(innerWidth, 1240) - 40) / 2) : innerWidth < 1100 ? 230 : 270;
+const encK = () => Math.round(((encS() - 10) / ENC_MAXW) * 20) / 20;
+const encKBig = () => (innerWidth < 700 ? 3 : 5); // fiche détaillée
 function encTile(c, i) {
   const s = SPR[c.id]; const k = encK(); const col = facHue(c.faction); const anim = i != null && i < 70;
   const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => encDetail(c.id), 140); } },
