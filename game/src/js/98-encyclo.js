@@ -31,15 +31,16 @@ function encList() {
   return L.sort(cmp);
 }
 const encK = () => (innerWidth < 700 ? 2 : 3); // pixels d'écran par pixel de sprite : identique pour tous
-function encTile(c) {
-  const s = SPR[c.id]; const k = encK();
-  return h('button', { class: 'enct', title: c.name, onclick: () => { sfx('click'); encDetail(c.id); } },
+function encTile(c, i) {
+  const s = SPR[c.id]; const k = encK(); const col = facHue(c.faction); const anim = i != null && i < 70;
+  const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => encDetail(c.id), 140); } },
     h('img', { class: 'spr', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false', loading: 'lazy' }),
     h('span', { class: 'encn' }, c.name), c.stars ? h('span', { class: 'encs' }, '★'.repeat(c.stars)) : null);
+  return t;
 }
 function encyclopediaScreen() {
   G = null; const FL = encFilters(); const grid = h('div', { class: 'encgrid' }); const count = h('div', { class: 'enccount' });
-  const refresh = () => { const L = encList(); grid.innerHTML = ''; L.forEach(c => grid.append(encTile(c))); if (!L.length) grid.append(h('div', { class: 'mut', style: 'padding:20px' }, 'Aucun personnage ne correspond à ces filtres.')); count.textContent = `${L.length} / ${DATA.chars.length} personnages`; grid.scrollTop = 0; bar.querySelectorAll('select').forEach(s => s.classList.toggle('act', !!s.value)); };
+  const refresh = () => { const L = encList(); ENC.list = L.map(c => c.id); grid.innerHTML = ''; grid.classList.remove('swap'); void grid.offsetWidth; grid.classList.add('swap'); L.forEach((c, i) => grid.append(encTile(c, i))); if (!L.length) grid.append(h('div', { class: 'mut', style: 'padding:20px' }, 'Aucun personnage ne correspond à ces filtres.')); { const from = ENC.shown == null ? 0 : ENC.shown; ENC.shown = L.length; const num = h('b', { class: 'encnum' }, String(from)); count.innerHTML = ''; count.append(num, ` / ${DATA.chars.length} personnages`); countUp(num, from, L.length, 450); } grid.scrollTop = 0; bar.querySelectorAll('select').forEach(s => s.classList.toggle('act', !!s.value)); };
   const sel = (ic, n, opts, val, on, all = 'Tous') => { const s = h('select', { title: n, 'aria-label': n, onchange: e => { sfx('click'); on(e.target.value); refresh(); } }, h('option', { value: '' }, `${ic} ${n} : ${all}`), ...opts.map(([v, l]) => h('option', { value: v }, `${ic} ${l}`))); s.value = val || ''; return s; };
   const search = h('input', { class: 'encq', type: 'search', placeholder: '🔎 Nom…', value: ENC.q, oninput: e => { ENC.q = e.target.value; refresh(); } });
   const sortSel = h('select', { title: 'Trier', 'aria-label': 'Trier', onchange: e => { ENC.sort = e.target.value; refresh(); } }, ENC_SORTS.map(([v, l]) => h('option', { value: v }, '↕ ' + l))); sortSel.value = ENC.sort;
@@ -52,15 +53,20 @@ function encyclopediaScreen() {
   UI.scene = { bare: true, extra: h('div', { class: 'enc' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: titleScreen, title: 'Retour' }, '←'), h('b', {}, '📚 Encyclopédie'), count), bar, grid) }; render(); refresh();
 }
 function encDetail(id) {
-  const c = CH[id]; const s = SPR[id]; const k = encK() + 1; const lead = Object.values(F).find(f => f.leaders && f.leaders.includes(id));
-  const row = (ic, t) => h('div', { class: 'encrow' }, h('span', {}, ic), h('span', {}, t));
+  const c = CH[id]; const s = SPR[id]; const k = encK() + 1; const lead = Object.values(F).find(f => f.leaders && f.leaders.includes(id)); const col = facHue(c.faction);
+  const list = (ENC.list && ENC.list.includes(id)) ? ENC.list : [id]; const pos = list.indexOf(id);
+  const go = d => { sfx('click'); encDetail(list[(pos + d + list.length) % list.length]); };
+  let n = 0; const row = (ic, t) => h('div', { class: 'encrow', style: `--i:${n++}` }, h('span', {}, ic), h('span', {}, t));
   const pw = (c.powers || []).map(p => PW[p] ? PW[p].name : p);
-  UI.scene = { bare: true, extra: h('div', { class: 'enc encd' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: encyclopediaScreen, title: 'Retour' }, '←'), h('b', {}, c.name), lead ? h('span', { class: 'enccount' }, '👑 chef') : null),
-    h('div', { class: 'encdbody' }, s ? h('div', { class: 'encbig' }, h('img', { class: 'spr', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false' })) : null,
+  const big = s ? h('div', { class: 'encbig', style: `--fc:${col}` }, h('i', { class: 'encring' }), h('i', { class: 'encscan' }), h('img', { class: 'spr encbigimg', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false' })) : null;
+  if (big) { big.addEventListener('pointermove', e => { const r = big.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; big.style.transform = `perspective(500px) rotateY(${x * 22}deg) rotateX(${-y * 22}deg) scale(1.04)`; }); big.addEventListener('pointerleave', () => { big.style.transform = ''; }); big.addEventListener('click', () => { sfx('crit'); burstAt(big, col, 26); big.classList.remove('wiggle'); void big.offsetWidth; big.classList.add('wiggle'); }); }
+  UI.scene = { bare: true, extra: h('div', { class: 'enc encd', style: `--fc:${col}` }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: () => { sfx('click'); encyclopediaScreen(); }, title: 'Retour' }, '←'), h('b', {}, c.name), lead ? h('span', { class: 'enccount' }, '👑 chef') : null,
+      list.length > 1 ? h('button', { class: 'ibtn', onclick: () => go(-1), title: 'Précédent' }, '‹') : null, list.length > 1 ? h('button', { class: 'ibtn', onclick: () => go(1), title: 'Suivant' }, '›') : null),
+    h('div', { class: 'encdbody' }, big,
       h('div', { class: 'encinfo' },
         row('🏴', F[c.faction] ? F[c.faction].name : c.faction), row('📍', `${stateName(c.origin)}${S[c.origin] ? ' · ' + S[c.origin].capital : ''} — ${c.continent || ''}`), row('🗺', c.zone || '—'),
         row('🎂', String(c.age || '—').replace('ans', ' ans')), row('⚥', GENRES[c.gender] || '—'), row('⭐', c.stars ? '★'.repeat(c.stars) : 'Anonyme'),
         row('🎭', `${STYLES[c.style] ? STYLES[c.style].name + ' · ' + STYLES[c.style].grp : c.style}`), row('✨', (c.ptypes && c.ptypes.length ? c.ptypes.map(t => TYPENAME[t] || t).join(' + ') : 'Aucun pouvoir')), pw.length ? row('🧬', pw.join(' · ')) : null,
         c.ratio ? row('💥', `Ratio de puissance : ${c.ratio}`) : null))) };
-  render();
+  render(); setTimeout(() => { const b = document.querySelector('.encbig'); if (b) burstAt(b, col, 20); }, 260);
 }
