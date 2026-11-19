@@ -5353,13 +5353,13 @@ function encList() {
 }
 // Cases carrées de même taille pour tous ; un pixel de sprite garde la même taille partout (échelle commune, calée sur le plus grand sprite : 98 px de large)
 const ENC_MAXW = 98;
-const encS = () => innerWidth < 700 ? Math.floor((Math.min(innerWidth, 1240) - 40) / 2) : innerWidth < 1100 ? 230 : 270;
-const encK = () => Math.round(((encS() - 10) / ENC_MAXW) * 20) / 20;
-const encKBig = () => (innerWidth < 700 ? 3 : 5); // fiche détaillée
+const encS = () => innerWidth < 700 ? Math.floor((Math.min(innerWidth, 1240) - 40) / 2) : 176;
+const encK = () => (innerWidth < 700 ? 2 : 2.3); // échelle commune ; seuls les plus larges sprites sont réduits pour tenir dans la case
+const encKBig = () => (innerWidth < 700 ? 3 : 4); // fiche détaillée
 function encTile(c, i) {
-  const s = SPR[c.id]; const k = encK(); const col = facHue(c.faction); const anim = i != null && i < 70;
+  const s = SPR[c.id]; const k = encK(); const S0 = encS(); const kk = Math.min(k, (S0 - 14) / s[0], (S0 - 34) / s[1]); const col = facHue(c.faction); const anim = i != null && i < 70;
   const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => encDetail(c.id), 140); } },
-    h('span', { class: 'encimg' }, h('img', { class: 'spr', src: s[2], width: Math.round(s[0] * k), height: Math.round(s[1] * k), alt: c.name, draggable: 'false', loading: 'lazy' })),
+    h('span', { class: 'encimg' }, h('img', { class: 'spr', src: s[2], width: Math.round(s[0] * kk), height: Math.round(s[1] * kk), alt: c.name, draggable: 'false', loading: 'lazy' })),
     h('span', { class: 'encn' }, c.name), c.stars ? h('span', { class: 'encs' }, '★'.repeat(c.stars)) : null);
   return t;
 }
