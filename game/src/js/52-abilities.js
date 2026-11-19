@@ -85,10 +85,12 @@ function powerAbility(pid) {
   const F = FAMS[fam]; const h = hashN(p.id); const mag = 1 + (h % 3); const verb = F.verbs[h % F.verbs.length];
   const RID = [['', ''], [' · +1 ⚡', 'en'], [' · une esquive', 'dodge'], [' · bouclier 3', 'shield'], [' · +5 % PV', 'hp']]; const rid = RID[(h >>> 3) % 5]; const q = e[1]; return abilCache[pid] = { pid, fam, ic: F.ic, name: `${verb}`, power: p.name, mag, rider: rid[1], txt: F.txt + rid[0], q: { n: q[0], d: q[1], tags: q[2], line: q[3] } };
 }
-const pcAbility = () => { const ps = pcPowers(); if (!ps.length) return null; CB && (CB.abil = CB.abil || {}); const p = ps.find(x => !(CB && CB.abil && CB.abil[x.id])) || ps[0]; return powerAbility(p.id); };
+const pcAbility = () => { const ps = pcPowers(); if (!ps.length) return null; CB && (CB.abil = CB.abil || {}); const p = ps.find(x => ((CB && CB.abil && CB.abil[x.id]) || 0) < (pxLevel(x.id) >= 3 ? 2 : 1)) || ps[0]; return powerAbility(p.id); };
+const abilCost = a => Math.max(1, 3 - (pxLevel(a.pid) - 1));
+const questCost = a => (pxLevel(a.pid) >= 3 ? 1 : 2);
 // ── Effets en combat ──
 function abilityApply(a, who) {
-  const pc = G.pc, F = FAMS[a.fam], m = a.mag; const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
+  const pc = G.pc, F = FAMS[a.fam]; const lvl = who ? 1 : pxLevel(a.pid), m = a.mag + (lvl - 1); const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
   const nm = who || pc.name; clog(`${F.ic} ${nm} : ${a.name} (${a.power}) !`, 'acc');
   if (a.rider === 'en') pc.en = Math.min(pc.enMax, pc.en + 1); else if (a.rider === 'dodge') CB.dodge += 1; else if (a.rider === 'shield') CB.shield += 3; else if (a.rider === 'hp') { pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * .05)); }
   switch (a.fam) {
@@ -120,6 +122,6 @@ function foeAbilityHit(a) {
 }
 // ── Capacités de quête : une fois par destination, 2 énergie, réussite automatique quand elle correspond à la situation ──
 function questAbility() { const ps = pcPowers(); for (const p of ps) { const a = powerAbility(p.id); if (a) return a; } return null; }
-const questReady = a => !!(a && G.pc.en >= 2 && G.pc.flags.qaDest !== (G.pc.flags.dest || 0));
+const questReady = a => !!(a && G.pc.en >= questCost(a) && G.pc.flags.qaDest !== (G.pc.flags.dest || 0));
 const questFits = (a, tags) => !!(a && (a.q.tags || []).some(t => (tags || []).includes(t)));
-function questUse() { const pc = G.pc; pc.en -= 2; pc.flags.qaDest = pc.flags.dest || 0; const a = questAbility(); pxGain(a.pid, 1); return a; }
+function questUse() { const pc = G.pc; const a = questAbility(); pc.en -= questCost(a); pc.flags.qaDest = pc.flags.dest || 0; pxGain(a.pid, 1); return a; }

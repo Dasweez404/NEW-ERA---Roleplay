@@ -37,24 +37,25 @@ const encK = () => (innerWidth < 700 ? 2 : 2.3); // échelle commune ; seuls les
 const encKBig = () => (innerWidth < 700 ? 3 : 4); // fiche détaillée
 function encTile(c, i) {
   const s = SPR[c.id]; const k = encK(); const S0 = encS(); const kk = Math.min(k, (S0 - 14) / s[0], (S0 - 34) / s[1]); const col = facHue(c.faction); const anim = i != null && i < 70;
-  const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => encDetail(c.id), 140); } },
+  const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => (ENC.mode ? ENC.mode.pick(c.id) : encDetail(c.id)), 140); } },
     h('span', { class: 'encimg' }, h('img', { class: 'spr', src: s[2], width: Math.round(s[0] * kk), height: Math.round(s[1] * kk), alt: c.name, draggable: 'false', loading: 'lazy' })),
     h('span', { class: 'encn' }, c.name), c.stars ? h('span', { class: 'encs' }, '★'.repeat(c.stars)) : null);
   return t;
 }
-function encyclopediaScreen() {
+function encyclopediaScreen(mode) {
+  if (mode && mode.pick) ENC.mode = mode; else if (mode !== 'keep') ENC.mode = null;
   G = null; const FL = encFilters(); const grid = h('div', { class: 'encgrid', style: `--S:${encS()}px` }); const count = h('div', { class: 'enccount' });
   const refresh = () => { const L = encList(); ENC.list = L.map(c => c.id); grid.innerHTML = ''; grid.classList.remove('swap'); void grid.offsetWidth; grid.classList.add('swap'); L.forEach((c, i) => grid.append(encTile(c, i))); if (!L.length) grid.append(h('div', { class: 'mut', style: 'padding:20px' }, 'Aucun personnage ne correspond à ces filtres.')); { const from = ENC.shown == null ? 0 : ENC.shown; ENC.shown = L.length; const num = h('b', { class: 'encnum' }, String(from)); count.innerHTML = ''; count.append(num, ` / ${DATA.chars.length} personnages`); countUp(num, from, L.length, 450); } grid.scrollTop = 0; bar.querySelectorAll('select').forEach(s => s.classList.toggle('act', !!s.value)); };
   const sel = (ic, n, opts, val, on, all = 'Tous') => { const s = h('select', { title: n, 'aria-label': n, onchange: e => { sfx('click'); on(e.target.value); refresh(); } }, h('option', { value: '' }, `${ic} ${n} : ${all}`), ...opts.map(([v, l]) => h('option', { value: v }, `${ic} ${l}`))); s.value = val || ''; return s; };
   const search = h('input', { class: 'encq', type: 'search', placeholder: '🔎 Nom…', value: ENC.q, oninput: e => { ENC.q = e.target.value; refresh(); } });
   const sortSel = h('select', { title: 'Trier', 'aria-label': 'Trier', onchange: e => { ENC.sort = e.target.value; refresh(); } }, ENC_SORTS.map(([v, l]) => h('option', { value: v }, '↕ ' + l))); sortSel.value = ENC.sort;
-  const reset = h('button', { class: 'tab', onclick: () => { ENC.f = {}; ENC.q = ''; ENC.sort = 'nom'; sfx('click'); encyclopediaScreen(); } }, '🔄 Tout réinitialiser');
+  const reset = h('button', { class: 'tab', onclick: () => { ENC.f = {}; ENC.q = ''; ENC.sort = 'nom'; sfx('click'); encyclopediaScreen('keep'); } }, '🔄 Tout réinitialiser');
   const nAct = () => Object.keys(ENC.f).length;
   const tog = h('button', { class: 'tab encfb', onclick: () => { ENC.open = !ENC.open; sfx('click'); bar.classList.toggle('open', ENC.open); } }, '🎛 Filtres');
   const sels = h('div', { class: 'encsels' }, ...FL.map(f => sel(f.ic, f.n, f.opts, ENC.f[f.k], v => { if (v) ENC.f[f.k] = v; else delete ENC.f[f.k]; tog.textContent = '🎛 Filtres' + (nAct() ? ` (${nAct()})` : ''); })), reset);
   tog.textContent = '🎛 Filtres' + (nAct() ? ` (${nAct()})` : '');
   const bar = h('div', { class: 'encbar' + (ENC.open ? ' open' : '') }, search, sortSel, tog, sels);
-  UI.scene = { bare: true, extra: h('div', { class: 'enc' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: titleScreen, title: 'Retour' }, '←'), h('b', {}, '📚 Encyclopédie'), count), bar, grid) }; render(); refresh();
+  UI.scene = { bare: true, extra: h('div', { class: 'enc' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: () => (ENC.mode ? ENC.mode.back() : titleScreen()), title: 'Retour' }, '←'), h('b', {}, ENC.mode ? '📇 ' + (ENC.mode.title || 'Choisir un personnage') : '📚 Encyclopédie'), count), bar, grid) }; render(); refresh();
 }
 function encDetail(id) {
   const c = CH[id]; const s = SPR[id]; const k = encKBig(); const lead = Object.values(F).find(f => f.leaders && f.leaders.includes(id)); const col = facHue(c.faction);
@@ -64,7 +65,7 @@ function encDetail(id) {
   const pw = (c.powers || []).map(p => PW[p] ? PW[p].name : p);
   const big = s ? h('div', { class: 'encbig', style: `--fc:${col}` }, h('i', { class: 'encring' }), h('i', { class: 'encscan' }), h('img', { class: 'spr encbigimg', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false' })) : null;
   if (big) { big.addEventListener('pointermove', e => { const r = big.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; big.style.transform = `perspective(500px) rotateY(${x * 22}deg) rotateX(${-y * 22}deg) scale(1.04)`; }); big.addEventListener('pointerleave', () => { big.style.transform = ''; }); big.addEventListener('click', () => { sfx('crit'); burstAt(big, col, 26); big.classList.remove('wiggle'); void big.offsetWidth; big.classList.add('wiggle'); }); }
-  UI.scene = { bare: true, extra: h('div', { class: 'enc encd', style: `--fc:${col}` }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: () => { sfx('click'); encyclopediaScreen(); }, title: 'Retour' }, '←'), h('b', {}, c.name), lead ? h('span', { class: 'enccount' }, '👑 chef') : null,
+  UI.scene = { bare: true, extra: h('div', { class: 'enc encd', style: `--fc:${col}` }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: () => { sfx('click'); encyclopediaScreen('keep'); }, title: 'Retour' }, '←'), h('b', {}, c.name), lead ? h('span', { class: 'enccount' }, '👑 chef') : null,
       list.length > 1 ? h('button', { class: 'ibtn', onclick: () => go(-1), title: 'Précédent' }, '‹') : null, list.length > 1 ? h('button', { class: 'ibtn', onclick: () => go(1), title: 'Suivant' }, '›') : null),
     h('div', { class: 'encdbody' }, big,
       h('div', { class: 'encinfo' },

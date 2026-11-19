@@ -2616,7 +2616,7 @@ function verdictCard(f, L, go) {
   const pc = G.pc; const c = CH[f.cid]; const fac = c.faction; const fn = F[fac] ? F[fac].name : fac; const rk = F[fac] ? fac : 'civils'; const bonus = 120 * ((c.stars || 0) + 1);
   const end = (txt, o, extra) => { const L2 = [...L, ...fx(o)]; if (extra) extra(); show({ kicker: 'SORT DU VAINCU', title: esc(c.name), text: [txt], fx: L2.slice(L.length), choices: [C('Continuer', () => go(L))] }); };
   show({ extra: portrait(c.id, 110), kicker: 'VICTOIRE · SORT DU VAINCU', title: esc(c.name), text: [`${esc(c.name)} (${esc(fn)}) est à terre, à ta merci. Que fais-tu ?`], choices: [
-    C('L’épargner', () => end(`Tu baisses ton arme. « Je n’oublierai pas, » souffle ${esc(c.name)} avant de disparaître.`, { rep: { [rk]: 4 }, xp: 10 }, () => { pc.flags['debt_' + c.id] = true; addKarma(1); }), { ic: '🕊', sub: 'Il te devra une faveur. Réputation +.', cls: 'safe' }),
+    C('L’épargner', () => end(`Tu baisses ton arme. « Je n’oublierai pas, » souffle ${esc(c.name)} avant de disparaître.`, { rep: { [rk]: 4 }, xp: 10 }, () => { pc.flags['debt_' + c.id] = true; addKarma(1); (pc.flags.spared = pc.flags.spared || []).push({ id: c.id, wk: G.wk, hostile: chance(karma() >= 6 ? 0.25 : 0.45), done: false }); }), { ic: '🕊', sub: 'Il te devra une faveur. Réputation +.', cls: 'safe' }),
     C('Le capturer et le livrer', () => end(`Tu le ligotes et le remets à qui de droit. La prime tombe : <b>+${bonus} ¢</b>.`, { money: bonus, rep: { [rk]: -8 } }, () => { G.world.npc[c.id].st = 'captured'; newsPush(`${c.name} (${fn}) a été capturé${c.gender === 'F' ? 'e' : ''} lors d’un affrontement.`); }), { ic: '⛓', sub: `+${bonus} ¢ · sa faction t’en voudra.` }),
     C('L’achever', () => end(`Tu ne laisses aucune chance à ${esc(c.name)}. Quelqu’un finira par le savoir.`, { rep: { [rk]: -14 }, heat: 4 }, () => { G.world.npc[c.id].alive = false; addKarma(-2); newsPush(`${c.name} (${fn}) est mort${c.gender === 'F' ? 'e' : ''} dans un affrontement.`); }), { ic: '☠', sub: 'Plus de menace… mais karma, réputation et prime en pâtissent.', cls: 'danger', heavy: 'On ne revient pas d’un tel geste.' })] });
 }
@@ -2738,10 +2738,12 @@ function powerAbility(pid) {
   const F = FAMS[fam]; const h = hashN(p.id); const mag = 1 + (h % 3); const verb = F.verbs[h % F.verbs.length];
   const RID = [['', ''], [' · +1 ⚡', 'en'], [' · une esquive', 'dodge'], [' · bouclier 3', 'shield'], [' · +5 % PV', 'hp']]; const rid = RID[(h >>> 3) % 5]; const q = e[1]; return abilCache[pid] = { pid, fam, ic: F.ic, name: `${verb}`, power: p.name, mag, rider: rid[1], txt: F.txt + rid[0], q: { n: q[0], d: q[1], tags: q[2], line: q[3] } };
 }
-const pcAbility = () => { const ps = pcPowers(); if (!ps.length) return null; CB && (CB.abil = CB.abil || {}); const p = ps.find(x => !(CB && CB.abil && CB.abil[x.id])) || ps[0]; return powerAbility(p.id); };
+const pcAbility = () => { const ps = pcPowers(); if (!ps.length) return null; CB && (CB.abil = CB.abil || {}); const p = ps.find(x => ((CB && CB.abil && CB.abil[x.id]) || 0) < (pxLevel(x.id) >= 3 ? 2 : 1)) || ps[0]; return powerAbility(p.id); };
+const abilCost = a => Math.max(1, 3 - (pxLevel(a.pid) - 1));
+const questCost = a => (pxLevel(a.pid) >= 3 ? 1 : 2);
 // ── Effets en combat ──
 function abilityApply(a, who) {
-  const pc = G.pc, F = FAMS[a.fam], m = a.mag; const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
+  const pc = G.pc, F = FAMS[a.fam]; const lvl = who ? 1 : pxLevel(a.pid), m = a.mag + (lvl - 1); const heal = pct => { const g = Math.round(pc.hpMax * pct); pc.hp = Math.min(pc.hpMax, pc.hp + g); pop('pc', `+${g}`, 'ok'); clog(`+${g} PV.`, 'good'); };
   const nm = who || pc.name; clog(`${F.ic} ${nm} : ${a.name} (${a.power}) !`, 'acc');
   if (a.rider === 'en') pc.en = Math.min(pc.enMax, pc.en + 1); else if (a.rider === 'dodge') CB.dodge += 1; else if (a.rider === 'shield') CB.shield += 3; else if (a.rider === 'hp') { pc.hp = Math.min(pc.hpMax, pc.hp + Math.round(pc.hpMax * .05)); }
   switch (a.fam) {
@@ -2773,9 +2775,9 @@ function foeAbilityHit(a) {
 }
 // ── Capacités de quête : une fois par destination, 2 énergie, réussite automatique quand elle correspond à la situation ──
 function questAbility() { const ps = pcPowers(); for (const p of ps) { const a = powerAbility(p.id); if (a) return a; } return null; }
-const questReady = a => !!(a && G.pc.en >= 2 && G.pc.flags.qaDest !== (G.pc.flags.dest || 0));
+const questReady = a => !!(a && G.pc.en >= questCost(a) && G.pc.flags.qaDest !== (G.pc.flags.dest || 0));
 const questFits = (a, tags) => !!(a && (a.q.tags || []).some(t => (tags || []).includes(t)));
-function questUse() { const pc = G.pc; pc.en -= 2; pc.flags.qaDest = pc.flags.dest || 0; const a = questAbility(); pxGain(a.pid, 1); return a; }
+function questUse() { const pc = G.pc; const a = questAbility(); pc.en -= questCost(a); pc.flags.qaDest = pc.flags.dest || 0; pxGain(a.pid, 1); return a; }
 
 // ───────── Combat V3 : 3 à 5 rounds, 3 choix simples selon ta catégorie de style, un % affiché ─────────
 // Chaque round : tu choisis ENTRE 3 gestes (principal, prudent, pouvoir). Un dé contre un pourcentage décide.
@@ -2795,7 +2797,7 @@ function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise'
 const hitBonus = () => (CB.rageLeft > 0 ? 4 : 0) + (CB.swarm > 0 ? 2 : 0) + (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
 const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)) - (CB.hexLeft > 0 ? 4 : 0); };
-const pwMax = () => Math.floor((CB.N + 1) / 3); // pouvoir : 1 round sur 3, 2 sur 5
+const pwMax = () => Math.floor((CB.N + 1) / 3) + (pcPowers().some(p => pxLevel(p.id) >= 3) ? 1 : 0); // pouvoir : 1 round sur 3, 2 sur 5
 const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
 
 // ── Intentions ennemies : on voit ce que l'adversaire prépare, et on choisit le geste qui le contre ──
@@ -2863,14 +2865,14 @@ function dealHand() {
   for (let k = 0; k < 3; k++) { const cand = pool.filter(c => !hand.some(h => h.id === c.id) && !(last.includes(c.id) && Math.random() < 0.75)); const c = wpick(cand.length ? cand : pool.filter(c => !hand.some(h => h.id === c.id)), x => x.w); hand.push(c); }
   if (CB) CB.hand = hand; return hand;
 }
-function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: 3, cls: 'safe', ab: a }; }
+function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: abilCost(a), cls: 'safe', ab: a }; }
 function powerMove() {
   const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
   const base = { ic: '✦', cat: 'pw', sev: 1.0 };
   if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
   if (spent) return Object.assign({}, base, { id: 'spent', kind: 'tech', label: 'Pouvoir', sub: `Déjà utilisé (${CB.pwUsed}/${pwMax()} ce combat)`, lock: 'Utilisé', cost: 0 });
   if (tags.includes('heal') && pc.hp < pc.hpMax * 0.5 && pc.en >= POWER_FX.heal.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'heal', kind: 'heal', ic: '💚', label: `${powName('heal')} : te régénérer`, sub: `Tu récupères ~25 % de PV · ${POWER_FX.heal.cost}⚡ · round nul`, cost: POWER_FX.heal.cost, sev: 0.4 });
-  const ab = pc.ptype !== 'aucun' ? abilMove() : null; if (ok(ab)) return Object.assign({}, base, ab, { sub: `${ab.ab.txt} · ${ab.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant` });
+  const ab = pc.ptype !== 'aucun' ? abilMove() : null; if (ok(ab)) return Object.assign({}, base, ab, { sub: `${ab.ab.txt} · ${ab.cost}⚡ · niv. ${pxLevel(ab.pid)}` });
   if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'power', kind: 'hit', label: `Pouvoir : ${powName('combat')}`, sub: `+4 au jet · ${POWER_FX.combat.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: 'maitrise', tags: ['combat'], bonus: 4, cost: POWER_FX.combat.cost });
   const st = STYLES[pc.style]; const fin = Object.assign({}, base, { id: 'tech', kind: 'tech', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: primAttr(), tags: ['combat'], bonus: 3, cost: st.tech.cost + 1 });
   if (ok(fin)) return fin; fin.lock = 'Énergie insuffisante'; fin.sub = 'Pas assez d’énergie'; return fin;
@@ -2885,6 +2887,7 @@ function startCombat(cfg) {
   scaleFoes(cfg); dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 4, round: 1, W: 0, Lz: 0, hist: [], log: [], pops: [], tier: Math.max(...cfg.foes.map(f => f.tier || Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, weak: 0, sig: {}, tgt: 0 };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
+  if (cfg.buff) { CB.hitBuff += cfg.buff; clog(`Tu connais ses coups : +${cfg.buff} à tous tes jets.`, 'good'); }
   CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap);
   if (hasAnti('buff')) CB.hitBuff += 1; if (hasAnti('rebound')) CB.shield += 6; if (hasAnti('shield')) CB.shield += 8; if (hasAnti('dash')) CB.dodge += 1;
   clog(cfg.intro || 'Le combat commence !');
@@ -2930,7 +2933,7 @@ function play(m) {
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   if (m.cat === 'pw' && m.kind !== 'awaken') CB.pwUsed = (CB.pwUsed || 0) + 1;
   let res = 'loss', sev = m.sev == null ? 1 : m.sev; const nb = CB.nextBonus; CB.nextBonus = 0; let r = null;
-  if (m.kind === 'abil') { CB.abil = CB.abil || {}; CB.abil[m.pid] = 1; pxGain(m.pid, 1); abilityApply(m.ab); res = m.ab.fam === 'rewind' ? 'draw' : 'win'; if (res === 'draw') sev = 0; pop('f0', res === 'win' ? m.ab.name.toUpperCase() : 'FAILLE', 'crit'); }
+  if (m.kind === 'abil') { CB.abil = CB.abil || {}; CB.abil[m.pid] = (CB.abil[m.pid] || 0) + 1; pxGain(m.pid, 1); abilityApply(m.ab); res = m.ab.fam === 'rewind' ? 'draw' : 'win'; if (res === 'draw') sev = 0; pop('f0', res === 'win' ? m.ab.name.toUpperCase() : 'FAILLE', 'crit'); }
   else if (m.kind === 'sig') { sigDo(m); res = 'win'; }
   else if (m.kind === 'heal') { const g = Math.round(pc.hpMax * 0.25); pc.hp = Math.min(pc.hpMax, pc.hp + g); clog(`${powName('heal')} : +${g} PV. Round nul.`, 'good'); pop('pc', `+${g}`, 'ok'); pc.party.forEach(a => { if (a.inj <= 0) a.hp = Math.min(a.hpMax, a.hp + Math.round(a.hpMax * 0.25)); }); res = 'draw'; }
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); res = 'draw'; sev = 0.4; }
@@ -3383,6 +3386,7 @@ function dealCard() {
   const co = canonOffers(); if (co.length) pool.push({ w: 50, f: () => co[0].go() });
   if (pc.hp < pc.hpMax * 0.5 && pc.flags.restDest !== pc.flags.dest) pool.push({ w: 80, f: restCard }); // une seule fois par destination
   pool.push({ w: 18, enc: true, f: () => { const ev = randomHubEvent(true); if (ev) ev(); else missionCard(); } });
+  if (typeof returnEligible === 'function' && returnEligible()) pool.push({ w: 8, enc: true, f: returnCard });
   pool.push({ w: 9, f: townCard }); pool.push({ w: 8, f: travelCard }); pool.push({ w: 5, f: vehicleCard });
   if (pc.grade >= 1 && pc.faction !== 'civils' && G.wk - (pc.flags.councilWk || -99) >= 8) pool.push({ w: 5, f: () => EVENT_FN.council() });
   if (pc.faction === 'civils') pool.push({ w: 14, f: joinCard });
@@ -4231,7 +4235,7 @@ const PX_STEPS = [0, 6, 15];
 function pxLevel(pid) { const n = (G.pc.pxp || {})[pid] || 0; return n >= PX_STEPS[2] ? 3 : n >= PX_STEPS[1] ? 2 : 1; }
 function pxGain(pid, n = 1) {
   const pc = G.pc; pc.pxp = pc.pxp || {}; const before = pxLevel(pid); pc.pxp[pid] = (pc.pxp[pid] || 0) + n; const after = pxLevel(pid);
-  if (after > before) { const k = perkOf(PW[pid]); splash({ title: 'POUVOIR NIV. ' + after, sub: `${PW[pid].name} · ${k.title}`, icon: '✦', color: '#27f0ff', ms: 2000 }); logEntry(`${PW[pid].name} passe au niveau ${after}.`); }
+  if (after > before) { const k = perkOf(PW[pid]); splash({ title: 'ÉVEIL · NIV. ' + after, sub: `${PW[pid].name} · ${after === 2 ? '+1 puissance, coûte 1 ⚡ de moins' : '+2 puissance, 2 usages par combat, quête à 1 ⚡'}`, icon: '✦', color: '#27f0ff', ms: 2400 }); logEntry(`${PW[pid].name} passe au niveau ${after}.`); }
 }
 const PX_TXT = ['', 'Niveau 1 : signature de base.', 'Niveau 2 : tes effets gagnent 25 %, la signature coûte 1 énergie.', 'Niveau 3 : effets +50 %, la signature s’utilise deux fois par combat.'];
 // ── Réputation par ville ──
@@ -4255,7 +4259,7 @@ function nemesisCard() {
   if (!n) { const c = nemesisPick(); if (!c) return missionCard(); n = f.nem = { cid: c.id, tier: Math.max(1, c.stars - 1), wins: 0, seen: 0 }; }
   const c = CH[n.cid]; const fac = F[c.faction]; f.nemWk = G.wk; n.seen++;
   const mk = () => [mkFoe('porteur', n.tier, c.name, { cid: c.id, hp: Math.round(40 + 10 * n.tier), hpMax: Math.round(40 + 10 * n.tier), dmg: 5 + 2 * n.tier, def: 2 + n.tier }), ...(n.tier >= 3 ? [mkFoe('porteur', n.tier - 1)] : [])];
-  const intro = n.seen === 1 ? `${esc(c.name)} de ${esc(fac.name)} te barre la route. « C’est toi. On m’a parlé de ce que tu as fait. »` : n.wins ? `${esc(c.name)} est de retour, plus dur que la dernière fois. « Tu m’as battu. Je me suis entraîné. »` : `${esc(c.name)} réapparaît. « On n’a pas fini. »`;
+  const intro = n.seen === 1 ? (f.nemLine ? `${esc(c.name)} de ${esc(fac.name)} te barre la route. ${f.nemLine}` : `${esc(c.name)} de ${esc(fac.name)} te barre la route. « C’est toi. On m’a parlé de ce que tu as fait. »`) : n.wins ? `${esc(c.name)} est de retour, plus dur que la dernière fois. « Tu m’as battu. Je me suis entraîné. »` : `${esc(c.name)} réapparaît. « On n’a pas fini. »`;
   show({ extra: portrait(c.id, 130), kicker: 'NÉMÉSIS · ' + capName(G.loc).toUpperCase(), title: c.name, text: [intro, `<span class="mut">${esc(fac.name)} · ${'★'.repeat(n.tier)} · ${esc(charPowerText(c))}</span>`], choices: [
     C('L’affronter', () => startCombat({ title: `${c.name}, ta némésis`, foes: mk(), intro: 'Le coup part avant même la fin de sa phrase.', lethal: 'capture', canFlee: true,
       onWin: L => { n.wins++; n.tier = Math.min(5, n.tier + 1); let t = [`${esc(c.name)} tombe à genoux.`, 'Il se relèvera plus fort.']; const L2 = fx({ xp: 30 + 10 * n.tier, rep: { [c.faction]: -4 } });
@@ -5673,6 +5677,32 @@ Object.assign(CAMPS, {
   ], end: [['Les voix se sont tues, apaisées. Tu repars avec un savoir rare.', { xp: 70, rep: { artefactors: 5 }, merit: 2 }], ['Les voix murmurent encore. Quelqu’un finira par les entendre.', { xp: 26 }]] },
 });
 
+// ───────── Retours : ceux qu'on a épargnés reviennent (rarement), les rancunes nourrissent la némésis, l'adversité éveille les pouvoirs ─────────
+function returnEligible() { const f = G.pc.flags; return (f.spared || []).some(e => !e.done && G.wk - e.wk >= 8) && G.wk - (f.retWk == null ? -99 : f.retWk) >= 14; }
+function returnCard() {
+  const pc = G.pc, f = pc.flags; const list = (f.spared || []).filter(e => !e.done && G.wk - e.wk >= 8 && CH[e.id] && G.world.npc[e.id] && G.world.npc[e.id].alive); if (!list.length) return missionCard();
+  const e = pick(list); const c = CH[e.id]; const nm = esc(c.name); const fac = F[c.faction]; f.retWk = G.wk; e.done = true;
+  if (!e.hostile) {
+    const opts = [{ money: 120 * (c.stars + 1) }, { xp: 40 + 12 * c.stars }, { item: { kit: 1, capsule: 1 } }]; const rw = pick(opts); const L = fx(Object.assign({ rep: { [c.faction]: 3 } }, rw));
+    return show({ extra: portrait(c.id, 130), kicker: 'UN VISAGE CONNU', title: c.name, text: [`${nm} te retrouve à ${esc(capName(G.loc))}. « Tu m’as laissé la vie sauve. Je n’ai pas oublié. »`, `${nm} te remet quelque chose avant de repartir.`], fx: L, choices: [C('Continuer', hub, { cls: 'cta' })] });
+  }
+  const tier = clamp(c.stars, 1, 5);
+  show({ extra: portrait(c.id, 130), kicker: 'UN VISAGE CONNU', title: c.name, text: [`${nm} (${esc(fac ? fac.name : '')}) te barre la route. « Tu m’as épargné, mais je ne le supporte pas. Cette fois, je me bats pour de bon. »`, '<span class="acc">Tu connais ses coups : +3 à tous tes jets pendant ce combat.</span>'], choices: [
+    C('L’affronter', () => startCombat({ title: `${c.name} revient`, foes: [mkFoe('porteur', tier, c.name + (fac ? ' (' + fac.name + ')' : ''), { cid: c.id })], buff: 3, noScale: true, intro: 'Il fonce sans attendre.', lethal: 'capture', onWin: L => show({ kicker: 'RETOUR', title: 'Réglé', text: [`${nm} s’incline. Cette fois, c’est vraiment fini.`], fx: [...L, ...fx({ xp: 30 })], choices: [C('Continuer', hub)] }), onFlee: () => show({ title: 'Tu t’éclipses', text: ['Il ne te suit pas.'], choices: [C('Continuer', hub)] }) }), { ic: '⚔', cls: 'danger' }),
+    C('Tenter de le calmer', () => { const r = check('charisme', 12 + 2 * tier, ['social']); show({ kicker: 'RETOUR', title: r.ok ? 'Il baisse les bras' : 'Il ne veut rien entendre', text: [r.ok ? `${nm} soupire et repart, apaisé.` : `${nm} attaque quand même.`, checkLine(r)], fx: r.ok ? fx({ rep: { [c.faction]: 3 }, xp: 14 }) : [], choices: [r.ok ? C('Continuer', hub) : C('Se défendre', () => startCombat({ title: `${c.name} revient`, foes: [mkFoe('porteur', tier, c.name, { cid: c.id })], buff: 3, noScale: true, lethal: 'capture', onWin: L => show({ title: 'Réglé', text: [`${nm} est à terre.`], fx: L, choices: [C('Continuer', hub)] }), onFlee: () => hub() }), { cls: 'danger' })] }); }, { ic: '🗣', odds: ['charisme', 12 + 2 * tier, ['social']] }),
+    C('Fuir', () => hub(), { ic: '💨', cls: 'back' })] });
+}
+// Rancunes : fuir ou perdre contre un personnage nommé nourrit la némésis
+const GRUDGE_LINES = ['« Tu t’es enfui devant moi. Pas cette fois. »', '« Je t’ai battu une fois, je recommencerai. »', '« On ne se quitte pas comme ça. »'];
+function noteGrudge(foes, how) { try { const f = G.pc.flags; (foes || []).forEach(x => { if (!x.cid || !CH[x.cid] || Object.values(F).some(q => q.leaders && q.leaders.includes(x.cid))) return; f.grudges = f.grudges || []; if (!f.grudges.includes(x.cid) && chance(how === 'lose' ? 0.5 : 0.35)) { f.grudges.push(x.cid); if (f.grudges.length > 6) f.grudges.shift(); } }); } catch (e) { } }
+(function () {
+  const _fin = finishCombat; finishCombat = function (kind) { let foes = null, thrGap = 0, win = kind !== 'flee'; try { if (CB) { foes = CB.foes.slice(); thrGap = CB.thr ? CB.thr.gap : 0; } } catch (e) { }
+    if (foes) { if (kind === 'flee') noteGrudge(foes, 'flee'); else if (thrGap >= 1) { const p = pcPowers()[0]; if (p) { pxGain(p.id, 2); toast('✦ Ton pouvoir s’éveille face à l’adversité'); } } }
+    return _fin.apply(this, arguments); };
+  const _lose = loseCombat; loseCombat = function (s) { try { if (CB) noteGrudge(CB.foes, 'lose'); } catch (e) { } return _lose.apply(this, arguments); };
+  const _pick = nemesisPick; nemesisPick = function () { const f = G.pc.flags; const g = (f.grudges || []).filter(id => CH[id] && G.world.npc[id] && G.world.npc[id].alive && G.world.npc[id].st === 'free' && !G.pc.party.some(p => p.id === id)); if (g.length && chance(0.7)) { const id = pick(g); f.grudges = f.grudges.filter(x => x !== id); f.nemLine = pick(GRUDGE_LINES); return CH[id]; } return _pick.apply(this, arguments); };
+})();
+
 // ───────── Encyclopédie : tous les personnages en mosaïque, avec filtres et tris combinables ─────────
 // Un pixel de sprite a la même taille à l'écran pour tous les personnages, quelle que soit la taille de l'image.
 const ENC = { f: {}, sort: 'nom', q: '' };
@@ -5712,24 +5742,25 @@ const encK = () => (innerWidth < 700 ? 2 : 2.3); // échelle commune ; seuls les
 const encKBig = () => (innerWidth < 700 ? 3 : 4); // fiche détaillée
 function encTile(c, i) {
   const s = SPR[c.id]; const k = encK(); const S0 = encS(); const kk = Math.min(k, (S0 - 14) / s[0], (S0 - 34) / s[1]); const col = facHue(c.faction); const anim = i != null && i < 70;
-  const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => encDetail(c.id), 140); } },
+  const t = h('button', { class: 'enct' + (anim ? ' in' : ''), title: c.name, style: `--fc:${col};--d:${Math.min(i || 0, 60) * 13}ms;--bd:${(i * 37) % 9 * 0.25}s`, onclick: () => { sfx('click'); t.classList.add('press'); burstAt(t, col, 16); ENC.last = c.id; setTimeout(() => (ENC.mode ? ENC.mode.pick(c.id) : encDetail(c.id)), 140); } },
     h('span', { class: 'encimg' }, h('img', { class: 'spr', src: s[2], width: Math.round(s[0] * kk), height: Math.round(s[1] * kk), alt: c.name, draggable: 'false', loading: 'lazy' })),
     h('span', { class: 'encn' }, c.name), c.stars ? h('span', { class: 'encs' }, '★'.repeat(c.stars)) : null);
   return t;
 }
-function encyclopediaScreen() {
+function encyclopediaScreen(mode) {
+  if (mode && mode.pick) ENC.mode = mode; else if (mode !== 'keep') ENC.mode = null;
   G = null; const FL = encFilters(); const grid = h('div', { class: 'encgrid', style: `--S:${encS()}px` }); const count = h('div', { class: 'enccount' });
   const refresh = () => { const L = encList(); ENC.list = L.map(c => c.id); grid.innerHTML = ''; grid.classList.remove('swap'); void grid.offsetWidth; grid.classList.add('swap'); L.forEach((c, i) => grid.append(encTile(c, i))); if (!L.length) grid.append(h('div', { class: 'mut', style: 'padding:20px' }, 'Aucun personnage ne correspond à ces filtres.')); { const from = ENC.shown == null ? 0 : ENC.shown; ENC.shown = L.length; const num = h('b', { class: 'encnum' }, String(from)); count.innerHTML = ''; count.append(num, ` / ${DATA.chars.length} personnages`); countUp(num, from, L.length, 450); } grid.scrollTop = 0; bar.querySelectorAll('select').forEach(s => s.classList.toggle('act', !!s.value)); };
   const sel = (ic, n, opts, val, on, all = 'Tous') => { const s = h('select', { title: n, 'aria-label': n, onchange: e => { sfx('click'); on(e.target.value); refresh(); } }, h('option', { value: '' }, `${ic} ${n} : ${all}`), ...opts.map(([v, l]) => h('option', { value: v }, `${ic} ${l}`))); s.value = val || ''; return s; };
   const search = h('input', { class: 'encq', type: 'search', placeholder: '🔎 Nom…', value: ENC.q, oninput: e => { ENC.q = e.target.value; refresh(); } });
   const sortSel = h('select', { title: 'Trier', 'aria-label': 'Trier', onchange: e => { ENC.sort = e.target.value; refresh(); } }, ENC_SORTS.map(([v, l]) => h('option', { value: v }, '↕ ' + l))); sortSel.value = ENC.sort;
-  const reset = h('button', { class: 'tab', onclick: () => { ENC.f = {}; ENC.q = ''; ENC.sort = 'nom'; sfx('click'); encyclopediaScreen(); } }, '🔄 Tout réinitialiser');
+  const reset = h('button', { class: 'tab', onclick: () => { ENC.f = {}; ENC.q = ''; ENC.sort = 'nom'; sfx('click'); encyclopediaScreen('keep'); } }, '🔄 Tout réinitialiser');
   const nAct = () => Object.keys(ENC.f).length;
   const tog = h('button', { class: 'tab encfb', onclick: () => { ENC.open = !ENC.open; sfx('click'); bar.classList.toggle('open', ENC.open); } }, '🎛 Filtres');
   const sels = h('div', { class: 'encsels' }, ...FL.map(f => sel(f.ic, f.n, f.opts, ENC.f[f.k], v => { if (v) ENC.f[f.k] = v; else delete ENC.f[f.k]; tog.textContent = '🎛 Filtres' + (nAct() ? ` (${nAct()})` : ''); })), reset);
   tog.textContent = '🎛 Filtres' + (nAct() ? ` (${nAct()})` : '');
   const bar = h('div', { class: 'encbar' + (ENC.open ? ' open' : '') }, search, sortSel, tog, sels);
-  UI.scene = { bare: true, extra: h('div', { class: 'enc' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: titleScreen, title: 'Retour' }, '←'), h('b', {}, '📚 Encyclopédie'), count), bar, grid) }; render(); refresh();
+  UI.scene = { bare: true, extra: h('div', { class: 'enc' }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: () => (ENC.mode ? ENC.mode.back() : titleScreen()), title: 'Retour' }, '←'), h('b', {}, ENC.mode ? '📇 ' + (ENC.mode.title || 'Choisir un personnage') : '📚 Encyclopédie'), count), bar, grid) }; render(); refresh();
 }
 function encDetail(id) {
   const c = CH[id]; const s = SPR[id]; const k = encKBig(); const lead = Object.values(F).find(f => f.leaders && f.leaders.includes(id)); const col = facHue(c.faction);
@@ -5739,7 +5770,7 @@ function encDetail(id) {
   const pw = (c.powers || []).map(p => PW[p] ? PW[p].name : p);
   const big = s ? h('div', { class: 'encbig', style: `--fc:${col}` }, h('i', { class: 'encring' }), h('i', { class: 'encscan' }), h('img', { class: 'spr encbigimg', src: s[2], width: s[0] * k, height: s[1] * k, alt: c.name, draggable: 'false' })) : null;
   if (big) { big.addEventListener('pointermove', e => { const r = big.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; big.style.transform = `perspective(500px) rotateY(${x * 22}deg) rotateX(${-y * 22}deg) scale(1.04)`; }); big.addEventListener('pointerleave', () => { big.style.transform = ''; }); big.addEventListener('click', () => { sfx('crit'); burstAt(big, col, 26); big.classList.remove('wiggle'); void big.offsetWidth; big.classList.add('wiggle'); }); }
-  UI.scene = { bare: true, extra: h('div', { class: 'enc encd', style: `--fc:${col}` }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: () => { sfx('click'); encyclopediaScreen(); }, title: 'Retour' }, '←'), h('b', {}, c.name), lead ? h('span', { class: 'enccount' }, '👑 chef') : null,
+  UI.scene = { bare: true, extra: h('div', { class: 'enc encd', style: `--fc:${col}` }, h('div', { class: 'enchead' }, h('button', { class: 'ibtn', onclick: () => { sfx('click'); encyclopediaScreen('keep'); }, title: 'Retour' }, '←'), h('b', {}, c.name), lead ? h('span', { class: 'enccount' }, '👑 chef') : null,
       list.length > 1 ? h('button', { class: 'ibtn', onclick: () => go(-1), title: 'Précédent' }, '‹') : null, list.length > 1 ? h('button', { class: 'ibtn', onclick: () => go(1), title: 'Suivant' }, '›') : null),
     h('div', { class: 'encdbody' }, big,
       h('div', { class: 'encinfo' },
@@ -5921,12 +5952,13 @@ function newGameMenu() {
   show({ kicker: 'Nouvelle partie', title: 'Qui es-tu ?', text: [], extra: h('div', {}, h('div', { class: 'small mut', style: 'margin-bottom:6px;letter-spacing:.1em;text-transform:uppercase' }, 'Type de scénario'), sw, desc, h('div', { class: 'small mut', style: 'margin:10px 0 6px;letter-spacing:.1em;text-transform:uppercase' }, 'Durée de la partie'), lsw), choices: [
     C('Personnage customisé', () => { CR = { name: '', gender: 'N/B', age: 24, faction: null, origin: null, ptype: null, powers: [], style: null, base: { corps: 2, agilite: 2, intellect: 2, charisme: 2, maitrise: 2 }, add: { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }, canon: true }; crName(); }, { sub: 'Nom, faction, origine, pouvoir, style, attributs. 🎲 à chaque étape.', cls: 'safe', ic: '🧬' }),
     C('Un personnage existant, au hasard', () => randomChar(), { sub: 'Tiré parmi les 441 du tableur, tout est pré-rempli.', ic: '🎲' }),
-    C('Choisir un personnage existant', browseChars, { sub: 'Filtrer par faction.', ic: '📇' }),
+    C('Choisir un personnage existant', browseChars, { sub: 'Mosaïque des 441, avec filtres.', ic: '📇' }),
     C('← Retour', titleScreen, { cls: 'back' })] });
 }
 // ── personnage existant ──
 function randomChar() { const c = pick(DATA.chars); charCard(c.id, true); }
-function browseChars() {
+function browseChars() { return encyclopediaScreen({ pick: id => charCard(id, false), back: newGameMenu, title: 'Choisir un personnage' }); }
+function browseCharsOld() {
   const L = Object.keys(F).filter(k => !['own'].includes(k)).map(fid => C(F[fid].name, () => browseFaction(fid), { sub: `${DATA.chars.filter(c => c.faction === fid).length} personnage(s)` }));
   L.push(C('← Retour', newGameMenu)); show({ kicker: 'Personnages', title: 'Choisir une faction', text: [], choices: L });
 }
@@ -5938,7 +5970,7 @@ function charCard(cid, rnd) {
   const c = CH[cid]; const spec = charToSpec(c); const lead = Object.values(F).find(f => f.leaders.includes(cid));
   const att = spec.pc.attrs;
   show({ extra: portrait(c.id, 170), kicker: F[c.faction].name, title: c.name, text: [`${c.gender === 'H' ? 'Homme' : c.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : <b>${STYLES[spec.pc.style].name}</b>.`, `Pouvoir : <b>${esc(charPowerText(c))}</b>${c.ptypes.length > 1 ? ' (hybride)' : ''}.`, `Grade de départ : <b>${esc(gradeNames(spec.pc.faction === 'fa' ? { faction: 'fa' } : { faction: spec.pc.faction })[spec.pc.grade])} ${'★'.repeat(spec.pc.grade)}</b>${lead ? ' — <b>CHEF DE FACTION : tu commences avec toutes les responsabilités.</b>' : ''}.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + att[a.id]).join(' · ')}.`, spec.recruits.length ? `Équipiers de départ : ${esc(spec.recruits.map(i => CH[i].name).join(', '))}.` : ''],
-    choices: [C(`Jouer ${c.name}`, () => { spec.mode = UI.mode || 'libre'; startGame(spec); hub(); }, { cls: 'safe' }), rnd ? C('🎲 Tirer un autre personnage', randomChar) : null, C('← Retour', rnd ? newGameMenu : () => browseFaction(c.faction))] });
+    choices: [C(`Jouer ${c.name}`, () => { spec.mode = UI.mode || 'libre'; startGame(spec); hub(); }, { cls: 'safe' }), rnd ? C('🎲 Tirer un autre personnage', randomChar) : null, C('← Retour', rnd ? newGameMenu : browseChars)] });
 }
 // ── personnage customisé ──
 function crSteps() { return ['Nom', 'Faction', 'Origine', 'Pouvoir', 'Style', 'Attributs', 'Résumé']; }

@@ -41,12 +41,13 @@ function newGameMenu() {
   show({ kicker: 'Nouvelle partie', title: 'Qui es-tu ?', text: [], extra: h('div', {}, h('div', { class: 'small mut', style: 'margin-bottom:6px;letter-spacing:.1em;text-transform:uppercase' }, 'Type de scénario'), sw, desc, h('div', { class: 'small mut', style: 'margin:10px 0 6px;letter-spacing:.1em;text-transform:uppercase' }, 'Durée de la partie'), lsw), choices: [
     C('Personnage customisé', () => { CR = { name: '', gender: 'N/B', age: 24, faction: null, origin: null, ptype: null, powers: [], style: null, base: { corps: 2, agilite: 2, intellect: 2, charisme: 2, maitrise: 2 }, add: { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }, canon: true }; crName(); }, { sub: 'Nom, faction, origine, pouvoir, style, attributs. 🎲 à chaque étape.', cls: 'safe', ic: '🧬' }),
     C('Un personnage existant, au hasard', () => randomChar(), { sub: 'Tiré parmi les 441 du tableur, tout est pré-rempli.', ic: '🎲' }),
-    C('Choisir un personnage existant', browseChars, { sub: 'Filtrer par faction.', ic: '📇' }),
+    C('Choisir un personnage existant', browseChars, { sub: 'Mosaïque des 441, avec filtres.', ic: '📇' }),
     C('← Retour', titleScreen, { cls: 'back' })] });
 }
 // ── personnage existant ──
 function randomChar() { const c = pick(DATA.chars); charCard(c.id, true); }
-function browseChars() {
+function browseChars() { return encyclopediaScreen({ pick: id => charCard(id, false), back: newGameMenu, title: 'Choisir un personnage' }); }
+function browseCharsOld() {
   const L = Object.keys(F).filter(k => !['own'].includes(k)).map(fid => C(F[fid].name, () => browseFaction(fid), { sub: `${DATA.chars.filter(c => c.faction === fid).length} personnage(s)` }));
   L.push(C('← Retour', newGameMenu)); show({ kicker: 'Personnages', title: 'Choisir une faction', text: [], choices: L });
 }
@@ -58,7 +59,7 @@ function charCard(cid, rnd) {
   const c = CH[cid]; const spec = charToSpec(c); const lead = Object.values(F).find(f => f.leaders.includes(cid));
   const att = spec.pc.attrs;
   show({ extra: portrait(c.id, 170), kicker: F[c.faction].name, title: c.name, text: [`${c.gender === 'H' ? 'Homme' : c.gender === 'F' ? 'Femme' : 'Non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : <b>${STYLES[spec.pc.style].name}</b>.`, `Pouvoir : <b>${esc(charPowerText(c))}</b>${c.ptypes.length > 1 ? ' (hybride)' : ''}.`, `Grade de départ : <b>${esc(gradeNames(spec.pc.faction === 'fa' ? { faction: 'fa' } : { faction: spec.pc.faction })[spec.pc.grade])} ${'★'.repeat(spec.pc.grade)}</b>${lead ? ' — <b>CHEF DE FACTION : tu commences avec toutes les responsabilités.</b>' : ''}.`, `Attributs : ${ATTRS.map(a => a.short + ' ' + att[a.id]).join(' · ')}.`, spec.recruits.length ? `Équipiers de départ : ${esc(spec.recruits.map(i => CH[i].name).join(', '))}.` : ''],
-    choices: [C(`Jouer ${c.name}`, () => { spec.mode = UI.mode || 'libre'; startGame(spec); hub(); }, { cls: 'safe' }), rnd ? C('🎲 Tirer un autre personnage', randomChar) : null, C('← Retour', rnd ? newGameMenu : () => browseFaction(c.faction))] });
+    choices: [C(`Jouer ${c.name}`, () => { spec.mode = UI.mode || 'libre'; startGame(spec); hub(); }, { cls: 'safe' }), rnd ? C('🎲 Tirer un autre personnage', randomChar) : null, C('← Retour', rnd ? newGameMenu : browseChars)] });
 }
 // ── personnage customisé ──
 function crSteps() { return ['Nom', 'Faction', 'Origine', 'Pouvoir', 'Style', 'Attributs', 'Résumé']; }

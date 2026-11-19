@@ -11,7 +11,7 @@ const PX_STEPS = [0, 6, 15];
 function pxLevel(pid) { const n = (G.pc.pxp || {})[pid] || 0; return n >= PX_STEPS[2] ? 3 : n >= PX_STEPS[1] ? 2 : 1; }
 function pxGain(pid, n = 1) {
   const pc = G.pc; pc.pxp = pc.pxp || {}; const before = pxLevel(pid); pc.pxp[pid] = (pc.pxp[pid] || 0) + n; const after = pxLevel(pid);
-  if (after > before) { const k = perkOf(PW[pid]); splash({ title: 'POUVOIR NIV. ' + after, sub: `${PW[pid].name} · ${k.title}`, icon: '✦', color: '#27f0ff', ms: 2000 }); logEntry(`${PW[pid].name} passe au niveau ${after}.`); }
+  if (after > before) { const k = perkOf(PW[pid]); splash({ title: 'ÉVEIL · NIV. ' + after, sub: `${PW[pid].name} · ${after === 2 ? '+1 puissance, coûte 1 ⚡ de moins' : '+2 puissance, 2 usages par combat, quête à 1 ⚡'}`, icon: '✦', color: '#27f0ff', ms: 2400 }); logEntry(`${PW[pid].name} passe au niveau ${after}.`); }
 }
 const PX_TXT = ['', 'Niveau 1 : signature de base.', 'Niveau 2 : tes effets gagnent 25 %, la signature coûte 1 énergie.', 'Niveau 3 : effets +50 %, la signature s’utilise deux fois par combat.'];
 // ── Réputation par ville ──
@@ -35,7 +35,7 @@ function nemesisCard() {
   if (!n) { const c = nemesisPick(); if (!c) return missionCard(); n = f.nem = { cid: c.id, tier: Math.max(1, c.stars - 1), wins: 0, seen: 0 }; }
   const c = CH[n.cid]; const fac = F[c.faction]; f.nemWk = G.wk; n.seen++;
   const mk = () => [mkFoe('porteur', n.tier, c.name, { cid: c.id, hp: Math.round(40 + 10 * n.tier), hpMax: Math.round(40 + 10 * n.tier), dmg: 5 + 2 * n.tier, def: 2 + n.tier }), ...(n.tier >= 3 ? [mkFoe('porteur', n.tier - 1)] : [])];
-  const intro = n.seen === 1 ? `${esc(c.name)} de ${esc(fac.name)} te barre la route. « C’est toi. On m’a parlé de ce que tu as fait. »` : n.wins ? `${esc(c.name)} est de retour, plus dur que la dernière fois. « Tu m’as battu. Je me suis entraîné. »` : `${esc(c.name)} réapparaît. « On n’a pas fini. »`;
+  const intro = n.seen === 1 ? (f.nemLine ? `${esc(c.name)} de ${esc(fac.name)} te barre la route. ${f.nemLine}` : `${esc(c.name)} de ${esc(fac.name)} te barre la route. « C’est toi. On m’a parlé de ce que tu as fait. »`) : n.wins ? `${esc(c.name)} est de retour, plus dur que la dernière fois. « Tu m’as battu. Je me suis entraîné. »` : `${esc(c.name)} réapparaît. « On n’a pas fini. »`;
   show({ extra: portrait(c.id, 130), kicker: 'NÉMÉSIS · ' + capName(G.loc).toUpperCase(), title: c.name, text: [intro, `<span class="mut">${esc(fac.name)} · ${'★'.repeat(n.tier)} · ${esc(charPowerText(c))}</span>`], choices: [
     C('L’affronter', () => startCombat({ title: `${c.name}, ta némésis`, foes: mk(), intro: 'Le coup part avant même la fin de sa phrase.', lethal: 'capture', canFlee: true,
       onWin: L => { n.wins++; n.tier = Math.min(5, n.tier + 1); let t = [`${esc(c.name)} tombe à genoux.`, 'Il se relèvera plus fort.']; const L2 = fx({ xp: 30 + 10 * n.tier, rep: { [c.faction]: -4 } });
