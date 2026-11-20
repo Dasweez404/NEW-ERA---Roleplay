@@ -105,7 +105,7 @@ function travelGo(to, r, weeks) {
   });
   transit(r, from, to, () => {
     G.loc = to; pc.flags.stage = 'contrats'; pc.flags.acts = {}; pc.flags.cityActs = null; advance(weeks); if (G.status !== 'play') return;
-    logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`); if (chance(0.4)) { const tl = Math.max(1, Math.min(Math.round(pc.hpMax * rr(0.03, 0.07)), pc.hp - 1)); pc.hp -= tl; toast(`🥱 Voyage éprouvant : −${tl} PV`); }
+    logEntry(`Voyage : ${capName(from)} → ${capName(to)}.`); if (chance(0.12)) { const tl = Math.max(1, Math.min(Math.round(pc.hpMax * rr(0.04, 0.08)), pc.hp - 1)); pc.hp -= tl; toast(`🥱 Voyage éprouvant : −${tl} PV`); }
     if (ctl) return controleFA(r);
     const ev = randomTravelEvent(); if (ev) return ev();
     contractCard(used.length ? 'Tu as utilisé : ' + used.join(', ') + '.' : 'Le train glisse sans histoire.');

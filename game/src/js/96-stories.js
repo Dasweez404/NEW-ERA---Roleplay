@@ -90,7 +90,7 @@ function runStory(s, roleId) {
   const gates = gateSet(opts.map(o => ({ lab: o[0], attr: o[1] })), t);
   const L = opts.map((o, gi) => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
     return C(lab, () => {
-      const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t;
+      const r = check(attr, dc, tags); if (kar) addKarma(kar); const ok = r.ok; const rw = Object.assign({}, ok ? okFx : koFx); if (ok && rw.xp) rw.xp += 4 * t; if (ok && rw.hp < 0) rw.hp = 0;
       show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Réussi' : 'Raté', text: [ok ? okT : koT, checkLine(r)], fx: fx(rw), choices: [C('Continuer', hub)] });
     }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: (extra.includes(o) ? '🎭 Rôle · ' : '') + (gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '') });
   });

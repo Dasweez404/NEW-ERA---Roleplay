@@ -79,7 +79,7 @@ function fx(o) {
   const L = []; const pc = G.pc; const line = (t, c = '') => L.push({ t, c });
   if (o.money) { pc.money = Math.max(0, pc.money + o.money); line(`${o.money > 0 ? '+' : ''}${fmt(o.money)} ¢`, o.money > 0 ? 'good' : 'badc'); }
   if (o.xp) { const p0 = pc.pts; addXp(o.xp); line(`+${o.xp} XP`, 'good'); if (pc.pts > p0) line(`Niveau supérieur : +${pc.pts - p0} point${pc.pts - p0 > 1 ? 's' : ''}`, 'acc'); }
-  if (o.hp) { const before = pc.hp; const sc = (o.hp < 0 && !o.rawHp) ? clamp(pc.hpMax / 38, 1, 2.2) : 1; const hp0 = Math.round(o.hp * sc); const dmg = o.hp < 0 && pc.hp < pc.hpMax * 0.4 ? Math.round(hp0 * 1.2) : hp0; pc.hp = clamp(pc.hp + dmg, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
+  if (o.hp) { const before = pc.hp; const sc = (o.hp < 0 && !o.rawHp) ? clamp(pc.hpMax / 30, 1.3, 3) : 1; const hp0 = Math.round(o.hp * sc); const dmg = o.hp < 0 && pc.hp < pc.hpMax * 0.4 ? Math.round(hp0 * 1.2) : hp0; pc.hp = clamp(pc.hp + dmg, 0, pc.hpMax); line(`${o.hp > 0 ? '+' : ''}${pc.hp - before} PV`, o.hp > 0 ? 'good' : 'badc'); }
   if (o.en) { const b = pc.en; pc.en = clamp(pc.en + o.en, 0, pc.enMax); line(`${o.en > 0 ? '+' : ''}${pc.en - b} énergie`, o.en > 0 ? 'good' : 'badc'); }
   if (o.heat) addHeat(o.heat, L);
   if (o.merit && pc.faction !== 'civils') { pc.merit = Math.max(0, pc.merit + o.merit); line(`${o.merit > 0 ? '+' : ''}${o.merit} mérite (${F[pc.faction].name})`, o.merit > 0 ? 'good' : 'badc'); }

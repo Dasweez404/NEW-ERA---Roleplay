@@ -169,7 +169,7 @@ function finishMission(o, quality, lines, extraFx) {
   if (o.tgt && o.tgt !== emp && quality !== 'partial') rewards.rep[o.tgt] = (rewards.rep[o.tgt] || 0) - (o.arch === 'humanitaire' || o.arch === 'climat' ? 0 : 3);
   if (o.arch === 'humanitaire' || o.arch === 'climat') { rewards.rep.civils = 5; delete rewards.rep[o.tgt]; G.score.saved = (G.score.saved || 0) + rint(3, 12); }
   if (rewards.rep[emp] === 0) delete rewards.rep[emp];
-  { const frac = quality === 'partial' ? rr(0.10, 0.16) : quality === 'crit' ? rr(0, 0.03) : rr(0.04, 0.09); rewards.hp = -Math.max(0, Math.min(Math.round(pc.hpMax * frac * (a.heat >= 3 ? 1.3 : 1)), pc.hp - 1)); rewards.rawHp = true; }
+  { const frac = quality === 'partial' ? rr(0.14, 0.22) : quality === 'crit' ? 0 : (chance(0.15) ? rr(0.02, 0.05) : 0); rewards.hp = -Math.max(0, Math.min(Math.round(pc.hpMax * frac * (a.heat >= 3 ? 1.3 : 1)), pc.hp - 1)); rewards.rawHp = true; }
   const L = fx(rewards); if (extraFx) L.unshift(...extraFx);
   pc.missions++; G.score.missions = (G.score.missions || 0) + 1;
   addCityRep(['humanitaire', 'climat', 'temoin', 'mediation', 'pelerinage', 'recrutement'].includes(o.arch) ? 4 : ['assassinat', 'incendie', 'emeute', 'racket', 'braquage', 'kidnapping', 'trouble', 'blanchiment'].includes(o.arch) ? -3 : 2, o.arch);
