@@ -826,3 +826,7 @@ body::after{display:none!important}
 .cfoe.ko,.cfoe.ko .spr,.cfoe.ko img{filter:brightness(0) drop-shadow(0 0 .8px rgba(255,255,255,.35))!important}
 .sg.dead{opacity:.9;filter:none!important}.sg.dead .spr,.sg.dead img{filter:brightness(0) drop-shadow(0 0 .8px rgba(255,255,255,.35))!important}
 .fchip.dead .foeico img,.fchip.dead .spr{filter:brightness(0)!important}
+
+/* jauge d'avantage (remplace les rounds) */
+.tens{display:flex;align-items:center;gap:4px;margin:6px 0}.tens .tl{font-size:1rem;flex:none}.tens .ts{flex:1;height:10px;background:#1a1a2e;border:1px solid #2a2a44;transform:skewX(-18deg);transition:background .3s,box-shadow .3s}
+.tens .ts.neg{border-color:#5a2336}.tens .ts.pos{border-color:#235a3c}.tens .ts.zero{border-color:#6b7099}.tens .ts.cur{background:var(--acc);box-shadow:0 0 10px var(--acc);border-color:var(--acc)}.tens .ts.cur.neg{background:#ff2a6d;box-shadow:0 0 10px #ff2a6d}

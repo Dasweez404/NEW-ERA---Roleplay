@@ -15,8 +15,9 @@ function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return;
 const hitBonus = () => (CB.rageLeft > 0 ? 4 : 0) + (CB.swarm > 0 ? 2 : 0) + (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
 const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)) - (CB.hexLeft > 0 ? 4 : 0); };
-const pwMax = () => Math.floor((CB.N + 1) / 3) + (pcPowers().some(p => pxLevel(p.id) >= 3) ? 1 : 0); // pouvoir : 1 round sur 3, 2 sur 5
-const needW = () => CB.N >= 4 ? CB.N - 1 : CB.N; // rounds à gagner pour une victoire totale
+const lead = () => CB.W - CB.Lz; // l'avance : positive = tu prends le dessus
+const pwMax = () => Math.floor(((CB.T || 3) + 1) / 3) + (pcPowers().some(p => pxLevel(p.id) >= 3) ? 1 : 0); // pouvoir : 1 round sur 3, 2 sur 5
+const needW = () => CB.T || 3; // avance à prendre pour l'emporter (la durée varie : on ne compte plus de rounds)
 
 // ── Intentions ennemies : on voit ce que l'adversaire prépare, et on choisit le geste qui le contre ──
 const INTENTS = {
@@ -115,7 +116,7 @@ function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags
 
 
 // ── Lancement ──
-function roundsFor2(cfg, foes, gap) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || 1)); let n = 4; if (foes.length === 1 && gap <= -1) n = 3; if (foes.length >= 3 || t >= 5 || gap >= 2) n = 5; return n; }
+function roundsFor2(cfg, foes, gap) { return cfg.rounds || 9; } // plafond de sécurité seulement : la confrontation s'arrête quand l'avance est prise ou perdue
 function startCombat(cfg) {
   if (cfg.foes.length > 4) cfg.foes = cfg.foes.slice(0, 4);
   scaleFoes(cfg); dedupeFoes(cfg.foes);
@@ -123,7 +124,7 @@ function startCombat(cfg) {
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
   CB.mode = confMode(cfg); if (CB.mode === 'embuscade' && !cfg.buff && !cfg.noAmbushMalus) { CB.nextBonus -= 2; clog('Pris par surprise : −2 à ta première décision.', 'log-dmg'); }
   if (cfg.buff) { CB.hitBuff += cfg.buff; clog(`Tu connais ses coups : +${cfg.buff} à tous tes jets.`, 'good'); }
-  CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap);
+  CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap); CB.T = clamp(2 + (CB.foes.length >= 3 ? 1 : 0) + (CB.thr.gap >= 1 ? 1 : 0), 2, 4); CB.Lmax = 3;
   if (hasAnti('buff')) CB.hitBuff += 1; if (hasAnti('rebound')) CB.shield += 6; if (hasAnti('shield')) CB.shield += 8; if (hasAnti('dash')) CB.dodge += 1;
   clog(cfg.intro || 'Le combat commence !');
   if (cfg.noPreview) return beginDuel();
@@ -157,7 +158,7 @@ function renderPreview() {
   coach('combat'); const cfg = CB.cfg; const T = CB.thr;
   const r = CB.foes.map(f => { const t = f.tier || Math.max(1, Math.round(f.atk / 2)); const tags = foeSpecialChips(f).slice(0, 2);
     return h('div', { class: 'fcard' }, foeIcon(f, 64) || '', h('div', { class: 'fi2' }, h('div', { class: 'fn2' }, h('b', {}, fname(f)), h('span', { class: 'fst' }, '★'.repeat(Math.min(5, t)) + '☆'.repeat(Math.max(0, 5 - t)))), tags.length || f.m ? h('div', {}, f.m ? h('span', { class: 'tag' }, 'machine') : null, tags) : null)); });
-  const chips = h('div', { class: 'pvchips' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label), h('span', { class: 'pvc' }, `${CB.N} rounds`));
+  const chips = h('div', { class: 'pvchips' }, h('span', { class: 'pvc', style: `border-color:${T.col};color:${T.col}` }, T.label), h('span', { class: 'pvc' }, `${CB.T} d’avance à prendre`));
   const L = [C(T.gap >= 2 ? 'Tenter malgré tout' : 'Combattre', engage, { ic: '⚔', cls: 'cta' })];
   if (cfg.canFlee !== false) L.push(C('Fuir', flee, { odds: ['agilite', 11 + CB.foes.length + CB.tier * 2, ['mobility']], cls: 'back' }));
   show({ compact: true, kicker: 'FACE À FACE', title: cfg.title || 'Un affrontement', text: [cfg.intro || '', T.gap >= 2 ? '<span class="badc">Une victoire totale est improbable.</span>' : ''].filter(Boolean), extra: h('div', {}, chips, h('div', { class: 'fpv' }, r)), choices: L });
@@ -198,14 +199,14 @@ function play(m) {
   syncFoes();
   CB.round++; nextIntent();
   if (pc.hp <= 0) return loseCombat(false);
-  if (CB.Lz >= CB.N) return conclude();
-  if (CB.W >= needW()) return conclude();
+  if (lead() <= -CB.Lmax) return conclude();
+  if (lead() >= CB.T) return conclude();
   if (CB.round > CB.N) return conclude();
   renderCombat();
 }
 // Les ennemis tombent au fil des rounds gagnés
 function syncFoes() {
-  const prog = Math.min(1, CB.W / needW()); const n = CB.foes.length;
+  const prog = Math.min(1, Math.max(0, lead()) / needW()); const n = CB.foes.length;
   CB.foes.forEach((f, i) => { const k = clamp(prog * n - i, 0, 1); const before = f.dead; f.hp = Math.round(f.hpMax * (1 - k)); f.dead = k >= 1; if (f.dead && !before) { clog(`${fname(f)} s’effondre.`, 'good'); pop('f' + i, 'K.O.', 'crit'); } else if (k > 0 && !f.dead) pop('f' + i, '−', 'dmg'); });
 }
 function hurtPc(sev) {
@@ -227,16 +228,16 @@ function flee() {
   const dc = 11 + CB.foes.length + CB.tier * 2; const r = check('agilite', dc, ['mobility']);
   if (r.ok) { clog('Tu t’échappes !', 'good'); const cb = CB; CB.fx = { pc: 'flee' }; renderCombat(); return void setTimeout(() => { if (CB === cb) finishCombat('flee'); }, 700); }
   clog('Impossible de fuir : on te rattrape.', 'log-dmg'); CB.Lz++; CB.hist.push('l'); CB.preview = false; hurtPc(1); CB.round++;
-  if (G.pc.hp <= 0) return loseCombat(false); if (CB.Lz >= CB.N || CB.round > CB.N) return conclude(); renderCombat();
+  if (G.pc.hp <= 0) return loseCombat(false); if (lead() <= -CB.Lmax || CB.round > CB.N) return conclude(); renderCombat();
 }
 function sweepAway() { G.pc.hp = Math.max(1, G.pc.hp - Math.round(G.pc.hpMax * 0.05)); CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.over = true; CB.bilan = '💨 Ils ne font pas le poids'; finishCombat('win'); }
 function conclude() {
-  const { W, Lz, N } = CB; const cfg = CB.cfg; const pc = G.pc; CB.over = true; const hist = CB.hist.map(x => x === 'w' ? '✔' : x === 'l' ? '✖' : '–').join(' ');
+  const { W, Lz } = CB; const cfg = CB.cfg; const pc = G.pc; CB.over = true; const hist = CB.hist.map(x => x === 'w' ? '✔' : x === 'l' ? '✖' : '–').join(' '); const ld = W - Lz;
   const fate = cfg.lethal === 'death' ? 'tué' : cfg.lethal === 'capture' ? 'capturé' : 'hors de combat';
-  if (Lz >= N) { toast(`${hist} · Défaite`); return loseCombat(false); }
-  if (W >= needW()) { CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.bilan = `${hist} · adversaire ${fate}`; return finishCombat('win'); }
-  if (W > Lz) { CB.partial = true; CB.bilan = `${hist} · il s’enfuit, blessé`; return finishCombat('win'); }
-  let txt = W === Lz ? 'impasse, chacun se replie' : 'tu es blessé, tu te replies'; if (W < Lz) { const loss = Math.round(pc.hpMax * 0.12); pc.hp = Math.max(1, pc.hp - loss); txt += ` (−${loss} PV)`; }
+  if (ld <= -CB.Lmax) { toast(`${hist} · Défaite`); return loseCombat(false); }
+  if (ld >= CB.T) { CB.foes.forEach(f => { f.dead = true; f.hp = 0; }); CB.bilan = `${hist} · adversaire ${fate}`; return finishCombat('win'); }
+  if (ld > 0) { CB.partial = true; CB.bilan = `${hist} · il s’enfuit, blessé`; return finishCombat('win'); }
+  let txt = ld === 0 ? 'impasse, chacun se replie' : 'tu es blessé, tu te replies'; if (ld < 0) { const loss = Math.round(pc.hpMax * 0.12); pc.hp = Math.max(1, pc.hp - loss); txt += ` (−${loss} PV)`; }
   toast(`${hist} · ${txt}`);
   if (cfg.canFlee === false) return loseCombat(false); finishCombat('flee');
 }
@@ -248,12 +249,13 @@ function foesStrip() {
 function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Ce qui se prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
   if (CB && CB.auto) return; const cfg = CB.cfg; const mode = CB.mode || 'combat'; const need = needW();
-  const dots = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : String(i + 1)); }));
+  const T = CB.T, Lm = CB.Lmax, ld = Math.max(-Lm, Math.min(T, lead()));
+  const dots = h('div', { class: 'tens' }, h('span', { class: 'tl' }, '😣'), ...Array.from({ length: T + Lm + 1 }, (_, i) => { const v = i - Lm; return h('i', { class: 'ts ' + (v === ld ? 'cur' : v < 0 ? 'neg' : v > 0 ? 'pos' : 'mid') + (v === 0 ? ' zero' : '') }); }), h('span', { class: 'tl' }, '😎'));
   const sit = fillF((PHASE[mode] || PHASE.combat)[Math.min(CB.round - 1, 4)]);
   const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `${CB.nextBonus > 0 ? '+' : ''}${CB.nextBonus} prochain jet` : '', CB.weak ? 'ennemis affaiblis' : ''].filter(Boolean).join(' · ');
-  const goal = h('div', { class: 'small mut' }, `Réussis ${need} décision${need > 1 ? 's' : ''} sur ${CB.N} · ${CB.W} réussie${CB.W > 1 ? 's' : ''}, ${CB.Lz} manquée${CB.Lz > 1 ? 's' : ''}`);
+  const goal = h('div', { class: 'small mut' }, `Prends ${T} d’avance pour l’emporter · tu cèdes à −${Lm} · ${CB.W} réussie${CB.W > 1 ? 's' : ''}, ${CB.Lz} manquée${CB.Lz > 1 ? 's' : ''}`);
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  show({ compact: true, kkind: mode, kicker: `${MODES[mode]} · DÉCISION ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, foesStrip(), dots, intentChip(), goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, kkind: mode, kicker: `${MODES[mode]} · DÉCISION ${CB.round}`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, foesStrip(), dots, intentChip(), goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 
 function combatChoices() {
