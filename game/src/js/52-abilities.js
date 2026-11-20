@@ -124,4 +124,5 @@ function foeAbilityHit(a) {
 function questAbility() { const ps = pcPowers(); for (const p of ps) { const a = powerAbility(p.id); if (a) return a; } return null; }
 const questReady = a => !!(a && G.pc.en >= questCost(a) && G.pc.flags.qaDest !== (G.pc.flags.dest || 0));
 const questFits = (a, tags) => !!(a && (a.q.tags || []).some(t => (tags || []).includes(t)));
+const qaBonus = o => { const a = questAbility(); return (a && questReady(a) && questFits(a, ARCH[o.arch].ptags)) ? 4 : 0; };
 function questUse() { const pc = G.pc; const a = questAbility(); pc.en -= questCost(a); pc.flags.qaDest = pc.flags.dest || 0; pxGain(a.pid, 1); return a; }

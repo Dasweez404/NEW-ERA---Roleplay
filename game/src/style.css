@@ -830,3 +830,16 @@ body::after{display:none!important}
 /* jauge d'avantage (remplace les rounds) */
 .tens{display:flex;align-items:center;gap:4px;margin:6px 0}.tens .tl{font-size:1rem;flex:none}.tens .ts{flex:1;height:10px;background:#1a1a2e;border:1px solid #2a2a44;transform:skewX(-18deg);transition:background .3s,box-shadow .3s}
 .tens .ts.neg{border-color:#5a2336}.tens .ts.pos{border-color:#235a3c}.tens .ts.zero{border-color:#6b7099}.tens .ts.cur{background:var(--acc);box-shadow:0 0 10px var(--acc);border-color:var(--acc)}.tens .ts.cur.neg{background:#ff2a6d;box-shadow:0 0 10px #ff2a6d}
+
+/* mobile aéré : quand l'écran est grand, on agrandit et on met les choix en bas */
+@media (max-width:640px){
+  .roomy .card.scene{display:flex;flex-direction:column;min-height:calc(100dvh - 232px)}
+  .roomy .card.scene .choices{margin-top:auto;padding-top:10px}
+  .roomy .card.scene p{font-size:1rem;line-height:1.45}.roomy .card.scene .title{font-size:1.3rem;margin:4px 0 8px}
+  .roomy .kicker{font-size:.7rem;padding:2px 9px}
+  .roomy .ch{padding:12px 14px}.roomy .ch .l{font-size:1rem}.roomy .ch .s{font-size:.8rem;-webkit-line-clamp:2}
+  .roomy .tiles .ch{padding:14px 8px}.roomy .tiles .ch .l{font-size:.9rem}
+  .roomy .hud{padding:6px 10px;gap:5px}.roomy .pill{font-size:.74rem}.roomy .stat{font-size:.8rem}
+  .roomy .rail2{margin:7px 0}
+  .roomy .dk .i{font-size:1.1rem}.roomy .dk .n{font-size:.6rem}
+}

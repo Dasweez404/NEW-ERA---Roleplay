@@ -131,8 +131,11 @@ function choicesEl(list, tiles, tcls) {
 
 // Mobile : tout doit tenir dans l'écran. On réduit la zone de scène (zoom) en dernier recours.
 function fitScreen() {
-  const go = () => { const lay = document.querySelector('#app .layout'); if (!lay) return; lay.style.zoom = ''; if (innerWidth > 700) return;
-    const avail = innerHeight, total = document.documentElement.scrollHeight; if (total <= avail + 1) return;
+  const go = () => { const lay = document.querySelector('#app .layout'); if (!lay) return; lay.style.zoom = ''; if (innerWidth > 700) { document.body.classList.remove('roomy'); return; }
+    // grands écrans de téléphone : mise en page aérée (texte plus grand, choix en bas, à portée de pouce) ; si ça déborde on repasse en compact, puis en zoom
+    document.body.classList.toggle('roomy', innerHeight >= 740); const avail = innerHeight; let total = document.documentElement.scrollHeight;
+    if (total > avail + 1 && document.body.classList.contains('roomy')) { document.body.classList.remove('roomy'); total = document.documentElement.scrollHeight; }
+    if (total <= avail + 1) return;
     const lh = lay.getBoundingClientRect().height; if (!lh) return; const z = (avail - (total - lh) - 2) / lh; lay.style.zoom = String(Math.max(0.6, Math.min(1, z))); };
   requestAnimationFrame(go); setTimeout(go, 400); setTimeout(go, 1300);
 }
@@ -206,7 +209,7 @@ function tabPerso() {
   { const fp = factionPerk(); if (fp) P1.append(h('div', { class: 'fperk' }, h('span', { class: 'fpi' }, fp[0]), h('div', {}, h('b', {}, fp[1]), h('div', { class: 'small mut' }, fp[2])))); }
   P1.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) P2.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => { const ab = powerAbility(p.id); if (ab) P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, `${ab.ic} ${ab.power} : ${ab.name}`)), h('div', { class: 'small' }, `⚔ Combat : ${ab.txt}`), h('div', { class: 'small' }, `🧭 Quêtes : ${ab.q.n} — ${ab.q.d} (réussite assurée, 2⚡, 1×/destination)`))); const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
+  pcPowers().forEach(p => { const ab = powerAbility(p.id); if (ab) P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, `${ab.ic} ${ab.power} : ${ab.name}`)), h('div', { class: 'small' }, `⚔ Combat : ${ab.txt}`), h('div', { class: 'small' }, `🧭 Quêtes : ${ab.q.n} — ${ab.q.d} (+4 au jet, jamais garanti, 2⚡, 1×/destination)`))); const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
   if (pc.ptype !== 'aucun') P2.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); P1.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });

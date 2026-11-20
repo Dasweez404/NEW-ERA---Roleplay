@@ -842,6 +842,19 @@ body::after{display:none!important}
 /* jauge d'avantage (remplace les rounds) */
 .tens{display:flex;align-items:center;gap:4px;margin:6px 0}.tens .tl{font-size:1rem;flex:none}.tens .ts{flex:1;height:10px;background:#1a1a2e;border:1px solid #2a2a44;transform:skewX(-18deg);transition:background .3s,box-shadow .3s}
 .tens .ts.neg{border-color:#5a2336}.tens .ts.pos{border-color:#235a3c}.tens .ts.zero{border-color:#6b7099}.tens .ts.cur{background:var(--acc);box-shadow:0 0 10px var(--acc);border-color:var(--acc)}.tens .ts.cur.neg{background:#ff2a6d;box-shadow:0 0 10px #ff2a6d}
+
+/* mobile aéré : quand l'écran est grand, on agrandit et on met les choix en bas */
+@media (max-width:640px){
+  .roomy .card.scene{display:flex;flex-direction:column;min-height:calc(100dvh - 232px)}
+  .roomy .card.scene .choices{margin-top:auto;padding-top:10px}
+  .roomy .card.scene p{font-size:1rem;line-height:1.45}.roomy .card.scene .title{font-size:1.3rem;margin:4px 0 8px}
+  .roomy .kicker{font-size:.7rem;padding:2px 9px}
+  .roomy .ch{padding:12px 14px}.roomy .ch .l{font-size:1rem}.roomy .ch .s{font-size:.8rem;-webkit-line-clamp:2}
+  .roomy .tiles .ch{padding:14px 8px}.roomy .tiles .ch .l{font-size:.9rem}
+  .roomy .hud{padding:6px 10px;gap:5px}.roomy .pill{font-size:.74rem}.roomy .stat{font-size:.8rem}
+  .roomy .rail2{margin:7px 0}
+  .roomy .dk .i{font-size:1.1rem}.roomy .dk .n{font-size:.6rem}
+}
 </style>
 </head>
 <body>
@@ -1131,7 +1144,7 @@ const gradeNames = pc => (pc.faction === 'fa' ? GRADES_FA : pc.faction === 'fall
 const gradeName = pc => gradeNames(pc || G.pc)[(pc || G.pc).grade];
 
 function statsForChar(c) {
-  const total = [13, 16, 19, 22, 25, 28][c.stars] || 14;
+  const total = [10, 12, 14, 16, 18, 20][c.stars] || 11; // départ plus modeste : on progresse en jouant
   const st = STYLES[c.style] || STYLES.brawler;
   const w = {}; ATTRS.forEach(a => w[a.id] = 1 + (a.id === st.prim ? 3 : 0) + (a.id === st.sec ? 1.5 : 0) + (hashStr(c.id + a.id) % 100) / 100 * 1.4);
   const sum = Object.values(w).reduce((x, y) => x + y, 0); const attrs = {}; let used = 0;
@@ -1607,8 +1620,11 @@ function choicesEl(list, tiles, tcls) {
 
 // Mobile : tout doit tenir dans l'écran. On réduit la zone de scène (zoom) en dernier recours.
 function fitScreen() {
-  const go = () => { const lay = document.querySelector('#app .layout'); if (!lay) return; lay.style.zoom = ''; if (innerWidth > 700) return;
-    const avail = innerHeight, total = document.documentElement.scrollHeight; if (total <= avail + 1) return;
+  const go = () => { const lay = document.querySelector('#app .layout'); if (!lay) return; lay.style.zoom = ''; if (innerWidth > 700) { document.body.classList.remove('roomy'); return; }
+    // grands écrans de téléphone : mise en page aérée (texte plus grand, choix en bas, à portée de pouce) ; si ça déborde on repasse en compact, puis en zoom
+    document.body.classList.toggle('roomy', innerHeight >= 740); const avail = innerHeight; let total = document.documentElement.scrollHeight;
+    if (total > avail + 1 && document.body.classList.contains('roomy')) { document.body.classList.remove('roomy'); total = document.documentElement.scrollHeight; }
+    if (total <= avail + 1) return;
     const lh = lay.getBoundingClientRect().height; if (!lh) return; const z = (avail - (total - lh) - 2) / lh; lay.style.zoom = String(Math.max(0.6, Math.min(1, z))); };
   requestAnimationFrame(go); setTimeout(go, 400); setTimeout(go, 1300);
 }
@@ -1682,7 +1698,7 @@ function tabPerso() {
   { const fp = factionPerk(); if (fp) P1.append(h('div', { class: 'fperk' }, h('span', { class: 'fpi' }, fp[0]), h('div', {}, h('b', {}, fp[1]), h('div', { class: 'small mut' }, fp[2])))); }
   P1.append(h('div', { class: 'kv' }, h('b', { title: 'Faction' }, '🏴'), `${F[pc.faction].name} · ${gradeName()} ${rankStr(pc.grade)}`, h('b', { title: 'Puissance' }, '💥'), `${pcPower().toFixed(1)} / 10`, h('b', { title: 'Style' }, '🎭'), STYLES[pc.style].name + ' · ' + STYLES[pc.style].grp, ...(CAT_DESC[STYLES[pc.style].grp] ? [h('b', { title: 'En combat' }, '⚔'), h('span', { class: 'small mut' }, CAT_DESC[STYLES[pc.style].grp])] : []), ...(pc.roles.length ? [h('b', { title: 'Rôles' }, '🛠'), pc.roles.map(r => ROLES[r].name).join(', ')] : []), h('b', { title: 'Moralité' }, '⚖'), `${karmaName()} (${karma() > 0 ? '+' : ''}${karma()})`, ...((pc.traits || []).length ? [h('b', { title: 'Traits' }, '🧬'), traitNames().join(' · ')] : [])));
   if (!pcPowers().length) P2.append(h('div', { class: 'mut small', style: 'margin:8px 0' }, 'Aucun pouvoir : tu comptes sur ton équipement, tes techniques anti-geno et ta tête.'));
-  pcPowers().forEach(p => { const ab = powerAbility(p.id); if (ab) P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, `${ab.ic} ${ab.power} : ${ab.name}`)), h('div', { class: 'small' }, `⚔ Combat : ${ab.txt}`), h('div', { class: 'small' }, `🧭 Quêtes : ${ab.q.n} — ${ab.q.d} (réussite assurée, 2⚡, 1×/destination)`))); const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
+  pcPowers().forEach(p => { const ab = powerAbility(p.id); if (ab) P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, `${ab.ic} ${ab.power} : ${ab.name}`)), h('div', { class: 'small' }, `⚔ Combat : ${ab.txt}`), h('div', { class: 'small' }, `🧭 Quêtes : ${ab.q.n} — ${ab.q.d} (+4 au jet, jamais garanti, 2⚡, 1×/destination)`))); const k = perkOf(p); const lv = pxLevel(p.id), n = (pc.pxp || {})[p.id] || 0;
     P2.append(h('div', { class: 'pwbox' }, h('div', {}, h('b', {}, p.name), ' ', h('span', { class: 'mut small' }, TYPENAME[p.type] || '')), k ? h('div', { class: 'perk' }, h('b', {}, '✦ ' + k.title), h('div', { class: 'mut small' }, k.desc)) : null, h('div', { class: 'small mut' }, `Niveau ${lv}/3${lv < 3 ? ` · ${n}/${PX_STEPS[lv]}` : ' · max'}`))); });
   if (pc.ptype !== 'aucun') P2.append(h('details', { class: 'small mut' }, h('summary', {}, 'Faiblesse'), WEAK[pc.ptype === 'hybride' ? (PW[pc.powers[0]].type) : pc.ptype]));
   ATTRS.forEach(a => { const v = A(a.id); const pips = h('div', { class: 'pips' }); for (let i = 0; i < Math.min(v, 16); i++) pips.append(h('span', { class: 'pip on' })); P1.append(h('div', { class: 'attr', title: a.desc }, h('div', { class: 'n' }, a.short), pips, h('b', {}, v))); });
@@ -2783,6 +2799,7 @@ function foeAbilityHit(a) {
 function questAbility() { const ps = pcPowers(); for (const p of ps) { const a = powerAbility(p.id); if (a) return a; } return null; }
 const questReady = a => !!(a && G.pc.en >= questCost(a) && G.pc.flags.qaDest !== (G.pc.flags.dest || 0));
 const questFits = (a, tags) => !!(a && (a.q.tags || []).some(t => (tags || []).includes(t)));
+const qaBonus = o => { const a = questAbility(); return (a && questReady(a) && questFits(a, ARCH[o.arch].ptags)) ? 4 : 0; };
 function questUse() { const pc = G.pc; const a = questAbility(); pc.en -= questCost(a); pc.flags.qaDest = pc.flags.dest || 0; pxGain(a.pid, 1); return a; }
 
 // ───────── Combat V3 : 3 à 5 rounds, 3 choix simples selon ta catégorie de style, un % affiché ─────────
@@ -2804,7 +2821,7 @@ const hitBonus = () => allyBonus() + (CB.rageLeft > 0 ? 4 : 0) + (CB.swarm > 0 ?
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
 const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)) - (CB.hexLeft > 0 ? 4 : 0); };
 const lead = () => CB.W - CB.Lz; // l'avance : positive = tu prends le dessus
-const pwMax = () => Math.floor(((CB.T || 3) + 1) / 3) + (pcPowers().some(p => pxLevel(p.id) >= 3) ? 1 : 0); // pouvoir : 1 round sur 3, 2 sur 5
+const pwMax = () => (CB.team ? Math.max(1, Math.floor(((CB.T || 3) + 1) / 3)) : 1) + (pcPowers().some(p => pxLevel(p.id) >= 3) ? 1 : 0); // pouvoir : 1 round sur 3, 2 sur 5
 const needW = () => CB.T || 3; // avance à prendre pour l'emporter (la durée varie : on ne compte plus de rounds)
 
 // ── Intentions ennemies : on voit ce que l'adversaire prépare, et on choisit le geste qui le contre ──
@@ -2889,11 +2906,11 @@ function specialOptions() {
   return out.slice(0, 3);
 }
 
-function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: abilCost(a), cls: 'safe', ab: a }; }
+function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: abilCost(a), cls: 'safe', ab: a, attr: 'maitrise', tags: [...a.q.tags, 'control'], bonus: 1 + a.mag + pxLevel(a.pid) - 1, sev: 1.0, cat: 'pw', okT: `${a.power} : ${a.name}. ${FAMS[a.fam].txt}.`, koT: 'Ton pouvoir t’échappe : l’effet ne vient pas.' }; }
 function powerMove() {
   const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
   const base = { ic: '✦', cat: 'pw', sev: 1.0 };
-  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
+  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', okT: 'L’Éveil te traverse : plus rien ne t’arrête.', koT: 'L’Éveil ne vient pas.', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
   if (spent) return Object.assign({}, base, { id: 'spent', kind: 'tech', label: 'Pouvoir', sub: `Déjà utilisé (${CB.pwUsed}/${pwMax()} ce combat)`, lock: 'Utilisé', cost: 0 });
   const ab = pc.ptype !== 'aucun' ? abilMove() : null; if (ok(ab)) return Object.assign({}, base, ab, { sub: `${ab.ab.txt} · ${ab.cost}⚡ · niv. ${pxLevel(ab.pid)}` });
   if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'power', kind: 'hit', label: `Pouvoir : ${powName('combat')}`, sub: `+4 au jet · ${POWER_FX.combat.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: 'maitrise', tags: ['combat'], bonus: 4, cost: POWER_FX.combat.cost });
@@ -2963,17 +2980,14 @@ function play(m) {
   if (m.kind === 'flee') return flee();
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   let margin, r = null; const nb = CB.nextBonus; CB.nextBonus = 0;
-  if (m.kind === 'abil') {
-    pxGain(m.pid, 1); abilityApply(m.ab);
-    if (m.ab.fam === 'rewind') { dealHand(); nextIntent(); CB.nextBonus += 2; clog('⏪ Le temps se replie : de nouvelles décisions s’offrent à toi.', 'good'); return renderCombat(); }
-    margin = 4 + 2 * (m.ab.mag + pxLevel(m.pid) - 1); m = Object.assign({}, m, { okT: `${m.ab.power} : ${m.ab.name}. ${FAMS[m.ab.fam].txt}.` });
-  } else if (m.kind === 'awaken') { awaken(); margin = 6; m = Object.assign({}, m, { okT: 'L’Éveil te traverse : plus rien ne t’arrête.' }); }
+  if (false) {}
   else {
-    if (m.kind === 'tech') techEffect();
+    if (m.kind === 'tech') techEffect(); if (m.kind === 'abil') pxGain(m.pid, 1);
     const roll = () => check(m.attr, m.dc != null ? m.dc : roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); r = roll();
     if (CB.adv > 0) { if (!r.ok) { const r2 = roll(); if (r2.total - r2.dc > r.total - r.dc) { r = r2; clog('🍀 Seconde chance : le jet est repris.', 'good'); } } CB.adv--; }
     margin = r.total - r.dc + (r.crit ? 4 : 0) - (r.fumble ? 4 : 0);
-    if (margin >= 1 || r.ok) { if (m.shield) CB.shield += m.shield; if (m.fam) abilityApply({ fam: m.fam, mag: 1, pid: null, name: m.label, power: m.sub }, 'ton rôle'); if (m.weak) CB.weak = m.weak; if (m.kind === 'tech') { /* effet déjà appliqué */ } }
+    if (margin >= 1 || r.ok) { if (m.kind === 'abil') { if (m.ab.fam === 'rewind') { abilityApply(m.ab); dealHand(); nextIntent(); CB.nextBonus += 2; clog('⏪ Le temps se replie : de nouvelles décisions s’offrent à toi.', 'good'); return renderCombat(); } abilityApply(m.ab); } if (m.kind === 'awaken') awaken(); if (m.shield) CB.shield += m.shield; if (m.fam) abilityApply({ fam: m.fam, mag: 1, pid: null, name: m.label, power: m.sub }, 'ton rôle'); if (m.weak) CB.weak = m.weak; if (m.kind === 'tech') { /* effet déjà appliqué */ } }
+    else if (m.kind === 'abil' && r.fumble) { pc.en = Math.max(0, pc.en - 2); clog('⚠ Ton pouvoir te lâche : −2 ⚡.', 'log-dmg'); }
     else if (m.dodge && chance(m.dodge)) { clog('Tu esquives de justesse !', 'good'); margin = Math.max(margin, 0); }
   }
   if (CB.mirror && margin < 0) { CB.mirror = 0; margin = 0; clog('🪞 Ta défaite est renvoyée : impasse.', 'good'); }
@@ -3056,7 +3070,7 @@ function renderCombat() {
   show({ compact: true, kicker: CB.team ? `${MODES[mode]} · BATAILLE D’ÉQUIPE · TOUR ${CB.round}/${CB.N}` : `${MODES[mode]} · UNE DÉCISION`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, foesStrip(), meter, intentChip(), h('div', { class: 'small mut' }, CB.team ? `Prends ${T} d’avance pour l’emporter · tu cèdes à −${Lm} · ${CB.N} tours au plus.` : 'L’écart de ton jet décide du sort : défaite, blessure, retraite ennemie, ou victoire dont tu choisis les suites.'), st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
-  const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: (m.kind === 'abil' || m.kind === 'awaken') ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
+  const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
 }
 
 // ───────── Hub : menu principal du tour, voyage, repos, marché, recrutement, rôles, retraite ─────────
@@ -3947,12 +3961,11 @@ function approachChoices(o) {
   const keys = Object.keys(a.ap); const gates = gateSet(keys.map(k => ({ lab: a.ap[k][0], attr: APPROACH[k].a })), o.tier);
   keys.forEach((k, gi) => {
     const d = APPROACH[k]; let tags = d.t; let sub = '';
-    if (k === 'pouvoir') { tags = a.ptags; const match = a.ptags.some(t => (powerTags()[t] || 0) > 0); sub = match ? 'pouvoir adapté ✔' : 'pouvoir peu adapté'; }
+    if (k === 'pouvoir') { tags = a.ptags; const match = a.ptags.some(t => (powerTags()[t] || 0) > 0); sub = match ? 'pouvoir adapté ✔' : 'pouvoir peu adapté'; const qa0 = questAbility(); if (qaBonus(o)) sub = `✨ ${qa0.q.n} : +4 au jet (2⚡, jamais garanti)`; }
     const rq = Object.assign({}, d.req || {}); if (d.money) rq.money = 40 * o.tier; if (gates.has(gi)) { rq.attr = Object.assign({}, rq.attr, { [d.a]: gates.get(gi) }); sub = (sub ? sub + ' · ' : '') + `🔑 ${AT[d.a].short} ${gates.get(gi)}`; }
     const price = d.money ? ` (${40 * o.tier} ¢)` : '';
-    L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' ? 2 : 0), tags, d.money ? 4 : 0], req: rq, cls: d.cls, sub }));
+    L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' && !qaBonus(o) ? 2 : 0), tags, (d.money ? 4 : 0) + (k === 'pouvoir' ? qaBonus(o) : 0)], req: rq, cls: d.cls, sub }));
   });
-  { const qa = questAbility(); if (qa && questReady(qa) && questFits(qa, ARCH[o.arch].ptags)) L.push(C(`✨ ${qa.q.n}`, () => { questUse(); advance(o.weeks); if (G.status !== 'play') return; finishMission(o, 'ok', [qa.q.line, `✨ ${qa.q.n} (${qa.power}) · 2⚡`]); }, { ic: '✨', cls: 'safe', sub: `${qa.q.d} · réussite assurée · 2⚡ · 1×/destination` })); }
   return L;
 }
 function missionApproach(o) {
@@ -3963,8 +3976,8 @@ function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;
   if (k === 'furtif' && typeof feat === 'function' && feat('infil') && INFIL.has(o.arch)) return infiltration(o);
   if (d.money) pc.money -= 40 * o.tier;
-  const tags = k === 'pouvoir' ? a.ptags : d.t; const penal = k === 'pouvoir' && !a.ptags.some(t => (powerTags()[t] || 0) > 0) ? -2 : 0;
-  const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal);
+  const tags = k === 'pouvoir' ? a.ptags : d.t; const qb = k === 'pouvoir' ? qaBonus(o) : 0; if (qb) questUse(); const penal = k === 'pouvoir' && !qb && !a.ptags.some(t => (powerTags()[t] || 0) > 0) ? -2 : 0;
+  const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal + qb);
   advance(o.weeks); if (G.status !== 'play') return;
   const txt = a.ap[k];
   if (r.ok && k === 'pouvoir' && pcPowers()[0]) pxGain(pcPowers()[0].id, 1);
@@ -5552,7 +5565,7 @@ function runStory(s, roleId) {
     }, { odds: [attr, dc, tags], ic: kar > 0 ? '🤝' : kar < 0 ? '😈' : '🎲', req: gates.has(gi) ? { attr: { [attr]: gates.get(gi) } } : undefined, sub: (extra.includes(o) ? '🎭 Rôle · ' : '') + (gates.has(gi) ? `🔑 ${AT[attr].short} ${gates.get(gi)}` : '') });
   });
   { const qa = questAbility(); const m = qa && questReady(qa) ? opts.find(o => questFits(qa, o[2])) : null;
-    if (m) L.push(C(`✨ ${qa.q.n}`, () => { questUse(); if (m[7]) addKarma(m[7]); const rw = Object.assign({}, m[5]); if (rw.xp) rw.xp += 4 * t; show({ chainTitle: s[1], kicker: s[0], title: 'Pouvoir utilisé', text: [qa.q.line, `✨ ${qa.q.n} (${qa.power}) · 2⚡`], fx: fx(rw), choices: [C('Continuer', hub)] }); }, { ic: '✨', cls: 'safe', sub: `${qa.q.d} · réussite assurée · 2⚡ · 1×/destination` })); }
+    if (m) { const dc = 11 + 2 * t; L.push(C(`✨ ${qa.q.n}`, () => { questUse(); const r = check(m[1], dc, [...m[2], ...qa.q.tags], 4); if (m[7]) addKarma(m[7]); const ok = r.ok; const rw = Object.assign({}, ok ? m[5] : m[6]); if (ok && rw.xp) rw.xp += 4 * t; if (ok && rw.hp < 0) rw.hp = 0; show({ chainTitle: s[1], kicker: s[0], title: ok ? 'Pouvoir utilisé' : 'Ton pouvoir te lâche', text: [ok ? qa.q.line : m[4], checkLine(r), `✨ ${qa.q.n} (${qa.power})`], fx: fx(rw), choices: [C('Continuer', hub)] }); }, { ic: '✨', cls: 'safe', odds: [m[1], dc, [...m[2], ...qa.q.tags], 4], sub: `${qa.q.d} · +4 au jet, jamais garanti · ${questCost(qa)}⚡` })); } }
   L.push(C('Passer ton chemin', hub, { cls: 'back' }));
   show({ kicker: s[0] + ' · ' + capName(G.loc).toUpperCase(), title: s[1], text: [s[2](place)], choices: L });
 }
@@ -6049,7 +6062,7 @@ function crStyle() {
   L.push(C('🎲 Style au hasard', () => { CR.style = pick(Object.keys(STYLES)); crAttrs(); })); L.push(C('← Retour', crPower));
   crHead(4, 'Ton style de combat', ['Huit catégories de géno-porteurs, deux par famille : offensifs (Brawler, Performer), défensifs (Juggernaut, Protector), techniques (Flanker, Ranger), soutiens (Assist, Engineer).'], L);
 }
-function crPool() { return 8 + (CR.ptype === 'elementaire' ? -2 : 0) + (CR.ptype === 'aucun' ? 2 : 0); }
+function crPool() { return 5 + (CR.ptype === 'elementaire' ? -2 : 0) + (CR.ptype === 'aucun' ? 2 : 0); }
 function crAttrs() {
   const st = STYLES[CR.style]; const bonus = { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }; bonus[st.prim] += 2; bonus[st.sec] += 1; if (CR.ptype === 'zoologique') bonus.agilite += 1;
   const used = () => Object.values(CR.add).reduce((x, y) => x + y, 0);

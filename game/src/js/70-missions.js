@@ -114,12 +114,11 @@ function approachChoices(o) {
   const keys = Object.keys(a.ap); const gates = gateSet(keys.map(k => ({ lab: a.ap[k][0], attr: APPROACH[k].a })), o.tier);
   keys.forEach((k, gi) => {
     const d = APPROACH[k]; let tags = d.t; let sub = '';
-    if (k === 'pouvoir') { tags = a.ptags; const match = a.ptags.some(t => (powerTags()[t] || 0) > 0); sub = match ? 'pouvoir adapté ✔' : 'pouvoir peu adapté'; }
+    if (k === 'pouvoir') { tags = a.ptags; const match = a.ptags.some(t => (powerTags()[t] || 0) > 0); sub = match ? 'pouvoir adapté ✔' : 'pouvoir peu adapté'; const qa0 = questAbility(); if (qaBonus(o)) sub = `✨ ${qa0.q.n} : +4 au jet (2⚡, jamais garanti)`; }
     const rq = Object.assign({}, d.req || {}); if (d.money) rq.money = 40 * o.tier; if (gates.has(gi)) { rq.attr = Object.assign({}, rq.attr, { [d.a]: gates.get(gi) }); sub = (sub ? sub + ' · ' : '') + `🔑 ${AT[d.a].short} ${gates.get(gi)}`; }
     const price = d.money ? ` (${40 * o.tier} ¢)` : '';
-    L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' ? 2 : 0), tags, d.money ? 4 : 0], req: rq, cls: d.cls, sub }));
+    L.push(C(`${a.ap[k][0]}${price}`, () => resolveApproach(o, k, dc), { odds: [d.a, dc + (k === 'pouvoir' && sub !== 'pouvoir adapté ✔' && !qaBonus(o) ? 2 : 0), tags, (d.money ? 4 : 0) + (k === 'pouvoir' ? qaBonus(o) : 0)], req: rq, cls: d.cls, sub }));
   });
-  { const qa = questAbility(); if (qa && questReady(qa) && questFits(qa, ARCH[o.arch].ptags)) L.push(C(`✨ ${qa.q.n}`, () => { questUse(); advance(o.weeks); if (G.status !== 'play') return; finishMission(o, 'ok', [qa.q.line, `✨ ${qa.q.n} (${qa.power}) · 2⚡`]); }, { ic: '✨', cls: 'safe', sub: `${qa.q.d} · réussite assurée · 2⚡ · 1×/destination` })); }
   return L;
 }
 function missionApproach(o) {
@@ -130,8 +129,8 @@ function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;
   if (k === 'furtif' && typeof feat === 'function' && feat('infil') && INFIL.has(o.arch)) return infiltration(o);
   if (d.money) pc.money -= 40 * o.tier;
-  const tags = k === 'pouvoir' ? a.ptags : d.t; const penal = k === 'pouvoir' && !a.ptags.some(t => (powerTags()[t] || 0) > 0) ? -2 : 0;
-  const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal);
+  const tags = k === 'pouvoir' ? a.ptags : d.t; const qb = k === 'pouvoir' ? qaBonus(o) : 0; if (qb) questUse(); const penal = k === 'pouvoir' && !qb && !a.ptags.some(t => (powerTags()[t] || 0) > 0) ? -2 : 0;
+  const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal + qb);
   advance(o.weeks); if (G.status !== 'play') return;
   const txt = a.ap[k];
   if (r.ok && k === 'pouvoir' && pcPowers()[0]) pxGain(pcPowers()[0].id, 1);

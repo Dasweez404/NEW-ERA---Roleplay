@@ -122,7 +122,7 @@ function crStyle() {
   L.push(C('🎲 Style au hasard', () => { CR.style = pick(Object.keys(STYLES)); crAttrs(); })); L.push(C('← Retour', crPower));
   crHead(4, 'Ton style de combat', ['Huit catégories de géno-porteurs, deux par famille : offensifs (Brawler, Performer), défensifs (Juggernaut, Protector), techniques (Flanker, Ranger), soutiens (Assist, Engineer).'], L);
 }
-function crPool() { return 8 + (CR.ptype === 'elementaire' ? -2 : 0) + (CR.ptype === 'aucun' ? 2 : 0); }
+function crPool() { return 5 + (CR.ptype === 'elementaire' ? -2 : 0) + (CR.ptype === 'aucun' ? 2 : 0); }
 function crAttrs() {
   const st = STYLES[CR.style]; const bonus = { corps: 0, agilite: 0, intellect: 0, charisme: 0, maitrise: 0 }; bonus[st.prim] += 2; bonus[st.sec] += 1; if (CR.ptype === 'zoologique') bonus.agilite += 1;
   const used = () => Object.values(CR.add).reduce((x, y) => x + y, 0);

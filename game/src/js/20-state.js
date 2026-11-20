@@ -24,7 +24,7 @@ const gradeNames = pc => (pc.faction === 'fa' ? GRADES_FA : pc.faction === 'fall
 const gradeName = pc => gradeNames(pc || G.pc)[(pc || G.pc).grade];
 
 function statsForChar(c) {
-  const total = [13, 16, 19, 22, 25, 28][c.stars] || 14;
+  const total = [10, 12, 14, 16, 18, 20][c.stars] || 11; // départ plus modeste : on progresse en jouant
   const st = STYLES[c.style] || STYLES.brawler;
   const w = {}; ATTRS.forEach(a => w[a.id] = 1 + (a.id === st.prim ? 3 : 0) + (a.id === st.sec ? 1.5 : 0) + (hashStr(c.id + a.id) % 100) / 100 * 1.4);
   const sum = Object.values(w).reduce((x, y) => x + y, 0); const attrs = {}; let used = 0;

@@ -17,7 +17,7 @@ const hitBonus = () => allyBonus() + (CB.rageLeft > 0 ? 4 : 0) + (CB.swarm > 0 ?
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
 const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)) - (CB.hexLeft > 0 ? 4 : 0); };
 const lead = () => CB.W - CB.Lz; // l'avance : positive = tu prends le dessus
-const pwMax = () => Math.floor(((CB.T || 3) + 1) / 3) + (pcPowers().some(p => pxLevel(p.id) >= 3) ? 1 : 0); // pouvoir : 1 round sur 3, 2 sur 5
+const pwMax = () => (CB.team ? Math.max(1, Math.floor(((CB.T || 3) + 1) / 3)) : 1) + (pcPowers().some(p => pxLevel(p.id) >= 3) ? 1 : 0); // pouvoir : 1 round sur 3, 2 sur 5
 const needW = () => CB.T || 3; // avance à prendre pour l'emporter (la durée varie : on ne compte plus de rounds)
 
 // ── Intentions ennemies : on voit ce que l'adversaire prépare, et on choisit le geste qui le contre ──
@@ -102,11 +102,11 @@ function specialOptions() {
   return out.slice(0, 3);
 }
 
-function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: abilCost(a), cls: 'safe', ab: a }; }
+function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: abilCost(a), cls: 'safe', ab: a, attr: 'maitrise', tags: [...a.q.tags, 'control'], bonus: 1 + a.mag + pxLevel(a.pid) - 1, sev: 1.0, cat: 'pw', okT: `${a.power} : ${a.name}. ${FAMS[a.fam].txt}.`, koT: 'Ton pouvoir t’échappe : l’effet ne vient pas.' }; }
 function powerMove() {
   const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
   const base = { ic: '✦', cat: 'pw', sev: 1.0 };
-  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
+  if (pcPowers().length && pc.hp <= pc.hpMax * 0.4 && !CB.wasAwake) return Object.assign({}, base, { id: 'awaken', kind: 'awaken', okT: 'L’Éveil te traverse : plus rien ne t’arrête.', koT: 'L’Éveil ne vient pas.', ic: '⚡', label: 'ÉVEIL', sub: 'Plus tu es blessé, plus c’est probable', attr: 'maitrise', tags: ['control', 'combat'], bonus: Math.round((1 - pc.hp / pc.hpMax) * 8), cls: 'danger' });
   if (spent) return Object.assign({}, base, { id: 'spent', kind: 'tech', label: 'Pouvoir', sub: `Déjà utilisé (${CB.pwUsed}/${pwMax()} ce combat)`, lock: 'Utilisé', cost: 0 });
   const ab = pc.ptype !== 'aucun' ? abilMove() : null; if (ok(ab)) return Object.assign({}, base, ab, { sub: `${ab.ab.txt} · ${ab.cost}⚡ · niv. ${pxLevel(ab.pid)}` });
   if (tags.includes('combat') && pc.en >= POWER_FX.combat.cost && pc.ptype !== 'aucun') return Object.assign({}, base, { id: 'power', kind: 'hit', label: `Pouvoir : ${powName('combat')}`, sub: `+4 au jet · ${POWER_FX.combat.cost}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: 'maitrise', tags: ['combat'], bonus: 4, cost: POWER_FX.combat.cost });
@@ -176,17 +176,14 @@ function play(m) {
   if (m.kind === 'flee') return flee();
   if (m.cost) pc.en = Math.max(0, pc.en - m.cost);
   let margin, r = null; const nb = CB.nextBonus; CB.nextBonus = 0;
-  if (m.kind === 'abil') {
-    pxGain(m.pid, 1); abilityApply(m.ab);
-    if (m.ab.fam === 'rewind') { dealHand(); nextIntent(); CB.nextBonus += 2; clog('⏪ Le temps se replie : de nouvelles décisions s’offrent à toi.', 'good'); return renderCombat(); }
-    margin = 4 + 2 * (m.ab.mag + pxLevel(m.pid) - 1); m = Object.assign({}, m, { okT: `${m.ab.power} : ${m.ab.name}. ${FAMS[m.ab.fam].txt}.` });
-  } else if (m.kind === 'awaken') { awaken(); margin = 6; m = Object.assign({}, m, { okT: 'L’Éveil te traverse : plus rien ne t’arrête.' }); }
+  if (false) {}
   else {
-    if (m.kind === 'tech') techEffect();
+    if (m.kind === 'tech') techEffect(); if (m.kind === 'abil') pxGain(m.pid, 1);
     const roll = () => check(m.attr, m.dc != null ? m.dc : roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); r = roll();
     if (CB.adv > 0) { if (!r.ok) { const r2 = roll(); if (r2.total - r2.dc > r.total - r.dc) { r = r2; clog('🍀 Seconde chance : le jet est repris.', 'good'); } } CB.adv--; }
     margin = r.total - r.dc + (r.crit ? 4 : 0) - (r.fumble ? 4 : 0);
-    if (margin >= 1 || r.ok) { if (m.shield) CB.shield += m.shield; if (m.fam) abilityApply({ fam: m.fam, mag: 1, pid: null, name: m.label, power: m.sub }, 'ton rôle'); if (m.weak) CB.weak = m.weak; if (m.kind === 'tech') { /* effet déjà appliqué */ } }
+    if (margin >= 1 || r.ok) { if (m.kind === 'abil') { if (m.ab.fam === 'rewind') { abilityApply(m.ab); dealHand(); nextIntent(); CB.nextBonus += 2; clog('⏪ Le temps se replie : de nouvelles décisions s’offrent à toi.', 'good'); return renderCombat(); } abilityApply(m.ab); } if (m.kind === 'awaken') awaken(); if (m.shield) CB.shield += m.shield; if (m.fam) abilityApply({ fam: m.fam, mag: 1, pid: null, name: m.label, power: m.sub }, 'ton rôle'); if (m.weak) CB.weak = m.weak; if (m.kind === 'tech') { /* effet déjà appliqué */ } }
+    else if (m.kind === 'abil' && r.fumble) { pc.en = Math.max(0, pc.en - 2); clog('⚠ Ton pouvoir te lâche : −2 ⚡.', 'log-dmg'); }
     else if (m.dodge && chance(m.dodge)) { clog('Tu esquives de justesse !', 'good'); margin = Math.max(margin, 0); }
   }
   if (CB.mirror && margin < 0) { CB.mirror = 0; margin = 0; clog('🪞 Ta défaite est renvoyée : impasse.', 'good'); }
@@ -269,5 +266,5 @@ function renderCombat() {
   show({ compact: true, kicker: CB.team ? `${MODES[mode]} · BATAILLE D’ÉQUIPE · TOUR ${CB.round}/${CB.N}` : `${MODES[mode]} · UNE DÉCISION`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, foesStrip(), meter, intentChip(), h('div', { class: 'small mut' }, CB.team ? `Prends ${T} d’avance pour l’emporter · tu cèdes à −${Lm} · ${CB.N} tours au plus.` : 'L’écart de ton jet décide du sort : défaite, blessure, retraite ennemie, ou victoire dont tu choisis les suites.'), st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
-  const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: (m.kind === 'abil' || m.kind === 'awaken') ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
+  const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
 }
