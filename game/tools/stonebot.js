@@ -16,7 +16,7 @@ const { chromium } = require('playwright');
         // écran de niveau : tout répartir
         const lv = document.querySelector('.lvact button'); if (lv) { lv.click(); return 'lv'; }
         // combat : contre l'intention sinon premier geste
-        if (typeof CB !== 'undefined' && CB && !CB.over && !CB.preview && UI.scene && /AFFRONTEMENT/.test(UI.scene.kicker || '')) {
+        if (typeof CB !== 'undefined' && CB && !CB.over && !CB.preview ) {
           const mv = moves(); const ok = mv.filter(m => !m.lock && !(m.cost && pc.en < m.cost)); let m = ok.find(x => isCounter(x)) || ok.find(x => x.cat === 'pw' && pc.en >= (x.cost || 0) && Math.random() < 0.5) || ok[0] || mv[0];
           if (pc.hp < pc.hpMax * 0.35 && hasItem('kit') && !CB.noItems) { play({ kind: 'item', item: 'kit', sev: 0.4 }); return 'combat'; }
           play(m); return 'combat';

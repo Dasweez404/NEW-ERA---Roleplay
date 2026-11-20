@@ -1,5 +1,5 @@
 // ───────── Combat V3 : 3 à 5 rounds, 3 choix simples selon ta catégorie de style, un % affiché ─────────
-// Chaque round : tu choisis ENTRE 3 gestes (principal, prudent, pouvoir). Un dé contre un pourcentage décide.
+// Chaque étape : tu choisis une décision parmi quelques options (tirées selon ton style, ton rôle, ta classe de pouvoir). Un dé contre un pourcentage décide.
 // Round gagné : l'adversaire recule. Round perdu : tu encaisses. Le bilan dépend des rounds gagnés et perdus.
 // Ta catégorie (Offensif, Défensif, Technique, Soutien) donne leur forme aux gestes.
 
@@ -12,7 +12,6 @@ const teamK = n => teamF(n) / 0.657;
 const rr = (a, b) => a + Math.random() * (b - a);
 const foeHit = f => Math.max(1, Math.round((2.6 + 2 * (f.tier || 1) + f.dmg * 0.09) * rr(0.9, 1.1)));
 function vfx(text, cls) { if (typeof REDUCED !== 'undefined' && REDUCED) return; const el = h('div', { class: 'vfx ' + cls }, text); document.body.append(el); setTimeout(() => el.remove(), 950); }
-function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise' ? 'corps' : a; }
 const hitBonus = () => (CB.rageLeft > 0 ? 4 : 0) + (CB.swarm > 0 ? 2 : 0) + (CB.hitBuff || 0) + PK('pierce') + Math.floor(PK('dmg') / 2) + (CB.rage ? 3 : 0) + (CB.boost > 1 ? 2 : 0);
 // Difficulté d'un round : suit le niveau des ennemis (la courbe douce du jeu est appliquée par check())
 const roundDc = () => { const a = aliveFoes(); const t = a.length ? a.reduce((s, f) => s + (f.tier || 1), 0) / a.length : 1; return Math.round(19 + 2.5 * t + 1.1 * (CB.foes.length - 1) + Math.min(6, Math.max(0, pcPower() - 4.5) * 1.1)) - (CB.hexLeft > 0 ? 4 : 0); };
@@ -39,51 +38,66 @@ const intentOf = () => (CB && CB.intent) ? INTENTS[CB.intent.k] : null;
 function intentBonus(m) { const it = intentOf(); if (!it || !m || !m.attr) return 0; if (it.counter(m)) return 4; if (it.penal && it.penal(m)) return -2; return 0; }
 const isCounter = m => { const it = intentOf(); return !!(it && m && m.attr && it.counter(m)); };
 
-// ── Les 3 gestes, définis par ta catégorie ──
+// ── Confrontations : pas de système de combat, seulement des DÉCISIONS. Tes attributs en jugent ; ton pouvoir, ta classe et ton rôle ouvrent des options. ──
 const CAT_DESC = {
-  'Offensif': 'Frapper de front (+2 au jet, risque normal) · Feinter et riposter (moitié moins de dégâts si tu perds) · Pouvoir.',
-  'Défensif': 'Tenir et repousser (tu encaisses toujours moins) · Se couvrir (presque aucun dégât, +1 énergie) · Pouvoir.',
-  'Technique': 'Coup précis (+3 au jet) · Esquiver (une chance sur trois de tout éviter) · Pouvoir.',
-  'Soutien': 'Déstabiliser (si tu gagnes, leurs coups faiblissent) · Coordonner l’équipe (mieux avec des alliés, et ils te couvrent) · Pouvoir.',
+  'Offensif': 'Tes décisions de front sont plus sûres (+2). Ton pouvoir, ta classe de pouvoir et ton rôle ouvrent des options en plus.',
+  'Défensif': 'Tenir sa position est plus sûr (+2) et te protège. Ton pouvoir, ta classe de pouvoir et ton rôle ouvrent des options en plus.',
+  'Technique': 'Lire la situation est plus sûr (+2). Ton pouvoir, ta classe de pouvoir et ton rôle ouvrent des options en plus.',
+  'Soutien': 'Intimider, négocier ou rallier est plus sûr (+2). Ton pouvoir, ta classe de pouvoir et ton rôle ouvrent des options en plus.',
 };
-const CATS = {
-  'Offensif': [
-    { id: 'a', ic: '⚔', label: 'Frapper de front', sub: 'Gros risque, grosse pression', tags: ['combat'], attr: () => primAttr(), bonus: 2, sev: 1.0 },
-    { id: 'b', ic: '🌀', label: 'Feinter et riposter', sub: 'Si tu perds, tu encaisses moitié moins', tags: ['mobility', 'stealth'], attr: () => 'agilite', bonus: 1, sev: 0.5 },
-  ],
-  'Défensif': [
-    { id: 'a', ic: '🛡', label: 'Tenir et repousser', sub: 'Tu encaisses toujours moins', tags: ['defense', 'combat'], attr: () => 'corps', bonus: 1, sev: 0.6 },
-    { id: 'b', ic: '🧱', label: 'Se couvrir', sub: 'Presque pas de dégâts · +1 énergie', tags: ['defense'], attr: () => 'corps', bonus: 1, sev: 0.3, en: 1 },
-  ],
-  'Technique': [
-    { id: 'a', ic: '🎯', label: 'Coup précis', sub: 'Bon pourcentage, risque normal', tags: ['scout', 'ranged', 'combat'], attr: () => (STYLES[G.pc.style].prim === 'intellect' ? 'intellect' : 'agilite'), bonus: 3, sev: 1.0 },
-    { id: 'b', ic: '💨', label: 'Esquiver', sub: 'Une chance sur trois de tout éviter', tags: ['mobility'], attr: () => 'agilite', bonus: 1, sev: 0.45, dodge: 0.33 },
-  ],
-  'Soutien': [
-    { id: 'a', ic: '🗣', label: 'Déstabiliser', sub: 'Si tu gagnes, leurs coups faiblissent', tags: ['social', 'tech'], attr: () => (STYLES[G.pc.style].prim === 'intellect' ? 'intellect' : 'charisme'), bonus: 1, sev: 0.8, weak: 2 },
-    { id: 'b', ic: '🤝', label: 'Coordonner l’équipe', sub: 'Mieux avec des alliés, et ils te couvrent', tags: ['ally', 'social'], attr: () => 'charisme', bonus: 1, sev: 0.5 },
-  ],
+const MODES = { combat: 'AFFRONTEMENT', embuscade: 'EMBUSCADE', guerre: 'GUERRE' };
+function confMode(cfg) { if (cfg.mode) return cfg.mode; const t = `${cfg.title || ''} ${cfg.intro || ''}`; if (/embuscade|guet-apens|piège|surgi/i.test(t)) return 'embuscade'; if (/assaut|escarmouche|guerre|territoire|siège|bataille|raid|offensive/i.test(t)) return 'guerre'; return 'combat'; }
+const DEC = {
+  combat: { front: ['Attaquer de front', 'Tu fonces sur {f}', 'Ton assaut fait plier {f}.', '{f} encaisse et te repousse.'], flank: ['Contourner et frapper', 'Prendre à revers', 'Tu les prends à revers.', 'Ils anticipent ton mouvement.'], tactic: ['Viser la faille', 'Observer, puis frapper juste', 'Tu repères le point faible et tu frappes juste.', 'Ton analyse arrive trop tard.'], talk: ['Intimider ou négocier', 'Faire douter {f}', 'Ton aplomb fait hésiter {f}.', '{f} ne se laisse pas impressionner.'], hold: ['Tenir sa position', 'Encaisser et reprendre la main', 'Tu encaisses et tu reprends la main.', 'Tu cèdes du terrain.'] },
+  embuscade: { front: ['Riposter tout de suite', 'Retourner le piège', 'Tu retournes l’embuscade contre eux.', 'Tu es pris sous le feu.'], flank: ['Se jeter à couvert', 'Trouver un abri et un angle', 'Tu trouves un abri et un angle de tir.', 'Pas d’abri : tu es à découvert.'], tactic: ['Repérer l’issue', 'Chercher la brèche', 'Une brèche dans leur dispositif !', 'Tu ne vois aucune sortie.'], talk: ['Crier, bluffer', 'Faire croire à des renforts', 'Ils croient à un renfort : ils reculent.', 'Le bluff ne prend pas.'], hold: ['Faire bloc', 'Serrer les rangs', 'Tu tiens le choc.', 'Tu es submergé.'] },
+  guerre: { front: ['Charger la ligne', 'Briser leur front', 'Votre charge rompt leur ligne.', 'La charge s’enlise.'], flank: ['Manœuvre de flanc', 'Déborder sur le côté', 'Vous enfoncez leur flanc.', 'Le flanc était couvert.'], tactic: ['Lire le champ de bataille', 'Anticiper leur plan', 'Tu devines leur plan et tu le contres.', 'Le front est trop confus.'], talk: ['Rallier les tiens', 'Galvaniser les troupes', 'Les rangs se resserrent derrière toi.', 'Personne n’entend dans le vacarme.'], hold: ['Tenir la ligne', 'Ne pas reculer d’un pas', 'La ligne tient.', 'La ligne plie.'] },
 };
-function catMoves() { return CATS[STYLES[G.pc.style].grp] || CATS['Offensif']; }
-// ── Main de cartes : à chaque round, 3 cartes tirées au sort (ton style en favorise certaines). On fait avec ce qu'on a. ──
-const bestAttr = () => ATTRS.reduce((b, a) => A(a.id) > A(b) ? a.id : b, 'corps');
-const XCARDS = [
-  { id: 'x1', ic: '💥', label: 'Charge furieuse', sub: 'Gros risque, gros jet', tags: ['combat'], attr: () => 'corps', bonus: 3, sev: 1.4, grp: 'Offensif' },
-  { id: 'x2', ic: '🗡', label: 'Coup bas', sub: 'Affaiblit leurs coups si tu gagnes', tags: ['stealth', 'combat'], attr: () => 'agilite', bonus: 1, sev: 0.8, weak: 1, grp: 'Offensif' },
-  { id: 'x3', ic: '🤺', label: 'Parade', sub: 'Encaisse peu · bon jet', tags: ['defense'], attr: () => 'corps', bonus: 2, sev: 0.5, grp: 'Défensif' },
-  { id: 'x4', ic: '🔍', label: 'Viser la faille', sub: 'Excellent contre une garde haute', tags: ['scout', 'tech'], attr: () => 'intellect', bonus: 3, sev: 1.0, grp: 'Technique' },
-  { id: 'x5', ic: '📣', label: 'Appel à l’aide', sub: 'Meilleur avec des alliés', tags: ['ally', 'social'], attr: () => 'charisme', bonus: () => Math.min(4, G.pc.party.filter(a => a.inj <= 0).length * 1.5), sev: 0.6, grp: 'Soutien' },
-  { id: 'x6', ic: '😈', label: 'Provoquer', sub: 'Leurs coups faiblissent si tu gagnes', tags: ['social'], attr: () => 'charisme', bonus: 1, sev: 0.9, weak: 2, grp: 'Soutien' },
-  { id: 'x7', ic: '🎲', label: 'Improviser', sub: 'Ton meilleur attribut, sans bonus', tags: ['combat'], attr: bestAttr, bonus: 0, sev: 0.7 },
-  { id: 'x8', ic: '🏃', label: 'Repli tactique', sub: 'Peu de dégâts · une chance d’esquive', tags: ['mobility'], attr: () => 'agilite', bonus: 2, sev: 0.3, dodge: 0.25 },
-  { id: 'x9', ic: '🌬', label: 'Canaliser', sub: 'Ton pouvoir à l’état brut', tags: ['control'], attr: () => 'maitrise', bonus: 1, sev: 0.8 },
+const PHASE = {
+  combat: ['{f} et les siens se déploient devant toi. Comment ouvres-tu ?', 'L’affrontement s’engage. {f} cherche une ouverture.', 'La tension monte : tout peut basculer.', 'Dernier échange, tout se joue maintenant.', 'Ils faiblissent, mais il reste de quoi te surprendre.'],
+  embuscade: ['Des silhouettes surgissent : {f} et les siens t’attendaient.', 'Le piège se referme. Il faut réagir vite.', 'Tu gagnes quelques secondes. Que fais-tu ?', 'Leur dispositif se disloque peu à peu.', 'Une dernière décision pour sortir de là.'],
+  guerre: ['Le front s’étend devant toi : {f} mène leur ligne.', 'Les lignes se heurtent, la mêlée gronde.', 'Un tournant s’annonce sur le champ de bataille.', 'Les réserves entrent en jeu.', 'L’issue de la bataille se joue ici.'],
+};
+const fillF = t => String(t || '').replace(/\{f\}/g, () => { const f = CB && aliveFoes()[0] ? fname(aliveFoes()[0]) : 'l’adversaire'; return f; });
+function primAttr() { const a = STYLES[G.pc.style].prim; return a === 'maitrise' ? 'corps' : a; }
+// Les cinq décisions de base : chacune est jugée par un attribut
+const BASE = [
+  { id: 'front', ic: '⚔', attr: 'corps', tags: ['combat'], bonus: 1, sev: 1.0, grp: 'Offensif' },
+  { id: 'flank', ic: '🌀', attr: 'agilite', tags: ['mobility', 'stealth'], bonus: 0, sev: 0.6, dodge: 0.25, style: 'flanker' },
+  { id: 'tactic', ic: '🧠', attr: 'intellect', tags: ['scout', 'tech'], bonus: 1, sev: 0.9, weak: 1, grp: 'Technique' },
+  { id: 'talk', ic: '🗣', attr: 'charisme', tags: ['social'], bonus: 0, sev: 0.7, weak: 2, grp: 'Soutien' },
+  { id: 'hold', ic: '🛡', attr: 'corps', tags: ['defense'], bonus: 0, sev: 0.35, shield: 5, grp: 'Défensif' },
 ];
-function cardPool() { const grp = STYLES[G.pc.style].grp; const pool = []; Object.entries(CATS).forEach(([g, arr]) => arr.forEach(c => pool.push(Object.assign({ grp: g, w: g === grp ? 3 : 1 }, c, { id: g[0] + c.id })))); XCARDS.forEach(c => pool.push(Object.assign({ w: c.grp === grp ? 3 : c.grp ? 1 : 1.5 }, c))); return pool; }
+// Options propres à un rôle : [libellé, attribut, étiquettes, effet de famille, texte de réussite]
+const ROLE_ACT = {
+  eclaireur: ['Repérer la faille', 'agilite', ['scout'], 'reveal', 'Tu repères tout ce qui se cache.'], combattant: ['Technique de combat', 'corps', ['combat'], 'ambush', 'Ton savoir-faire fait la différence.'],
+  artilleur: ['Tir de couverture', 'agilite', ['ranged'], 'ambush', 'Ton tir cloue tout le monde sur place.'], leader: ['Ordre de groupe', 'charisme', ['social', 'ally'], 'swarm', 'Les tiens suivent ton ordre sans hésiter.'],
+  medecin: ['Soigner sous le feu', 'intellect', ['heal'], 'regen', 'Tu soignes sans lâcher la situation.'], ingenieur: ['Piège improvisé', 'intellect', ['tech'], 'hex', 'Un piège improvisé les désoriente.'],
+  costumier: ['Leurre et déguisement', 'charisme', ['disguise'], 'hex', 'Ils poursuivent la mauvaise silhouette.'], hacker: ['Pirater leurs systèmes', 'intellect', ['hack'], 'stun', 'Leurs systèmes tombent en panne.'],
+  gardien: ['Former un rempart', 'corps', ['defense'], 'guard', 'Tu fais un rempart de ton corps.'], logisticien: ['Mobiliser le matériel', 'intellect', ['logi'], 'lucky', 'Le bon outil au bon moment.'],
+  infiltre: ['Disparaître puis frapper', 'agilite', ['stealth'], 'ambush', 'Tu disparais, et frappes là où ils ne regardent pas.'], pilote: ['Manœuvre de véhicule', 'agilite', ['mobility'], 'rewind', 'Une manœuvre impossible : tu changes la donne.'],
+  diplomate: ['Négocier la reddition', 'charisme', ['social'], 'mirror', 'Ils baissent la garde, le temps d’une trêve.'], dompteur: ['Calmer les bêtes et les foules', 'maitrise', ['control'], 'gravity', 'Tout le monde ralentit autour de toi.'],
+  strategiste: ['Plan tactique', 'intellect', ['strat'], 'reveal', 'Ton plan se déroule sans accroc.'],
+};
+// Options propres à la classe de pouvoir
+const CLASS_ACT = { zoologique: ['Instinct animal', 'agilite', ['scout', 'mobility'], 'Ton instinct te guide mieux qu’aucune réflexion.'], surnaturel: ['Libérer ton pouvoir', 'maitrise', ['control', 'combat'], 'Ton pouvoir se déchaîne.'], elementaire: ['Façonner l’élément', 'maitrise', ['control', 'defense'], 'L’élément t’obéit.'], hybride: ['Forme hybride', 'corps', ['combat', 'mobility'], 'Ta forme hybride dépasse leurs attentes.'] };
+const bestAttr = () => ATTRS.reduce((b, a) => A(a.id) > A(b) ? a.id : b, 'corps');
+// Tirage des décisions de base : trois sur cinq, selon ton style, jamais les mêmes d'un tour à l'autre
 function dealHand() {
-  const pool = cardPool(); const last = (CB && CB.hand) ? CB.hand.map(c => c.id) : []; const hand = [];
-  for (let k = 0; k < 3; k++) { const cand = pool.filter(c => !hand.some(h => h.id === c.id) && !(last.includes(c.id) && Math.random() < 0.75)); const c = wpick(cand.length ? cand : pool.filter(c => !hand.some(h => h.id === c.id)), x => x.w); hand.push(c); }
+  const pc = G.pc; const grp = STYLES[pc.style].grp; const mode = (CB && CB.mode) || 'combat'; const last = (CB && CB.hand) ? CB.hand.map(c => c.id) : [];
+  const pool = BASE.map(b => Object.assign({ w: (b.grp === grp || b.style === pc.style) ? 3 : 1.4 }, b)); const hand = [];
+  for (let k = 0; k < 3; k++) { const cand = pool.filter(c => !hand.some(h => h.id === c.id) && !(last.includes(c.id) && Math.random() < 0.7)); const c = wpick(cand.length ? cand : pool.filter(c => !hand.some(h => h.id === c.id)), x => x.w); const d = DEC[mode][c.id]; const fav = (c.grp === grp || c.style === pc.style) ? 2 : 0;
+    hand.push(Object.assign({}, c, { label: d[0], sub: d[1], okT: d[2], koT: d[3], bonus: c.bonus + fav, cat: 'mv', favs: fav })); }
   if (CB) CB.hand = hand; return hand;
 }
+// Options spéciales : rôle, classe de pouvoir (jamais plus de trois)
+function specialOptions() {
+  const pc = G.pc; const out = []; const mode = (CB && CB.mode) || 'combat';
+  const roles = shuffle(pc.roles.filter(r => ROLE_ACT[r])).slice(0, 2);
+  roles.forEach(r => { const [lab, attr, tags, fam, okT] = ROLE_ACT[r]; out.push({ id: 'role_' + r, ic: ROLE_IC[r] || '🎭', label: lab, sub: `Rôle : ${ROLES[r].name}`, attr, tags: [...tags, ROLES[r].tag], bonus: 3, sev: 0.7, cat: 'mv', kind: 'hit', okT, koT: 'Ton idée ne suffit pas, cette fois.', fam, role: true, cls: 'safe' }); });
+  const ca = pc.ptype && CLASS_ACT[pc.ptype]; if (ca && pc.en >= 2) out.push({ id: 'class', ic: pc.ptype === 'zoologique' ? '🐾' : pc.ptype === 'elementaire' ? '🌊' : pc.ptype === 'hybride' ? '🧬' : '✨', label: ca[0], sub: `Pouvoir ${TYPENAME[pc.ptype].toLowerCase()} · 2⚡`, attr: ca[1], tags: ca[2], bonus: 3, sev: 1.0, cost: 2, cat: 'mv', kind: 'hit', okT: ca[3], koT: 'Ton pouvoir t’échappe un instant.', cls: 'safe' });
+  return out.slice(0, 3);
+}
+
 function abilMove() { const a = pcAbility(); if (!a) return null; return { id: 'abil', pid: a.pid, ic: a.ic, label: `${a.power} : ${a.name}`, sub: a.txt, kind: 'abil', cost: abilCost(a), cls: 'safe', ab: a }; }
 function powerMove() {
   const pc = G.pc; const spent = (CB.pwUsed || 0) >= pwMax(); const tags = Object.keys(powerTags()).filter(x => POWER_FX[x]); const ok = m => m && !m.lock && !(m.cost && pc.en < m.cost);
@@ -96,8 +110,9 @@ function powerMove() {
   const st = STYLES[pc.style]; const fin = Object.assign({}, base, { id: 'tech', kind: 'tech', label: `Technique : ${st.tech.name}`, sub: `${cap(st.tech.text)} · ${st.tech.cost + 1}⚡ · ${pwMax() - (CB.pwUsed || 0)} restant`, attr: primAttr(), tags: ['combat'], bonus: 3, cost: st.tech.cost + 1 });
   if (ok(fin)) return fin; fin.lock = 'Énergie insuffisante'; fin.sub = 'Pas assez d’énergie'; return fin;
 }
-function moves() { const hand = (CB && CB.hand) || dealHand(); return [...hand.map(m => Object.assign({ kind: 'hit', cat: 'mv' }, m, { attr: m.attr(), bonus: typeof m.bonus === 'function' ? m.bonus() : m.bonus })), powerMove()]; }
+function moves() { const hand = (CB && CB.hand) || dealHand(); const base = hand.map(m => Object.assign({ kind: 'hit' }, m)); const sp = specialOptions().map(m => Object.assign({ kind: 'hit' }, m)); return [...base, ...sp, powerMove()]; }
 function oddsOf(m) { if (!m.attr) return null; return [m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + (CB.nextBonus || 0) + intentBonus(m)]; }
+
 
 // ── Lancement ──
 function roundsFor2(cfg, foes, gap) { if (cfg.rounds) return cfg.rounds; const t = Math.max(...foes.map(f => f.tier || 1)); let n = 4; if (foes.length === 1 && gap <= -1) n = 3; if (foes.length >= 3 || t >= 5 || gap >= 2) n = 5; return n; }
@@ -106,6 +121,7 @@ function startCombat(cfg) {
   scaleFoes(cfg); dedupeFoes(cfg.foes);
   CB = { cfg, foes: cfg.foes, N: 4, round: 1, W: 0, Lz: 0, hist: [], log: [], pops: [], tier: Math.max(...cfg.foes.map(f => f.tier || Math.round(f.atk / 2))), dodge: PK('dodge'), shield: PK('shield'), lb: !!PK('lastbreath'), hitBuff: 0, boost: 1, rage: false, noItems: false, wasAwake: false, nextBonus: 0, weak: 0, sig: {}, tgt: 0 };
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
+  CB.mode = confMode(cfg); if (CB.mode === 'embuscade' && !cfg.buff && !cfg.noAmbushMalus) { CB.nextBonus -= 2; clog('Pris par surprise : −2 à ta première décision.', 'log-dmg'); }
   if (cfg.buff) { CB.hitBuff += cfg.buff; clog(`Tu connais ses coups : +${cfg.buff} à tous tes jets.`, 'good'); }
   CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap);
   if (hasAnti('buff')) CB.hitBuff += 1; if (hasAnti('rebound')) CB.shield += 6; if (hasAnti('shield')) CB.shield += 8; if (hasAnti('dash')) CB.dodge += 1;
@@ -119,7 +135,7 @@ function startCombat(cfg) {
 }
 // Plus de 80 % de réussite sur chaque round : le combat se joue tout seul avec le meilleur geste de chaque main
 function autoWin() {
-  CB.auto = true; let g = 0; clog('⚡ Victoire quasi certaine : le combat est réglé d’un coup.', 'good');
+  CB.auto = true; let g = 0; clog('⚡ Victoire quasi certaine : les décisions se prennent d’elles-mêmes.', 'good');
   while (CB && !CB.over && g++ < 12) { const mv = moves().filter(m => m.attr && !m.lock && m.kind === 'hit'); if (!mv.length) break; mv.sort((a, b) => odds(...oddsOf(b)) - odds(...oddsOf(a))); play(mv[0]); }
 }
 function engage() { if (!CB) return; CB.preview = false; beginDuel(); }
@@ -158,12 +174,12 @@ function play(m) {
   else if (m.kind === 'item') { takeItem(m.item); const it = ITEMS[m.item]; const h0 = pc.hp; pc.hp = Math.min(pc.hpMax, pc.hp + (it.use === 'hp40' ? 40 : 15)); if (it.use === 'hp40') pc.party.forEach(a => { if (a.inj > 0) { a.inj = 0; a.hp = Math.ceil(a.hpMax / 2); } }); clog(`${it.n} : +${pc.hp - h0} PV. Round nul.`, 'good'); pop('pc', `+${pc.hp - h0}`, 'ok'); res = 'draw'; sev = 0.4; }
   else {
     const cnt = isCounter(m); r = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); if (CB.adv > 0) { if (!r.ok) { const r2 = check(m.attr, roundDc(), m.tags, hitBonus() + (m.bonus || 0) + nb + intentBonus(m)); if (r2.ok) { r = r2; clog('🍀 Seconde chance : le jet est repris.', 'good'); } } CB.adv--; } CB.lastR = r; const crit = r.crit || (PK('crit') && r.r >= 19);
-    if (r.ok) { res = 'win'; if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken(); if (m.weak) CB.weak = m.weak; if (m.en) pc.en = Math.min(pc.enMax, pc.en + m.en); if (crit) { CB.nextBonus += 2; clog('Coup remarquable : +2 au prochain jet.', 'good'); } }
+    if (r.ok) { res = 'win'; if (m.kind === 'tech') techEffect(); if (m.kind === 'awaken') awaken(); if (m.weak) CB.weak = m.weak; if (m.shield) { CB.shield += m.shield; } if (m.fam) abilityApply({ fam: m.fam, mag: 1, pid: null, name: m.label, power: m.sub }, 'ton rôle'); if (m.en) pc.en = Math.min(pc.enMax, pc.en + m.en); if (crit) { CB.nextBonus += 2; clog('Coup remarquable : +2 au prochain jet.', 'good'); } }
     else { res = 'loss'; if (r.fumble) sev *= 1.5; if (m.dodge && chance(m.dodge)) { res = 'draw'; sev = 0; clog('Tu esquives tout !', 'good'); pop('pc', 'ESQUIVE', 'ok'); } else if (m.kind === 'awaken') clog('L’Éveil ne vient pas.', 'log-miss'); if (PK('thorns') && chance(Math.min(0.6, PK('thorns') * 0.12))) { res = 'draw'; sev = 0.3; clog('Ta riposte contrebalance : round nul.', 'good'); } }
   }
   if (res === 'win' && hasAnti('shock') && !CB.shockUsed) { CB.shockUsed = true; CB.nextBonus += 2; clog('Onde de choc : +2 au prochain jet.', 'good'); }
-  if (res === 'win') { CB.W++; vfx(r && r.crit ? 'CRITIQUE !' : 'ROUND GAGNÉ', 'good'); sfx('hit'); clog(pick(['Tu prends l’avantage.', 'Ton geste fait mouche.', 'Ils reculent d’un pas.']), 'good'); if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - PK('weaken') * 2); }); clog('Tes ennemis faiblissent.', 'warnc'); } if (PK('stun') && chance(PK('stun') / 100)) { CB.nextBonus += 2; clog('Sidérés, ils vacillent : +2 au prochain round.', 'warnc'); } if (PK('drain')) { const g = Math.min(PK('drain') * 2, pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } } }
-  else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(pick(['Ils lisent ton geste et ripostent.', 'Ton geste échoue.', 'Tu perds le rythme.']), 'log-miss'); }
+  if (res === 'win') { CB.W++; vfx(r && r.crit ? 'CRITIQUE !' : 'ROUND GAGNÉ', 'good'); sfx('hit'); clog(m.okT ? fillF(m.okT) : pick(['Tu prends l’avantage.', 'Ta décision fait mouche.', 'Ils reculent d’un pas.']), 'good'); if (PK('weaken') && !CB.weakDone) { CB.weakDone = true; aliveFoes().forEach(x => { x.dmg = Math.max(1, x.dmg - PK('weaken') * 2); }); clog('Tes ennemis faiblissent.', 'warnc'); } if (PK('stun') && chance(PK('stun') / 100)) { CB.nextBonus += 2; clog('Sidérés, ils vacillent : +2 au prochain round.', 'warnc'); } if (PK('drain')) { const g = Math.min(PK('drain') * 2, pc.hpMax - pc.hp); if (g > 0) { pc.hp += g; clog(`Absorption : +${g} PV.`, 'good'); } } }
+  else if (res === 'loss') { CB.Lz++; vfx('ROUND PERDU', 'bad'); clog(m.koT ? fillF(m.koT) : pick(['Ils lisent ton geste et ripostent.', 'Ta décision échoue.', 'Tu perds le rythme.']), 'log-miss'); }
   if (res === 'loss' && CB.mirror) { CB.mirror = 0; res = 'draw'; sev = 0; clog('🪞 Ta défaite est renvoyée : round nul.', 'good'); }
   if (res === 'loss' && CB.foeStun) { CB.foeStun = 0; res = 'draw'; sev = 0; clog('💫 Leur coup est annulé : round nul.', 'good'); }
   if (res === 'loss' && CB.rageLeft > 0) sev *= 1.25;
@@ -224,44 +240,22 @@ function conclude() {
   toast(`${hist} · ${txt}`);
   if (cfg.canFlee === false) return loseCombat(false); finishCombat('flee');
 }
-// ── Affichage ──
-// Ton sprite et ceux de ton équipe en tête du combat
-function teamStrip() {
-  const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
-  const foes = CB.foes.map((f, i) => [f, i]).filter(([f]) => f.cid && hasSpr(f.cid));
-  if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
-  const fx = CB.fx || {}; CB.fx = null; const first = !CB.entered; CB.entered = true;
-  const fp = fx.pc ? ' ' + fx.pc : '', ff = fx.foe ? ' ' + fx.foe : '';
-  const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : '') + (fx.pc === 'atk' || fx.pc === 'power' ? ' assist' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 40, 'portrait'))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : '') + fp, 'data-k': 'pc' }, sprFit(me, 72, 'portrait'), fx.pc === 'power' ? h('i', { class: 'aura' }) : null) : null);
-  const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ff), style: `animation-delay:${i * 110}ms` }, sprFit(f.cid, 72, 'portrait'))));
-  const spark = fx.pc === 'atk' ? h('i', { class: 'spark r' }, '💥') : fx.pc === 'power' ? h('i', { class: 'spark r pw' }, '✦') : fx.foe === 'atk' ? h('i', { class: 'spark l' }, '💢') : null;
-  return h('div', { class: 'cstage' }, left, spark, h('div', { class: 'cvs' }, fx.pc === 'atk' || fx.pc === 'power' ? '⚔' : fx.foe === 'atk' ? '🗡' : ''), right);
+// ── Affichage : une situation, des décisions ──
+function foesStrip() {
+  const fs = CB.foes.map(f => { const sp = foeIcon(f, 44); return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + CB.foes.indexOf(f) }, sp || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f)), f.cid && CH[f.cid] ? h('span', { class: 'fst' }, '★'.repeat(Math.min(5, CH[f.cid].stars || 0)) || '·') : null)); });
+  return h('div', { class: 'foechips' }, fs);
 }
-function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Il prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
+function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Ce qui se prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
-  if (CB && CB.auto) return;
-  const cfg = CB.cfg; const pc = G.pc; CB.prev = CB.prev || {}; const bars = [];
-  const rows = h('div', { class: 'foechips' }, CB.foes.map((f, i) => {
-    const bi = h('i', { style: `width:${(CB.prev[i] != null ? CB.prev[i] : 100)}%` }); const pct = Math.max(0, f.hp) / f.hpMax * 100; bars.push([bi, pct]); CB.prev[i] = pct;
-    return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + i }, foeIcon(f, 44) || '', h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f)), h('div', { class: 'bar hp mini' }, bi)));
-  }));
-  const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `+${CB.nextBonus} prochain jet` : '', CB.weak ? 'ennemis affaiblis' : '', CB.rage ? 'BÊTE FÉROCE' : ''].filter(Boolean).join(' · ');
-  const need = needW();
-  const pips = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : i + 1); }));
-  const goal = h('div', { class: 'small mut' }, `Gagne ${need} round${need > 1 ? 's' : ''} sur ${CB.N} pour les battre · ${CB.W} gagné${CB.W > 1 ? 's' : ''}, ${CB.Lz} perdu${CB.Lz > 1 ? 's' : ''}`);
+  if (CB && CB.auto) return; const cfg = CB.cfg; const mode = CB.mode || 'combat'; const need = needW();
+  const dots = h('div', { class: 'rpips' }, Array.from({ length: CB.N }, (_, i) => { const x = CB.hist[i]; return h('span', { class: 'rp ' + (x === 'w' ? 'w' : x === 'l' ? 'l' : x === 'd' ? 'd' : i === CB.round - 1 ? 'cur' : '') }, x === 'w' ? '✔' : x === 'l' ? '✖' : x === 'd' ? '–' : String(i + 1)); }));
+  const sit = fillF((PHASE[mode] || PHASE.combat)[Math.min(CB.round - 1, 4)]);
+  const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `${CB.nextBonus > 0 ? '+' : ''}${CB.nextBonus} prochain jet` : '', CB.weak ? 'ennemis affaiblis' : ''].filter(Boolean).join(' · ');
+  const goal = h('div', { class: 'small mut' }, `Réussis ${need} décision${need > 1 ? 's' : ''} sur ${CB.N} · ${CB.W} réussie${CB.W > 1 ? 's' : ''}, ${CB.Lz} manquée${CB.Lz > 1 ? 's' : ''}`);
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  const pops = CB.pops || []; CB.pops = []; const hurt = CB.hurt; CB.hurt = false;
-  const hook = () => {
-    requestAnimationFrame(() => setTimeout(() => bars.forEach(([b, w]) => { b.style.width = w + '%'; }), 80));
-    setTimeout(() => {
-      let dmgF = false, dmgP = false;
-      pops.forEach((p, n) => { const host = document.querySelector(`.combat [data-k="${p.k}"]`); if (!host) return; if (p.cls === 'dmg' || p.cls === 'crit') { if (p.k === 'pc') dmgP = true; else dmgF = true; host.classList.add('hit'); }
-        const el = h('span', { class: 'pop ' + p.cls, style: `animation-delay:${n * 140}ms` }, p.txt); host.append(el); setTimeout(() => el.remove(), 1500 + n * 140); });
-      if (dmgP || hurt) { setTimeout(() => { sfx('hurt'); shake(); flash('#ff2a6d'); }, 180); }
-    }, 60);
-  };
-  show({ compact: true, after: hook, kicker: `AFFRONTEMENT · ROUND ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [], extra: h('div', { class: 'combat' }, teamStrip(), h('div', { class: 'chead', 'data-k': 'pc' }, pips), rows, intentChip(), goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, kkind: mode, kicker: `${MODES[mode]} · DÉCISION ${Math.min(CB.round, CB.N)}/${CB.N}`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, foesStrip(), dots, intentChip(), goal, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
+
 function combatChoices() {
   const pc = G.pc; const L = [];
   moves().forEach((m, i) => L.push(C(m.label, () => play(m), { ic: m.ic, sub: (isCounter(m) ? '✔ Contre ce qu’il prépare · ' : '') + m.sub, odds: m.kind === 'sig' || m.kind === 'heal' ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } })));
