@@ -2,7 +2,7 @@
 const TUTO = {
   contrats: ['Chaque ville commence par des contrats.', 'Choisis-en un, ou touche « Se faire petit ».'],
   trame: ['Voici un événement de la trame.', 'Choisis une option : un dé décide. Le pourcentage indique tes chances.'],
-  combat: ['Pas de combat : des décisions.', 'À chaque étape, tu choisis comment réagir. Tes attributs jugent (le % montre tes chances) ; ton pouvoir, ta classe de pouvoir et ton rôle ouvrent des options en plus.'],
+  combat: ['Une seule décision.', 'Tu choisis comment réagir (6 options au plus). Tes attributs jugent (le % montre tes chances) ; ton pouvoir, ta classe de pouvoir et ton rôle ouvrent des options. Plus l’écart est grand, plus le sort est tranché.'],
   ville: ['Tu es en ville.', 'Tu as une seule action ici (repos, marché, recruter, s’entraîner), puis tu repars. La station voisine est toujours gratuite.'],
   voyage: ['Choisis ta destination.', 'Touche une ville sur la carte, puis touche-la encore pour partir. Le 💎 marque un indice sur une pierre.']
 };
