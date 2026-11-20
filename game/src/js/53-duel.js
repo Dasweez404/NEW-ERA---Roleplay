@@ -48,6 +48,8 @@ const CAT_DESC = {
   'Soutien': 'Intimider, négocier ou rallier est plus sûr (+2). Ton pouvoir, ta classe de pouvoir et ton rôle ouvrent des options en plus.',
 };
 const MODES = { combat: 'AFFRONTEMENT', embuscade: 'EMBUSCADE', guerre: 'GUERRE' };
+// Seules les batailles d'équipe contre équipe se jouent en plusieurs tours (6 au maximum) ; tout le reste tient en une décision
+function isTeamBattle(cfg) { if (cfg.team != null) return !!cfg.team; const allies = G.pc.party.filter(a => a.inj <= 0).length; return cfg.foes.length >= 3 && (confMode(cfg) === 'guerre' || allies >= 2); }
 function confMode(cfg) { if (cfg.mode) return cfg.mode; const t = `${cfg.title || ''} ${cfg.intro || ''}`; if (/embuscade|guet-apens|piège|surgi/i.test(t)) return 'embuscade'; if (/assaut|escarmouche|guerre|territoire|siège|bataille|raid|offensive/i.test(t)) return 'guerre'; return 'combat'; }
 const DEC = {
   combat: { front: ['Attaquer de front', 'Tu fonces sur {f}', 'Ton assaut fait plier {f}.', '{f} encaisse et te repousse.'], flank: ['Contourner et frapper', 'Prendre à revers', 'Tu les prends à revers.', 'Ils anticipent ton mouvement.'], tactic: ['Viser la faille', 'Observer, puis frapper juste', 'Tu repères le point faible et tu frappes juste.', 'Ton analyse arrive trop tard.'], talk: ['Intimider ou négocier', 'Faire douter {f}', 'Ton aplomb fait hésiter {f}.', '{f} ne se laisse pas impressionner.'], hold: ['Tenir sa position', 'Encaisser et reprendre la main', 'Tu encaisses et tu reprends la main.', 'Tu cèdes du terrain.'] },
@@ -129,7 +131,7 @@ function startCombat(cfg) {
   CB.foes.forEach(f => { f.dead = false; f.stun = 0; f.hp = f.hpMax; });
   CB.mode = confMode(cfg); if (CB.mode === 'embuscade' && !cfg.buff && !cfg.noAmbushMalus) { CB.nextBonus -= 2; clog('Pris par surprise : −2 à ta première décision.', 'log-dmg'); }
   if (cfg.buff) { CB.hitBuff += cfg.buff; clog(`Tu connais ses coups : +${cfg.buff} à tous tes jets.`, 'good'); }
-  CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap); CB.N = 1; CB.T = 1; CB.Lmax = 1;
+  CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap); CB.team = isTeamBattle(cfg); if (CB.team) { CB.N = 6; CB.T = clamp(2 + (CB.foes.length >= 4 ? 1 : 0) + (CB.thr.gap >= 1 ? 1 : 0), 2, 4); CB.Lmax = 3; } else { CB.N = 1; CB.T = 1; CB.Lmax = 1; }
   if (hasAnti('buff')) CB.hitBuff += 1; if (hasAnti('rebound')) CB.shield += 6; if (hasAnti('shield')) CB.shield += 8; if (hasAnti('dash')) CB.dodge += 1;
   clog(cfg.intro || 'Le combat commence !');
   if (cfg.noPreview) return beginDuel();
@@ -190,7 +192,17 @@ function play(m) {
   if (CB.mirror && margin < 0) { CB.mirror = 0; margin = 0; clog('🪞 Ta défaite est renvoyée : impasse.', 'good'); }
   if (CB.foeStun && margin < 0) { CB.foeStun = 0; margin = 0; clog('💫 Leur coup est annulé : impasse.', 'good'); }
   if (CB.intent && CB.intent.k === 'special' && CB.intent.ab && margin < 0) foeAbilityHit(CB.intent.ab);
+  if (CB.team) return teamRound(m, margin, r);
   resolveDecision(m, margin, r);
+}
+// Bataille d'équipe : plusieurs tours, jauge d'avantage, 6 tours au plus
+function teamRound(m, margin, r) {
+  const pc = G.pc; const win = margin >= 1, lose = margin <= -1; CB.hist.push(win ? 'w' : lose ? 'l' : 'd'); clog(fillF(win ? m.okT : m.koT) || (win ? 'Votre manœuvre porte.' : 'Votre manœuvre échoue.'), win ? 'good' : lose ? 'log-miss' : '');
+  if (win) { CB.W += margin >= 6 ? 2 : 1; } else if (lose) { CB.Lz++; hurtPc(m.sev == null ? 1 : m.sev); } else hurtPc(0.3);
+  if (CB.rageLeft > 0) CB.rageLeft--; if (CB.hexLeft > 0) CB.hexLeft--; if (CB.swarm > 0) CB.swarm--;
+  CB.round++; syncFoes(); if (pc.hp <= 0) return loseCombat(false);
+  const ld = lead(); if (ld >= CB.T) return resolveDecision(m, margin >= 6 ? margin : 6, r); if (ld <= -CB.Lmax) return resolveDecision(m, -8, r); if (CB.round > CB.N) return resolveDecision(m, ld > 0 ? 3 : ld < 0 ? -3 : 0, r);
+  nextIntent(); renderCombat();
 }
 function genericFate(done) {
   const pc = G.pc; const tier = CB.tier || 1; const nm = CB.foes[0] ? fname(CB.foes[0]) : 'les adversaires'; const cfg = CB.cfg;
@@ -251,9 +263,10 @@ function foesStrip() {
 function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Ce qui se prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
   if (CB && CB.auto) return; const cfg = CB.cfg; const mode = CB.mode || 'combat';
-  const sit = fillF((PHASE[mode] || PHASE.combat)[0]); const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `${CB.nextBonus > 0 ? '+' : ''}${CB.nextBonus} au jet` : '', allyBonus() ? `🤝 alliés +${allyBonus()}` : ''].filter(Boolean).join(' · ');
+  const sit = fillF((PHASE[mode] || PHASE.combat)[Math.min(CB.round - 1, 4)]); const T = CB.T, Lm = CB.Lmax, ldv = Math.max(-Lm, Math.min(T, lead()));
+  const meter = CB.team ? h('div', { class: 'tens' }, h('span', { class: 'tl' }, '😣'), ...Array.from({ length: T + Lm + 1 }, (_, i) => { const v = i - Lm; return h('i', { class: 'ts ' + (v === ldv ? 'cur' : v < 0 ? 'neg' : v > 0 ? 'pos' : 'mid') + (v === 0 ? ' zero' : '') }); }), h('span', { class: 'tl' }, '😎')) : null; const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `${CB.nextBonus > 0 ? '+' : ''}${CB.nextBonus} au jet` : '', allyBonus() ? `🤝 alliés +${allyBonus()}` : ''].filter(Boolean).join(' · ');
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  show({ compact: true, kicker: `${MODES[mode]} · UNE DÉCISION`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, foesStrip(), intentChip(), h('div', { class: 'small mut' }, 'L’écart de ton jet décide du sort : défaite, blessure, retraite ennemie, ou victoire dont tu choisis les suites.'), st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
+  show({ compact: true, kicker: CB.team ? `${MODES[mode]} · BATAILLE D’ÉQUIPE · TOUR ${CB.round}/${CB.N}` : `${MODES[mode]} · UNE DÉCISION`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, foesStrip(), meter, intentChip(), h('div', { class: 'small mut' }, CB.team ? `Prends ${T} d’avance pour l’emporter · tu cèdes à −${Lm} · ${CB.N} tours au plus.` : 'L’écart de ton jet décide du sort : défaite, blessure, retraite ennemie, ou victoire dont tu choisis les suites.'), st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: true, tcls: 'hand' });
 }
 function combatChoices() {
   const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: (m.kind === 'abil' || m.kind === 'awaken') ? undefined : oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
