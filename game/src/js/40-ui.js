@@ -257,7 +257,7 @@ function tabPierres() {
   DATA.stones.forEach(s => {
     const have = !!G.pc.stones[s.id]; const known = have || G.world.stoneClue[s.id];
     const hold = G.world.stoneHolder[s.id];
-    const where = have ? 'Tu la possèdes.' : known ? `${hold === 'temple' ? 'Cachée dans un temple' : hold === 'pnj-levant' ? 'Détenue par un descendant du peuple du feu' : 'Détenue par ' + (F[hold] ? F[hold].name : hold)} — ${stateName(G.world.stoneLoc[s.id])}` : 'Localisation inconnue (enquête nécessaire).';
+    const where = have ? ((G.pc.stoneAlly && G.pc.stoneAlly[s.id]) ? `Alliée : ${F[G.pc.stoneAlly[s.id]] ? F[G.pc.stoneAlly[s.id]].name : ''} la garde, elle compte pour toi.` : 'Tu la possèdes.') : known ? `${hold === 'temple' ? 'Cachée dans un temple' : hold === 'pnj-levant' ? 'Détenue par un descendant du peuple du feu' : 'Détenue par ' + (F[hold] ? F[hold].name : hold)} — ${stateName(G.world.stoneLoc[s.id])}` : 'Localisation inconnue (enquête nécessaire).';
     box.append(h('div', { style: 'margin-top:6px' }, h('b', { style: `color:${s.color}` }, `${s.order}. Pierre de ${s.name}`), ` · Royaume ${s.ruler}`, h('div', { class: 'small mut' }, where)));
     if (have) box.append(h('div', { class: 'glyph small' }, s.glyph, h('div', { class: 'mut' }, 'Anciens détenteurs : ' + s.holders), h('div', { class: 'mut' }, 'Lecture des héros : ' + s.heroes)));
   });

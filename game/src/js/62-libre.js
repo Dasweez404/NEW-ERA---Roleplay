@@ -10,13 +10,12 @@ function setupLibre() {
   const W = G.world; const pc = G.pc;
   const pool = Object.keys(F).filter(f => (isAnti(f) || F[f].secret) && f !== pc.faction && !['fa'].includes(f));
   // détenteurs et lieux aléatoires
-  DATA.stones.forEach(s => {
-    const r = Math.random(); let holder, loc;
-    if (r < 0.34) { holder = 'temple'; loc = pick(DATA.states).id; }
-    else if (r < 0.46) { holder = 'fa'; loc = pick(['mitropa', 'atlante', 'gallica', 'slavo', 'sinotan']); }
-    else { holder = pick(pool); loc = F[holder].hq; }
-    W.stoneHolder[s.id] = holder; W.stoneLoc[s.id] = CANON_LOC[s.id] || loc; // lieu fixe de chaque pierre, même en mode libre
-  });
+  { // répartition équitable : 4 détenteurs « bons », 4 neutres, 2 « mauvais », la F.A., et le reste dans des temples
+    const mo = f => (typeof FACTION_MORAL !== 'undefined' && FACTION_MORAL[f] != null) ? FACTION_MORAL[f] : 0; const cand = pool.filter(f => f !== pc.faction && F[f] && f !== 'own');
+    const take = (list, n) => shuffle(list).slice(0, n); const good = take(cand.filter(f => mo(f) >= 5), 4), neu = take(cand.filter(f => mo(f) > -5 && mo(f) < 5), 4), bad = take(cand.filter(f => mo(f) <= -5), 2);
+    const holders = shuffle([...good, ...neu, ...bad, 'fa']); const order = shuffle(DATA.stones.map(s => s.id));
+    order.forEach((sid, i) => { const holder = i < holders.length ? holders[i] : 'temple'; W.stoneHolder[sid] = holder; W.stoneLoc[sid] = CANON_LOC[sid] || (F[holder] ? F[holder].hq : DATA.stones.find(x => x.id === sid).temple); });
+  }
   const rival = pick(pool); const prem = pick(PREMISES); W.rival = rival; W.premise = { id: prem.id, t: prem.t, text: prem.x({ r: rival }) };
   W.arcs = []; W.rivalStones = 0;
   if (prem.id === 'fragile') { W.fac.fa.power = 62; }

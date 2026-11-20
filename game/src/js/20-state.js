@@ -60,11 +60,13 @@ function blankPC() {
 
 // Emplacement de chaque pierre selon le document (lieu canonique), indépendamment du QG du détenteur
 const CANON_LOC = { lumiere: 'albion', sable: 'saha', roche: 'ubunye', feu: 'levant', magma: 'isgarde', fumee: 'atlante', gaz: 'banda', metal: 'annam', air: 'sinotan', eau: 'avaiki', glace: 'polaris', foudre: 'alpomare', plante: 'aymaro', acide: 'khora', terre: 'westrian', tenebres: 'slavo' };
+// Détenteurs de départ : répartis équitablement entre alignements moraux (bons / neutres / mauvais) et temples ; aucun n'en tient deux
+const CANON_HOLD = { lumiere: 'check', plante: 'temple', magma: 'ragnaroks', eau: 'arena', air: 'sanctuaire', feu: 'pnj-levant', fumee: 'uplift', sable: 'temple', acide: 'slummer', roche: 'ringan', foudre: 'committed', glace: 'gamma', gaz: 'manacorp', metal: 'hem', terre: 'natives', tenebres: 'fa' };
 function initWorld() {
   const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, stoneLv: {}, flags: {}, wanted: {} };
   DATA.stones.forEach(s => {
-    W.stoneHolder[s.id] = s.holder;
-    W.stoneLoc[s.id] = CANON_LOC[s.id] || (F[s.holder] ? F[s.holder].hq : s.temple);
+    W.stoneHolder[s.id] = CANON_HOLD[s.id] || s.holder;
+    W.stoneLoc[s.id] = CANON_LOC[s.id] || (F[W.stoneHolder[s.id]] ? F[W.stoneHolder[s.id]].hq : s.temple);
   });
   DATA.factions.forEach(f => {
     const mem = DATA.chars.filter(c => c.faction === f.id);

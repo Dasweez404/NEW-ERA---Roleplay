@@ -1163,11 +1163,13 @@ function blankPC() {
 
 // Emplacement de chaque pierre selon le document (lieu canonique), indépendamment du QG du détenteur
 const CANON_LOC = { lumiere: 'albion', sable: 'saha', roche: 'ubunye', feu: 'levant', magma: 'isgarde', fumee: 'atlante', gaz: 'banda', metal: 'annam', air: 'sinotan', eau: 'avaiki', glace: 'polaris', foudre: 'alpomare', plante: 'aymaro', acide: 'khora', terre: 'westrian', tenebres: 'slavo' };
+// Détenteurs de départ : répartis équitablement entre alignements moraux (bons / neutres / mauvais) et temples ; aucun n'en tient deux
+const CANON_HOLD = { lumiere: 'check', plante: 'temple', magma: 'ragnaroks', eau: 'arena', air: 'sanctuaire', feu: 'pnj-levant', fumee: 'uplift', sable: 'temple', acide: 'slummer', roche: 'ringan', foudre: 'committed', glace: 'gamma', gaz: 'manacorp', metal: 'hem', terre: 'natives', tenebres: 'fa' };
 function initWorld() {
   const W = { stoneHolder: {}, stoneLoc: {}, fac: {}, terr: {}, npc: {}, leader: {}, news: [], era: 'regime', canonDone: {}, stoneClue: {}, stoneLv: {}, flags: {}, wanted: {} };
   DATA.stones.forEach(s => {
-    W.stoneHolder[s.id] = s.holder;
-    W.stoneLoc[s.id] = CANON_LOC[s.id] || (F[s.holder] ? F[s.holder].hq : s.temple);
+    W.stoneHolder[s.id] = CANON_HOLD[s.id] || s.holder;
+    W.stoneLoc[s.id] = CANON_LOC[s.id] || (F[W.stoneHolder[s.id]] ? F[W.stoneHolder[s.id]].hq : s.temple);
   });
   DATA.factions.forEach(f => {
     const mem = DATA.chars.filter(c => c.faction === f.id);
@@ -1727,7 +1729,7 @@ function tabPierres() {
   DATA.stones.forEach(s => {
     const have = !!G.pc.stones[s.id]; const known = have || G.world.stoneClue[s.id];
     const hold = G.world.stoneHolder[s.id];
-    const where = have ? 'Tu la possèdes.' : known ? `${hold === 'temple' ? 'Cachée dans un temple' : hold === 'pnj-levant' ? 'Détenue par un descendant du peuple du feu' : 'Détenue par ' + (F[hold] ? F[hold].name : hold)} — ${stateName(G.world.stoneLoc[s.id])}` : 'Localisation inconnue (enquête nécessaire).';
+    const where = have ? ((G.pc.stoneAlly && G.pc.stoneAlly[s.id]) ? `Alliée : ${F[G.pc.stoneAlly[s.id]] ? F[G.pc.stoneAlly[s.id]].name : ''} la garde, elle compte pour toi.` : 'Tu la possèdes.') : known ? `${hold === 'temple' ? 'Cachée dans un temple' : hold === 'pnj-levant' ? 'Détenue par un descendant du peuple du feu' : 'Détenue par ' + (F[hold] ? F[hold].name : hold)} — ${stateName(G.world.stoneLoc[s.id])}` : 'Localisation inconnue (enquête nécessaire).';
     box.append(h('div', { style: 'margin-top:6px' }, h('b', { style: `color:${s.color}` }, `${s.order}. Pierre de ${s.name}`), ` · Royaume ${s.ruler}`, h('div', { class: 'small mut' }, where)));
     if (have) box.append(h('div', { class: 'glyph small' }, s.glyph, h('div', { class: 'mut' }, 'Anciens détenteurs : ' + s.holders), h('div', { class: 'mut' }, 'Lecture des héros : ' + s.heroes)));
   });
@@ -3448,13 +3450,12 @@ function setupLibre() {
   const W = G.world; const pc = G.pc;
   const pool = Object.keys(F).filter(f => (isAnti(f) || F[f].secret) && f !== pc.faction && !['fa'].includes(f));
   // détenteurs et lieux aléatoires
-  DATA.stones.forEach(s => {
-    const r = Math.random(); let holder, loc;
-    if (r < 0.34) { holder = 'temple'; loc = pick(DATA.states).id; }
-    else if (r < 0.46) { holder = 'fa'; loc = pick(['mitropa', 'atlante', 'gallica', 'slavo', 'sinotan']); }
-    else { holder = pick(pool); loc = F[holder].hq; }
-    W.stoneHolder[s.id] = holder; W.stoneLoc[s.id] = CANON_LOC[s.id] || loc; // lieu fixe de chaque pierre, même en mode libre
-  });
+  { // répartition équitable : 4 détenteurs « bons », 4 neutres, 2 « mauvais », la F.A., et le reste dans des temples
+    const mo = f => (typeof FACTION_MORAL !== 'undefined' && FACTION_MORAL[f] != null) ? FACTION_MORAL[f] : 0; const cand = pool.filter(f => f !== pc.faction && F[f] && f !== 'own');
+    const take = (list, n) => shuffle(list).slice(0, n); const good = take(cand.filter(f => mo(f) >= 5), 4), neu = take(cand.filter(f => mo(f) > -5 && mo(f) < 5), 4), bad = take(cand.filter(f => mo(f) <= -5), 2);
+    const holders = shuffle([...good, ...neu, ...bad, 'fa']); const order = shuffle(DATA.stones.map(s => s.id));
+    order.forEach((sid, i) => { const holder = i < holders.length ? holders[i] : 'temple'; W.stoneHolder[sid] = holder; W.stoneLoc[sid] = CANON_LOC[sid] || (F[holder] ? F[holder].hq : DATA.stones.find(x => x.id === sid).temple); });
+  }
   const rival = pick(pool); const prem = pick(PREMISES); W.rival = rival; W.premise = { id: prem.id, t: prem.t, text: prem.x({ r: rival }) };
   W.arcs = []; W.rivalStones = 0;
   if (prem.id === 'fragile') { W.fac.fa.power = 62; }
@@ -4610,6 +4611,7 @@ function monthTick() {
   simNpcs(); simFactions(); warMonth(); closureMonth();
   if (chance(0.5)) monthNews();
   // menace sur les pierres
+  checkAlliedStones();
   const n = stoneCount();
   if (n > 0 && G.wk - (pc.flags.raidWk == null ? -99 : pc.flags.raidWk) >= 12 && chance(Math.min(0.16, 0.015 + 0.011 * n)) && !pc.flags.cap) { pc.flags.raidWk = G.wk; queue('stoneRaid'); } // rare : au plus un raid par trimestre
   if (n >= 6 && W.era !== 'newera' && chance(0.12)) queue('neo');
@@ -4825,6 +4827,19 @@ function glyphLib() {
   const L = DATA.stones.filter(s => G.pc.stones[s.id]).map(s => C(`${s.order}. Pierre de ${s.name}`, () => show({ kicker: `${s.order}. ${s.name}`, title: `Royaume de ${s.name} — ${s.ruler}`, text: [`Origine : ${esc(s.origin)} · Spécialité : ${esc(s.spec)} · Clan de ${s.clan === 'bidh' ? 'Bidh' : 'Kaos'}.`, `<div class="glyph">${esc(s.glyph)}</div>`, `<span class="mut">Anciens détenteurs : ${esc(s.holders)}</span>`, `<span class="mut">Lecture des héros : ${esc(s.heroes)}</span>`], choices: [C('← Retour', glyphLib)] })));
   L.push(C('← Retour', stoneMenu)); show({ kicker: 'Glyphes', title: 'Glyphes déchiffrés', text: L.length > 1 ? [] : ['Tu n’as encore déchiffré aucun glyphe : il faut posséder la pierre.'], choices: L });
 }
+// ── Alignement moral : l'écart entre toi et le détenteur fait varier la balance ──
+const moralOf = f => (f === 'pnj-levant' || f === 'temple' || !F[f]) ? 0 : moralBase(f);
+const moralGap = f => Math.abs(karma() - moralOf(f));
+const moralIc = v => v >= 6 ? '😇' : v <= -6 ? '😈' : '😐';
+function allyStone(id, hold) {
+  const pc = G.pc; pc.stoneAlly = pc.stoneAlly || {}; const s = STONE[id]; const L = fx({ stone: id }); pc.stoneAlly[id] = hold; G.world.stoneHolder[id] = hold; setRel(pc.faction, hold, 2); G.world.stoneLoc[id] = CANON_LOC[id] || G.world.stoneLoc[id];
+  L.push(...fx({ rep: { [hold]: 6 }, xp: 50 })); addKarma(1); logEntry(`Alliance avec ${F[hold].name} : la pierre de ${s.name} compte pour toi.`); newsPush(`${F[hold].name} s’allie à ${pc.name} et partage la pierre de ${s.name}.`);
+  if (stoneCount() >= 16) return endGame('win', '');
+  show({ kicker: 'ALLIANCE', title: `La pierre de ${s.name} compte pour toi`, text: [`${esc(F[hold].name)} garde la pierre, mais vous êtes liés : elle est comptée dans ta quête tant que l’alliance tient.`, '<span class="mut">Si vous vous brouillez (guerre, trahison), la pierre cesse de compter. Tu peux aussi la prendre de force plus tard.</span>'], fx: L, choices: [C('Continuer', hub)] });
+}
+function checkAlliedStones() {
+  const pc = G.pc; if (!pc.stoneAlly) return; Object.keys(pc.stoneAlly).forEach(id => { const hold = pc.stoneAlly[id]; if (!F[hold] || relation(pc.faction, hold) < 2 || G.world.stoneHolder[id] !== hold) { delete pc.stones[id]; delete pc.stoneAlly[id]; if (G.world.stoneHolder[id] === 'pc') G.world.stoneHolder[id] = hold; recalc(); newsPush(`L’alliance avec ${F[hold] ? F[hold].name : hold} est rompue : la pierre de ${STONE[id].name} ne compte plus pour ${pc.name}.`); logEntry(`Alliance rompue : la pierre de ${STONE[id].name} ne compte plus.`); } });
+}
 function stoneAttempt(id) {
   const s = STONE[id]; const W = G.world; const hold = W.stoneHolder[id]; const pc = G.pc; const tier = stoneTier(hold); const dc = dcOf(tier);
   if (hold === 'temple') return templeExpedition(id);
@@ -4833,9 +4848,11 @@ function stoneAttempt(id) {
   L.push(C(`Voler discrètement la pierre`, () => stoneSteal(id, tier, dc), { odds: ['agilite', dc, ['stealth', 'mobility']], req: { grade: minGrade }, cls: 'risk', sub: 'Si ça échoue, ils te tombent dessus.' }));
   if (hold !== 'fa') L.push(C('Convaincre le détenteur de te la confier ou de te l’échanger', () => stoneTalk(id, tier), { odds: ['charisme', dc - Math.floor(rep / 12), ['social']], req: { ok: () => rep < -15 ? 'Ils te détestent : impossible de négocier' : (pc.faction === hold ? null : null) }, sub: rep >= 40 ? 'Ils t’aiment bien : tes chances sont bonnes.' : 'Une réputation solide avec eux aide beaucoup.' }));
   L.push(C('Rendre d’abord un service important au détenteur', () => { const o = genOffer(hold === 'fa' || hold === 'pnj-levant' ? 'civils' : hold, Math.min(5, tier), {}); o.favor = id; missionBrief(o); }, { sub: 'Une mission pour eux : +réputation, qui débloque la négociation.', req: { ok: () => hold === 'fa' ? 'La Force d’Autorité ne confie jamais une pierre' : null } }));
-  L.push(C('Prendre la pierre par la force', () => stoneAssault(id, tier), { cls: 'danger', req: { grade: minGrade }, sub: 'Combat contre les gardiens de la pierre.' }));
+  { const gap = moralGap(hold); const canAlly = F[hold] && hold !== 'fa' && hold !== 'pnj-levant' && !(pc.stoneAlly && pc.stoneAlly[id]); const adc = dc + Math.round(gap / 3) - Math.floor(rep / 12) - (relation(pc.faction, hold) >= 2 ? 4 : 0) - (pc.faction === hold ? 6 : 0);
+    if (canAlly) L.push(C('Proposer une alliance : la pierre compte pour toi', () => { const r = check('charisme', adc, ['social', 'strat']); advance(1); if (G.status !== 'play') return; if (r.ok) return allyStone(id, hold); show({ kicker: 'ALLIANCE', title: 'Ils refusent', text: [gap >= 14 ? 'Vos idéaux sont trop éloignés : ils ne te font pas confiance.' : 'Ils veulent plus de garanties avant de s’engager.', checkLine(r)], fx: fx({ rep: { [hold]: -3 } }), choices: [C('Continuer', () => stoneAttempt(id))] }); }, { ic: '🤝', odds: ['charisme', adc, ['social', 'strat']], req: { ok: () => gap >= 26 ? 'Vos idéaux sont inconciliables' : rep < -25 ? 'Ils te haïssent trop' : null }, sub: `${moralIc(karma())} toi · ${moralIc(moralOf(hold))} eux · écart ${Math.round(gap)} (${gap <= 6 ? 'proches : alliance facile' : gap >= 16 ? 'éloignés : alliance difficile' : 'écart moyen'}) · réversible` })); }
+  L.push(C('Prendre la pierre par la force', () => stoneAssault(id, tier), { cls: 'danger', req: { grade: minGrade }, sub: `Affrontement contre les gardiens de la pierre. ${moralGap(hold) <= 6 ? 'Ils te ressemblent : lourd à porter moralement.' : moralOf(hold) < karma() - 8 ? 'Leur camp est moins juste que le tien.' : ''}` }));
   L.push(C('Pas maintenant', hub, { cls: 'back' }));
-  show({ kicker: `Pierre de ${s.name}`, title: `Chez ${hn}`, text: [`La pierre de ${esc(s.name)} (royaume ${esc(s.ruler)}) est ${hold === 'pnj-levant' ? 'entre les mains d’un descendant du peuple du feu' : 'gardée par ' + esc(hn)} à ${esc(capName(W.stoneLoc[id]))}.`, `<span class="mut">Ton lien avec ${esc(hn)} : ${repLevel(rep)} (${rep}).</span>`], choices: L });
+  show({ kicker: `Pierre de ${s.name}`, title: `Chez ${hn}`, text: [`La pierre de ${esc(s.name)} (royaume ${esc(s.ruler)}) est ${hold === 'pnj-levant' ? 'entre les mains d’un descendant du peuple du feu' : 'gardée par ' + esc(hn)} à ${esc(capName(W.stoneLoc[id]))}.`, `<span class="mut">Alignement : toi ${moralIc(karma())} ${karmaName()} · eux ${moralIc(moralOf(hold))} · écart ${Math.round(moralGap(hold))}</span>`, `<span class="mut">Ton lien avec ${esc(hn)} : ${repLevel(rep)} (${rep}).</span>`], choices: L });
 }
 function stoneWin(id, lines, extra) {
   const L = [...(extra || []), ...fx({ stone: id })]; const s = STONE[id];
@@ -4858,7 +4875,7 @@ function stoneTalk(id, tier, bypassRep) {
 function guardsOf(hold, tier) { const n = tier >= 4 ? 3 : 2; const g = hold === 'fa' ? [mkFoe('atlas', 5), mkFoe('soldat', 5), mkFoe('centaure', 4)].slice(0, n) : (hold === 'pnj-levant' || hold === 'temple' || !F[hold]) ? foesFor('civils', tier, 2) : foesFor(hold, Math.min(5, tier), n); if (tier >= 4 && hold !== 'fa') { const c = G.world.leader[hold] && CH[G.world.leader[hold]]; if (c) g.push(mkFoe('porteur', Math.min(5, tier), c.name + ' (chef)', { cid: c.id })); } return g; }
 function stoneAssault(id, tier) {
   const hold = G.world.stoneHolder[id];
-  startCombat({ title: `Assaut : ${holderName(hold)}`, foes: guardsOf(hold, tier), lethal: lethalOf(hold), intro: `Tu fonces sur les gardiens de la pierre de ${STONE[id].name}.`, onWin: L => stoneWin(id, ['Les gardiens à terre, la pierre est à toi.'], [...L, ...fx({ rep: { [repF(hold)]: -25 }, heat: 8 })]) });
+  startCombat({ title: `Assaut : ${holderName(hold)}`, foes: guardsOf(hold, tier), lethal: lethalOf(hold), intro: `Tu fonces sur les gardiens de la pierre de ${STONE[id].name}.`, onWin: L => { const gap = moralGap(hold); const near = gap <= 6, far = gap >= 16; addKarma(near ? -2 : far && moralOf(hold) < karma() ? 1 : -0.5); stoneWin(id, ['Les gardiens à terre, la pierre est à toi.', near ? 'Ils étaient de ton bord, ou presque : ça pèse.' : far && moralOf(hold) < karma() ? 'Tu libères la pierre d’un camp qui n’aurait pas dû la garder.' : ''].filter(Boolean), [...L, ...fx({ rep: { [repF(hold)]: Math.round(-25 * (near ? 1.4 : far ? 0.6 : 1)) }, heat: 8 })]); } });
 }
 function templeExpedition(id) {
   const s = STONE[id]; const pc = G.pc; const steps = ['Les glyphes de l’entrée', 'Les mécanismes du temple', 'La salle de l’autel'];
@@ -4877,7 +4894,7 @@ function templeExpedition(id) {
 // ───────── Menaces sur les pierres ─────────
 EVENT_FN.stoneRaid = function () {
   const pc = G.pc; const n = stoneCount(); if (!n) return hub();
-  const sid = pick(Object.keys(pc.stones)); const tier = clamp(Math.ceil(n / 3) + 1, 2, 5); const att = n >= 6 && G.world.era !== 'newera' ? 'fa' : pick(Object.keys(F).filter(f => isAnti(f) && f !== pc.faction && relation(pc.faction, f) <= 0));
+  const sid = pick(Object.keys(pc.stones).filter(x => !(pc.stoneAlly && pc.stoneAlly[x])).concat([]).length ? Object.keys(pc.stones).filter(x => !(pc.stoneAlly && pc.stoneAlly[x])) : Object.keys(pc.stones)); const tier = clamp(Math.ceil(n / 3) + 1, 2, 5); const att = n >= 6 && G.world.era !== 'newera' ? 'fa' : pick(Object.keys(F).filter(f => isAnti(f) && f !== pc.faction && relation(pc.faction, f) <= 0));
   const foes = foesFor(att, tier, 3 + (n > 6 ? 1 : 0));
   show({ kicker: 'Menace', title: `On convoite ta pierre de ${STONE[sid].name}`, text: [`${esc(F[att].name)} a retrouvé ta trace. Une équipe approche de ta planque pour te voler la pierre de ${esc(STONE[sid].name)}.`], choices: [
     C('Défendre la pierre', () => startCombat({ title: `Raid de ${F[att].name}`, foes, lethal: lethalOf(att), onWin: L => show({ title: 'Repoussés', text: ['Ils s’enfuient. La pierre reste à toi.'], fx: [...L, ...fx({ xp: 20, rep: { [att]: -5 } })], choices: [C('Continuer', hub)] }), onLose: () => { loseStone(sid, att); defeatOutcome(lethalOf(att) === 'death' ? 'robbed' : lethalOf(att), `Ils t’arrachent la pierre de ${STONE[sid].name}.`); } })),
