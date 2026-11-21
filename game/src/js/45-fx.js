@@ -47,20 +47,23 @@ function burstAt(el, color, n) { if (!el) return; const r = el.getBoundingClient
 // ───────── Dé ─────────
 function diceEl(r, still) {
   const wrap = h('div', { class: 'dicebox ' + (still ? '' : 'rolling'), onclick: () => wrap.classList.toggle('open'), title: 'Touche pour voir le détail du jet' });
-  const num = h('span', { class: 'dnum' }, still ? r.r : '?'); const face = h('div', { class: 'dface' }, h('div', { class: 'dsq' }, num));
+  const num = h('span', { class: 'dnum' }, still ? r.r : '?'); const cv = h('canvas', { class: 'd3' }); const face = h('div', { class: 'dface d3f' }, cv, num);
+  const tint = () => r.crit ? [255, 214, 40] : r.fumble ? [255, 40, 110] : r.ok ? [40, 225, 150] : [235, 60, 110]; let stop = null;
   const res = h('div', { class: 'dres' }, still ? '' : 'jet en cours…'); const sub = h('div', { class: 'dsub' }, `Difficulté ${r.dc} sur d20`);
   const parts = h('div', { class: 'dparts' });
   wrap.append(face, h('div', { class: 'dinfo' }, h('div', { class: 'dlab' }, `Test de ${(AT[r.attr] ? AT[r.attr].short : 'chance').toLowerCase()}`), res, sub, parts));
   const settle = (quiet) => {
-    wrap.classList.remove('rolling'); wrap.classList.add(r.crit ? 'crit' : r.fumble ? 'fumble' : r.ok ? 'ok' : 'ko'); num.textContent = r.r;
+    if (stop) stop(); D3.still(cv, r.r, tint()); wrap.classList.remove('rolling'); wrap.classList.add(r.crit ? 'crit' : r.fumble ? 'fumble' : r.ok ? 'ok' : 'ko'); num.textContent = r.r;
     res.textContent = r.crit ? 'RÉUSSITE CRITIQUE' : r.fumble ? 'ÉCHEC CRITIQUE' : r.ok ? 'RÉUSSITE' : 'ÉCHEC';
     sub.textContent = `d20 ${r.r} ${r.mod >= 0 ? '+' : '−'} ${Math.abs(r.mod)} = ${r.total} · il fallait ${r.dc}+`;
     parts.append(...(r.parts || []).map(p => h('span', { class: 'dp ' + (p[1] < 0 ? 'neg' : '') }, `${p[1] >= 0 ? '+' : ''}${p[1]} ${p[0]}`)));
     if (!quiet) { sfx(r.crit ? 'crit' : r.ok ? 'win' : 'lose'); buzz(r.ok ? 25 : [40, 30, 60]); if (r.crit) { burstAt(face, '#ffe83a', 30); flash('#ffe83a'); } else if (r.fumble) { shake('shake-big'); flash('#ff3d7f'); } else if (!r.ok) shake(); else burstAt(face, '#35f0a0', 12); }
   };
   if (still || REDUCED) { settle(true); return wrap; }
+  D3.still(cv, rint(1, 20), [0, 190, 225]);
   UI.after.push(() => {
-    let n = 0; const iv = setInterval(() => { num.textContent = rint(1, 20); sfx('tick'); if (++n >= 8) { clearInterval(iv); settle(false); } }, 55);
+    let n = 0; const iv = setInterval(() => { num.textContent = rint(1, 20); sfx('tick'); if (++n >= 12) clearInterval(iv); }, 90);
+    stop = D3.roll(cv, r.r, 1100, tint, () => settle(false));
   });
   return wrap;
 }

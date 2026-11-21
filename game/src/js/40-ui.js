@@ -160,6 +160,7 @@ function render(quiet) {
   if (live) app.append(dockEl());
   if (live && UI.sheetOpen) fillSheet();
   if (sc.after && !sc.afterRan) { sc.afterRan = true; UI.after.push(sc.after); }
+  { const cs = sc.choices && sc.choices.filter(c => !c.lock); if (live && cs && cs.length === 1 && sc.choices.length === 1 && /^Continuer/.test(String(cs[0].label))) { main.classList.add('tapnext'); main.addEventListener('click', e => { if (e.target.closest('button,a,input,select,.dicebox')) return; const b = main.querySelector('.choices .ch'); if (b && !b.disabled && getComputedStyle(b.parentNode).pointerEvents !== 'none') b.click(); }); } }
   if (d && !quiet) { const ch = $('.choices', main); if (ch) { ch.style.pointerEvents = 'none'; setTimeout(() => { ch.style.pointerEvents = ''; }, d * 1000 + 200); } }
   if (!quiet) { try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { } }
   runAfter(); fitScreen();

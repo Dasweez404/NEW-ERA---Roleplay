@@ -874,3 +874,13 @@ button.tile:active,.tile:active,.choice:active{transform:scale(.985)}
 .strip{box-shadow:0 4px 18px rgba(0,0,0,.45);border-radius:2px;overflow:hidden}
 body{background-image:radial-gradient(ellipse at 50% -10%,rgba(60,90,160,.28),transparent 60%),radial-gradient(ellipse at 90% 110%,rgba(160,40,120,.16),transparent 55%)}
 @media (prefers-reduced-motion:reduce){.card.scene{animation:none}}
+
+/* dé 3D */
+.dface.d3f{position:relative}.d3f canvas{filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}.d3f .dnum{position:absolute;opacity:0;pointer-events:none;transform:none}
+.dicebox.ok .d3f canvas{filter:drop-shadow(0 0 12px rgba(53,240,160,.8))}.dicebox.ko .d3f canvas{filter:drop-shadow(0 0 12px rgba(255,61,127,.7))}.dicebox.crit .d3f canvas{filter:drop-shadow(0 0 18px rgba(255,232,58,.95))}
+
+/* fluidité : un écran « Continuer » se valide en touchant la carte */
+.tapnext{cursor:pointer}.tapnext .choices .ch.cta{animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateX(4px)}}
+.tapnext .choices::after{content:"touche n'importe où pour continuer";display:block;text-align:center;font:400 .66rem var(--fm);color:#6f7499;margin-top:6px;letter-spacing:.08em}
+@media (prefers-reduced-motion:reduce){.tapnext .choices .ch.cta{animation:none}}

@@ -256,8 +256,8 @@ function conclude() {
 function teamStrip() {
   const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
   const foes = CB.foes.map((f, i) => [f, i]).filter(([f]) => f.cid && hasSpr(f.cid)); if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
-  const first = !CB.entered; CB.entered = true; const sz = foes.length > 3 ? 52 : 64;
-  const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, 44, 'portrait'), h('small', { class: 'cap' }, CH[a.id] ? CH[a.id].name : ''))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : ''), 'data-k': 'pc' }, sprFit(me, sz, 'portrait'), h('small', { class: 'cap' }, G.pc.name)) : null);
+  const first = !CB.entered; CB.entered = true; const big = innerWidth < 700 ? 1.3 : 1; const sz = Math.round((foes.length > 3 ? 52 : 64) * big);
+  const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, sprFit(a.id, Math.round(44 * big), 'portrait'), h('small', { class: 'cap' }, CH[a.id] ? CH[a.id].name : ''))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : ''), 'data-k': 'pc' }, sprFit(me, sz, 'portrait'), h('small', { class: 'cap' }, G.pc.name)) : null);
   const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ''), style: `animation-delay:${i * 110}ms`, title: fname(f) }, sprFit(f.cid, sz, 'portrait'), h('small', { class: 'cap' }, fname(f)))));
   return h('div', { class: 'cstage' }, left, h('div', { class: 'cvs' }, 'VS'), right);
 }
