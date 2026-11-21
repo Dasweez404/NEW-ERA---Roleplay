@@ -887,3 +887,6 @@ body{background-image:radial-gradient(ellipse at 50% -10%,rgba(60,90,160,.28),tr
 
 .gem3d{filter:drop-shadow(0 0 16px var(--c,#ffe83a));animation:gemIn .7s cubic-bezier(.2,1.4,.4,1) both}
 @keyframes gemIn{from{transform:scale(.2) rotate(-40deg);opacity:0}to{transform:none;opacity:1}}
+
+.stone2.have .em.gemh{filter:none}.stone2 .gemh canvas{animation:none;filter:drop-shadow(0 0 6px var(--c));display:block}
+@media (max-width:640px){html,body{font-size:18.6px}.small,.mut{font-size:max(.82rem,13.5px)}}

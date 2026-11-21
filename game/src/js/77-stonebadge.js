@@ -5,7 +5,7 @@ const STONE_BONUS = { lumiere: ['bond', 1], plante: ['regen', 1], magma: ['dmg',
 function stoneBonusSum(id) { let t = 0; if (!G || !G.pc) return 0; DATA.stones.forEach(s => { if (G.pc.stones[s.id] && STONE_BONUS[s.id] && STONE_BONUS[s.id][0] === id) t += STONE_BONUS[s.id][1]; }); return t; }
 function stoneBonusText(s) { const b = STONE_BONUS[s.id]; return b && PERKS[b[0]] ? PERKS[b[0]][1](b[1]) : ''; }
 function stoneBadge(s) {
-  const have = !!G.pc.stones[s.id]; const el = h('button', { class: 'stone2' + (have ? ' have' : ''), style: `--c:${s.color}`, 'data-tip': `${s.name}${have ? '' : ' (non obtenue)'}\n${stoneBonusText(s)}`, 'aria-label': `Pierre de ${s.name}`, onclick: () => { const on = el.classList.contains('tip'); document.querySelectorAll('.stone2.tip').forEach(x => x.classList.remove('tip')); if (!on) el.classList.add('tip'); } }, h('span', { class: 'em' }, STONE_EMOJI[s.id] || '💎'));
+  const have = !!G.pc.stones[s.id]; const el = h('button', { class: 'stone2' + (have ? ' have' : ''), style: `--c:${s.color}`, 'data-tip': `${s.name}${have ? '' : ' (non obtenue)'}\n${stoneBonusText(s)}`, 'aria-label': `Pierre de ${s.name}`, onclick: () => { const on = el.classList.contains('tip'); document.querySelectorAll('.stone2.tip').forEach(x => x.classList.remove('tip')); if (!on) el.classList.add('tip'); } }, have && typeof gem3d === 'function' && !REDUCED ? h('span', { class: 'em gemh' }, gem3d(s.color, 40)) : h('span', { class: 'em' }, STONE_EMOJI[s.id] || '💎'));
   return el;
 }
 const stoneGrid = () => h('div', { class: 'stones2' }, DATA.stones.map(stoneBadge));

@@ -170,14 +170,28 @@ function meetNpc(cid) {
   L.push(C('Le convaincre par le charisme (gratuit)', () => recruit(cid, 0, true), { odds: ['charisme', 12 + c.stars * 2, ['social']], req: { ok: () => lead ? 'C’est un chef de faction' : pc.party.length >= partyMax() ? 'Groupe complet' : null } }));
   if (lead && lead.id === pc.faction && G.world.leader[pc.faction] === cid) { const ct = pc.flags.chiefWk; const cool = ct != null && G.wk - ct < 8; const here = G.world.npc[cid].loc === G.loc; const ac = pc.flags.chiefTemp;
     L.push(C('Lui demander son aide (temporaire)', () => chiefHelp(cid), { ic: '🆘', sub: `Il t’accompagne ${CHIEF_DESTS} destinations, puis retourne à ses devoirs. Une fois toutes les 8 semaines.`, req: { ok: () => ac ? 'Il est déjà à tes côtés' : !here ? 'Il n’est pas ici (' + capName(G.world.npc[cid].loc) + ')' : cool ? 'Il t’a déjà aidé récemment' : G.world.npc[cid].st === 'captured' ? 'Il est captif' : null } })); }
-  L.push(C('Parler et se renseigner', () => { const L2 = fx({ rep: { [c.faction]: 1 }, spill: false }); show({ kicker: c.name, title: 'Une conversation', text: [`${esc(c.name)} te parle de ${esc(F[c.faction].name)} : « ${esc(F[c.faction].goal)} »`, G.world.stoneClue && lead ? '' : `Il te glisse une rumeur : ${rumor()}`], fx: L2, choices: [C('Continuer', cityMenu)] }); }));
+  L.push(C('Parler et se renseigner', () => { if (tension(cid, {}, 0.12)) return; const L2 = fx({ rep: { [c.faction]: 1 }, spill: false }); show({ kicker: c.name, title: 'Une conversation', text: [`${esc(c.name)} te parle de ${esc(F[c.faction].name)} : « ${esc(F[c.faction].goal)} »`, G.world.stoneClue && lead ? '' : `Il te glisse une rumeur : ${rumor()}`], fx: L2, choices: [C('Continuer', cityMenu)] }); }));
   if (isAnti(c.faction) && c.stars && pc.faction !== c.faction) L.push(C('Le dénoncer à la Force d’Autorité (récompense)', () => betray(cid), { cls: 'danger', sub: 'Trahison : sa faction et ses alliés t’en voudront.' }));
   L.push(C('← Retour', recruitMenu));
   show({ extra: portrait(c.id, 150), kicker: F[c.faction].name, title: c.name, text: [`${esc(c.name)} — ${c.gender === 'H' ? 'homme' : c.gender === 'F' ? 'femme' : 'non-binaire'}, ${esc(c.age)}. Origine : ${esc(stateName(c.origin))}. Style : ${STYLES[c.style || 'brawler'].name}.`, `Pouvoir : ${esc(charPowerText(c))}.`, lead ? '<b>Chef de sa faction.</b>' : '', `Ton lien avec sa faction : ${repLevel(rep)} (${rep}).`], choices: L });
 }
+// Une discussion peut déraper : insulte, vieux contentieux, faction ennemie… et finir en bagarre
+function tension(cid, ctx, p0) {
+  const c = CH[cid], pc = G.pc; if (!c || pc.faction === c.faction && !ctx.bad) return false;
+  const rep = pc.rep[c.faction] || 0; const foe = (isAnti(c.faction) !== isAnti(pc.faction)) || rep < -10;
+  const p = p0 + (foe ? 0.25 : 0) + (rep > 25 ? -0.1 : 0) + (ctx.bad ? 0.15 : 0); if (Math.random() > p) return false;
+  const tier = clamp(c.stars, 1, 5); const fn = () => startCombat({ title: `${c.name} t’attaque`, foes: [mkFoe('porteur', tier, c.name + ' (' + F[c.faction].name + ')', { cid: c.id })], noScale: true, lethal: 'capture', intro: 'Les mots ne suffisent plus.',
+    onWin: L => show({ kicker: c.name, title: 'Calmé', text: [`${esc(c.name)} recule, la mâchoire serrée. La discussion est close.`], fx: [...L, ...fx({ rep: { [c.faction]: -3 }, xp: 12 })], choices: [C('Continuer', cityMenu)] }),
+    onFlee: () => show({ title: 'Tu t’éclipses', text: ['Tu tournes les talons avant que ça dégénère davantage.'], fx: fx({ rep: { [c.faction]: -2 } }), choices: [C('Continuer', cityMenu)] }) });
+  show({ extra: portrait(c.id, 130), kicker: c.name, title: 'Ça dégénère', text: [`${esc(c.name)} change de ton. ${ctx.line || 'Un mot de trop, un regard de travers.'}`, 'Sa main s’approche de son arme.'], choices: [
+    C('Se battre', fn, { cls: 'danger', ic: '⚔️' }),
+    C('Tenter de le calmer', () => { const r = check('charisme', 12 + 2 * tier, ['social']); if (r.ok) show({ kicker: c.name, title: 'Ça retombe', text: [`${esc(c.name)} souffle et baisse la garde.`, checkLine(r)], fx: fx({ xp: 8 }), choices: [C('Continuer', cityMenu)] }); else { show({ kicker: c.name, title: 'Raté', text: ['Il ne veut plus rien entendre.', checkLine(r)], choices: [C('Se défendre', fn, { cls: 'danger' })] }); } }, { odds: ['charisme', 12 + 2 * tier, ['social']], ic: '🕊️' }),
+    C('Partir sans un mot', () => { const L2 = fx({ rep: { [c.faction]: -1 } }); show({ title: 'Tu t’éloignes', text: ['Tu laisses tomber. Il te suit des yeux.'], fx: L2, choices: [C('Continuer', cityMenu)] }); })] });
+  return true;
+}
 function recruit(cid, price, viaCha) {
   const c = CH[cid]; const pc = G.pc;
-  if (viaCha) { const r = check('charisme', 12 + c.stars * 2, ['social']); if (!r.ok) { return show({ kicker: c.name, title: 'Refus', text: [`${esc(c.name)} te regarde de haut en bas. « Non. »`, checkLine(r)], choices: [C('Continuer', cityMenu)] }); } }
+  if (viaCha) { const r = check('charisme', 12 + c.stars * 2, ['social']); if (!r.ok) { if (tension(cid, { bad: true, line: 'Ton insistance l’agace.' }, 0.3)) return; return show({ kicker: c.name, title: 'Refus', text: [`${esc(c.name)} te regarde de haut en bas. « Non. »`, checkLine(r)], choices: [C('Continuer', cityMenu)] }); } }
   pc.money -= price; addAlly(cid, viaCha ? 50 : 60); addRep(c.faction, -2, { spill: false });
   logEntry(`${c.name} rejoint ton groupe.`);
   show({ kicker: c.name, title: 'Une recrue', text: [`${esc(c.name)} te rejoint. Veille à sa loyauté : les ordres douteux et les échecs la font baisser.`], choices: [C('Continuer', cityMenu)] });
