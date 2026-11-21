@@ -843,3 +843,15 @@ body::after{display:none!important}
   .roomy .rail2{margin:7px 0}
   .roomy .dk .i{font-size:1.1rem}.roomy .dk .n{font-size:.6rem}
 }
+
+.cvs{font:900 .8rem var(--fd);color:var(--acc);letter-spacing:.1em;opacity:.8}
+
+@media (max-width:640px){.roomy .cstage{min-height:116px;padding:6px 8px}.roomy .cstage img{max-height:104px;width:auto}.roomy .cstage .cside{gap:10px}}
+@media (max-width:640px){
+  .tiles.hand .ch{min-height:74px!important;padding:6px 6px!important;gap:3px}
+  .tiles.hand .ch .tic{font-size:1.25rem}.tiles.hand .ch .l{font-size:.78rem}.tiles.hand .ch .s{font-size:.66rem;-webkit-line-clamp:1}
+  .combat .foechips{gap:4px}.combat .fchip{padding:3px 8px}.combat .fchip .fst{font-size:.6rem}
+}
+
+.cstage .cfoe,.cstage .cme,.cstage .cmate{display:flex;flex-direction:column;align-items:center;gap:2px}.cstage .cap{font:600 .55rem var(--fm);color:#c8ccf0;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){.cstage{min-height:96px}.cstage img{max-height:84px;width:auto}}
