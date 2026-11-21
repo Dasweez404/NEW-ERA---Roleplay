@@ -1,9 +1,10 @@
 // ───────── Capture, évasion, gladiateurs, Fallen ─────────
 function prisonFor(stars) { return stars >= 4 ? 'swahilis' : G.loc; }
+const recentCaps = () => Math.min(3, ((G.pc.flags.capLog) || []).filter(w => G.wk - w <= 26).length);
 function capturedScene(text) {
   const pc = G.pc; const st = wantedStars(); const fa = pc.faction === 'fa'; const captor = fa ? (Object.keys(F).filter(f => isAnti(f)).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0))[0] || 'noir') : 'fa'; const captorName = fa ? (F[captor] ? F[captor].name : 'le Marché Noir') : 'la Force d’Autorité';
-  pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4));
-  pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : 20), tartare: st >= 4 && !fa, captor };
+  pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4)); (pc.flags.capLog = pc.flags.capLog || []).push(G.wk);
+  pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : st >= 2 ? 10 : 6), tartare: st >= 4 && !fa, captor };
   pc.stash = { inv: pc.inv, eq: pc.eq }; pc.inv = { kit: 0 }; delete pc.inv.kit; pc.eq = { arme: null, armure: null };
   splash({ title: 'CAPTURÉ', sub: pc.flags.cap.tartare ? 'Direction le Tartare' : 'Derrière les barreaux', icon: '⛓', color: '#ff3d7f' }); shake('shake-big'); G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par ${captorName}.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
   show({ kicker: 'CAPTURÉ', title: pc.flags.cap.tartare ? 'Le Tartare' : fa ? `Prisonnier de ${captorName}` : 'Cellule', text: [text || 'On te passe les menottes.', fa ? `Un officier de la Force d’Autorité, capturé par ${esc(captorName)} : ils te retiennent dans une planque et monnaient ta liberté.` : st >= 4 ? 'Tu es un multirécidiviste, « représentant » de ta faction, recherché sur tout le globe : direction le <b>Tartare</b>, la plus grande prison du monde, sous la garde de Gaia, Erebe, Nyx et Eros.' : st >= 3 ? 'Prison continentale. Ils ne comptent pas te relâcher de sitôt.' : st >= 2 ? 'Prison d’État. Quelques mois derrière les barreaux t’attendent.' : 'Garde à vue. Pour des infractions mineures, tu n’en as pas pour longtemps.', 'Ton équipement est confisqué. Les captifs vivants peuvent être interrogés, emprisonnés, torturés, exécutés ou vendus selon leur mise à prix.'], choices: [C('Continuer', hub)] });

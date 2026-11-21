@@ -1433,7 +1433,7 @@ function skill(attrId, tags = []) {
 }
 // Équilibrage : les difficultés (dc) écrites dans le jeu sont recalées sur une courbe douce (±9 % par niveau d'écart),
 // et les bonus cumulés (pouvoir, rôle, style, matériel, équipe…) sont plafonnés pour qu'un perso spécialisé reste battable.
-const dcEff = dc => { let e = 1; if (typeof G !== 'undefined' && G && G.pc && G.pc.stones) e = (1 + 0.8 * (G.pc.pstars || 0) + (G.pc.grade || 0) * 0.3) - stoneCount() * 0.5; return Math.round(4.5 + 0.58 * dc + Math.max(0, e)); };
+const dcEff = dc => { let e = 1; if (typeof G !== 'undefined' && G && G.pc && G.pc.stones) e = (1 + 0.8 * (G.pc.pstars || 0) + (G.pc.grade || 0) * 0.3) - stoneCount() * 0.5 - (typeof recentCaps === 'function' ? recentCaps() * 1.2 : 0); return Math.round(4.5 + 0.58 * dc + Math.max(0, e)); };
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
   const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
@@ -3274,6 +3274,7 @@ function cityMenu() {
     const rec = hpR < 0.6 || pc.en < pc.enMax * 0.3 ? 'Se reposer' : (pc.money >= 250 && light) ? 'Marché' : (pc.party.length < Math.min(2, partyMax()) && pc.money >= 300) ? 'Recruter' : 'S’entraîner';
     T.forEach(c => { if (c.label === rec) { c.sub = '★ Conseillé · ' + (c.sub || ''); c.cls = ((c.cls || '') + ' safe').trim(); } });
     T.forEach(c => { const g = c.go; c.go = () => { f.cityMark = cityMark(); f.cityActs--; g(); }; }); L.push(...T);
+    { const sq = typeof stoneQuestHere === 'function' ? stoneQuestHere() : null; if (sq) { const lv = G.world.stoneLv[sq.id] || 0; L.push(C(lv >= 3 ? `La pierre de ${sq.name} est ici` : `Enquêter : pierre de ${sq.name}`, () => stoneQuestCard(sq), { ic: '💎', cls: 'risk', sub: lv >= 3 ? 'Tu connais sa cachette : tente de la récupérer (ne coûte pas d’action de ville).' : 'Un indice t’y a mené (ne coûte pas d’action de ville).' })); } }
   }
   { const q = []; const pcx = pc; const heal = ['nanosoin', 'kit'].find(id => hasItem(id)); if (heal && pcx.hp < pcx.hpMax * 0.7) q.push(C(`Utiliser ${ITEMS[heal].n}`, () => { useItem(heal); toast(`${ITEMS[heal].n} utilisé`); sfx('win'); cityMenu(); }, { ic: '💊', cls: 'safe', sub: `${ITEMS[heal].desc} · n’utilise pas ton action` })); if (hasItem('capsule') && pcx.en < pcx.enMax * 0.5) q.push(C('Utiliser une Capsule OGEN', () => { useItem('capsule'); toast('+8 énergie'); sfx('win'); cityMenu(); }, { ic: '⚡', cls: 'safe', sub: 'Recharge 8 énergie · n’utilise pas ton action' })); L.unshift(...q); }
   coach('ville'); show({ kicker: 'EN VILLE · ' + capName(G.loc).toUpperCase(), title: 'Une action ici, puis tu repars', text: [(typeof feat === 'function' && feat('rep')) ? `<span class="mut">${esc(zoneOf())} · ${cityLabel(cityRep())}${cityPerk().txt ? ' · ' + cityPerk().txt : ''}</span>` : ''].filter(Boolean), choices: L, tiles: true });
@@ -5132,10 +5133,11 @@ EVENT_FN.neo = function () {
 
 // ───────── Capture, évasion, gladiateurs, Fallen ─────────
 function prisonFor(stars) { return stars >= 4 ? 'swahilis' : G.loc; }
+const recentCaps = () => Math.min(3, ((G.pc.flags.capLog) || []).filter(w => G.wk - w <= 26).length);
 function capturedScene(text) {
   const pc = G.pc; const st = wantedStars(); const fa = pc.faction === 'fa'; const captor = fa ? (Object.keys(F).filter(f => isAnti(f)).sort((a, b) => (pc.rep[a] || 0) - (pc.rep[b] || 0))[0] || 'noir') : 'fa'; const captorName = fa ? (F[captor] ? F[captor].name : 'le Marché Noir') : 'la Force d’Autorité';
-  pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4));
-  pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : 20), tartare: st >= 4 && !fa, captor };
+  pc.hp = Math.max(1, Math.round(pc.hpMax * 0.4)); (pc.flags.capLog = pc.flags.capLog || []).push(G.wk);
+  pc.flags.cap = { wk: G.wk, stars: st, deadline: G.wk + (st >= 4 ? 12 : st >= 3 ? 16 : st >= 2 ? 10 : 6), tartare: st >= 4 && !fa, captor };
   pc.stash = { inv: pc.inv, eq: pc.eq }; pc.inv = { kit: 0 }; delete pc.inv.kit; pc.eq = { arme: null, armure: null };
   splash({ title: 'CAPTURÉ', sub: pc.flags.cap.tartare ? 'Direction le Tartare' : 'Derrière les barreaux', icon: '⛓', color: '#ff3d7f' }); shake('shake-big'); G.loc = prisonFor(st); logEntry(`Capturé${pc.gender === 'F' ? 'e' : ''} par ${captorName}.`); newsPush(`${pc.name} a été capturé${pc.gender === 'F' ? 'e' : ''} (prime ${st ? starStr(st) : 'aucune'}).`);
   show({ kicker: 'CAPTURÉ', title: pc.flags.cap.tartare ? 'Le Tartare' : fa ? `Prisonnier de ${captorName}` : 'Cellule', text: [text || 'On te passe les menottes.', fa ? `Un officier de la Force d’Autorité, capturé par ${esc(captorName)} : ils te retiennent dans une planque et monnaient ta liberté.` : st >= 4 ? 'Tu es un multirécidiviste, « représentant » de ta faction, recherché sur tout le globe : direction le <b>Tartare</b>, la plus grande prison du monde, sous la garde de Gaia, Erebe, Nyx et Eros.' : st >= 3 ? 'Prison continentale. Ils ne comptent pas te relâcher de sitôt.' : st >= 2 ? 'Prison d’État. Quelques mois derrière les barreaux t’attendent.' : 'Garde à vue. Pour des infractions mineures, tu n’en as pas pour longtemps.', 'Ton équipement est confisqué. Les captifs vivants peuvent être interrogés, emprisonnés, torturés, exécutés ou vendus selon leur mise à prix.'], choices: [C('Continuer', hub)] });
