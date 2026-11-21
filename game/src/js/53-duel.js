@@ -257,13 +257,14 @@ function teamStrip() {
   const pc = G.pc; const me = pcSprite(); const mates = pc.party.filter(a => a.inj <= 0 && hasSpr(a.id)).slice(0, 4);
   const foes = CB.foes.map((f, i) => [f, i]).filter(([f]) => f.cid && hasSpr(f.cid)); if (!(me && hasSpr(me)) && !mates.length && !foes.length) return null;
   const first = !CB.entered; CB.entered = true;
-  // une seule échelle pour tous les sprites de la scène : même taille de pixel, la hauteur du plus grand plafonne
+  // chaque sprite est calé dans la même case (même hauteur, les plus larges rétrécissent) : tous paraissent de taille égale
   const ids = [...mates.map(a => a.id), ...(me && hasSpr(me) ? [me] : []), ...foes.map(([f]) => f.cid)].filter(id => SPR[id]);
-  const maxH = Math.max(...ids.map(id => SPR[id][1])), sumW = ids.reduce((t, id) => t + Math.min(SPR[id][0], SPR[id][1] * 1.1), 0); const availW = Math.min(innerWidth - 56, 640) - 40 - ids.length * 14;
-  const scl = Math.max(0.5, Math.min((innerWidth < 700 ? 92 : 100) / maxH, availW / sumW, 2.6));
-  const fit = (id, cls, foe) => { const sp = SPR[id]; return sp ? h('img', { class: 'spr ' + (cls || ''), src: sp[2], width: Math.round(sp[0] * scl), height: Math.round(sp[1] * scl), alt: '', draggable: 'false', style: `margin:0;margin-${foe ? 'left' : 'right'}:-${Math.round(Math.max(0, sp[0] - sp[1] * 1.1) * scl)}px` }) : null; };
+  const availW = Math.min(innerWidth - 56, 640) - 40 - ids.length * 12; const H0 = innerWidth < 700 ? 88 : 100; const boxW = H0 * 1.8;
+  const base = id => { const sp = SPR[id]; return Math.min(H0 / sp[1], boxW / sp[0]); };
+  const sumW = ids.reduce((t, id) => t + SPR[id][0] * base(id), 0); const gf = Math.min(1, availW / sumW);
+  const fit = (id, cls) => { const sp = SPR[id]; if (!sp) return null; const k = base(id) * gf; return h('img', { class: 'spr ' + (cls || ''), src: sp[2], width: Math.max(8, Math.round(sp[0] * k)), height: Math.max(8, Math.round(sp[1] * k)), alt: '', draggable: 'false' }); };
   const left = h('div', { class: 'cside l' }, ...mates.map((a, i) => h('div', { class: 'cmate' + (first ? ' enter-l' : ''), style: `animation-delay:${(i + 1) * 90}ms`, title: CH[a.id] ? CH[a.id].name : '' }, fit(a.id, 'portrait'), h('small', { class: 'cap' }, CH[a.id] ? CH[a.id].name : ''))), me && hasSpr(me) ? h('div', { class: 'cme' + (first ? ' enter-l' : ''), 'data-k': 'pc' }, fit(me, 'portrait'), h('small', { class: 'cap' }, G.pc.name)) : null);
-  const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ''), style: `animation-delay:${i * 110}ms`, title: fname(f) }, fit(f.cid, 'portrait', true), h('small', { class: 'cap' }, fname(f)))));
+  const right = h('div', { class: 'cside r' }, ...foes.map(([f, i]) => h('div', { class: 'cfoe' + (first ? ' enter-r' : '') + (f.dead ? ' ko' : ''), style: `animation-delay:${i * 110}ms`, title: fname(f) }, fit(f.cid, 'portrait'), h('small', { class: 'cap' }, fname(f)))));
   return h('div', { class: 'cstage' }, left, h('div', { class: 'cvs' }, 'VS'), right);
 }
 function foesStrip() {
