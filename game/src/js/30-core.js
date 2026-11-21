@@ -33,12 +33,12 @@ function skill(attrId, tags = []) {
   if (pc.enMax > 0 && pc.en <= 0 && pc.ptype !== 'aucun') { parts.push(['épuisé', -1]); mod -= 1; }
   { const hr = pc.hp / pc.hpMax; const wp = hr < 0.2 ? 3 : hr < 0.4 ? 2 : hr < 0.6 ? 1 : 0; if (wp) { parts.push(['blessé', -wp]); mod -= wp; } }
   if (pc.implant) { parts.push(['implant (nerfs)', -1]); mod -= 1; }
-  { const bonus = mod - A(attrId); if (bonus > 6) { const cut = Math.floor((bonus - 6) / 2); parts.push(['plafond des bonus', -cut]); mod -= cut; } }
+  { const bonus = mod - A(attrId); if (bonus > 4) { const cut = Math.floor((bonus - 4) / 2) + (bonus > 7 ? 1 : 0); parts.push(['plafond des bonus', -cut]); mod -= cut; } }
   return { mod, parts };
 }
 // Équilibrage : les difficultés (dc) écrites dans le jeu sont recalées sur une courbe douce (±9 % par niveau d'écart),
 // et les bonus cumulés (pouvoir, rôle, style, matériel, équipe…) sont plafonnés pour qu'un perso spécialisé reste battable.
-const dcEff = dc => Math.round(3.9 + 0.58 * dc + (typeof G !== 'undefined' && G && G.pc && G.pc.stones ? Math.max(0, 1 - stoneCount() * 0.5) : 1));
+const dcEff = dc => { let e = 1; if (typeof G !== 'undefined' && G && G.pc && G.pc.stones) e = (1 + 0.8 * (G.pc.pstars || 0) + (G.pc.grade || 0) * 0.3) - stoneCount() * 0.5; return Math.round(4.5 + 0.58 * dc + Math.max(0, e)); };
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
   const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
