@@ -14,7 +14,7 @@ function capturedMenu() {
   L.push(C('Tenter de t’évader', escapeMenu, { sub: 'Plusieurs approches. En cas d’échec : blessures et surveillance accrue.' }));
   if (st <= 1) L.push(C(`Payer l’amende (${200 + st * 300} ¢)`, () => { pc.money -= 200 + st * 300; release('Tu paies l’amende et on te rend tes affaires.'); }, { req: { money: 200 + st * 300 } }));
   L.push(C('Acheter ta liberté au Marché Noir', () => { const price = 900 * (st + 1); pc.money -= price; release('Un gardien « perd » ton dossier. Le Marché Noir encaisse.', { noir: 6 }); }, { req: { money: 900 * (st + 1), rep: { noir: 10 } }, sub: `${900 * (st + 1)} ¢ — il faut un contact (10 de réputation)` }));
-  L.push(C('Combattre dans l’ARENA', () => arenaTournament(3, true), { sub: 'Trois combats à mort. Victoire : liberté et fortune. Défaite : tu es mort ou presque.', cls: 'danger', req: { ok: () => cap.tartare ? null : null } }));
+  L.push(C('Combattre dans l’ARENA', () => arenaTournament(3, true), { sub: 'Trois combats à mort. Victoire : liberté et fortune. Défaite : tu es mort ou presque.' + (pcPower() < 5 ? ' ⚠ Déconseillé : tu n’es pas encore assez fort.' : ''), cls: 'danger', req: { ok: () => cap.tartare ? null : null } }));
   L.push(C('Rejoindre les Fallen (implant explosif)', becomeFallenScene, { cls: 'danger', sub: 'Chasseur de primes sous peine d’explosion. Ton ancienne faction ne te le pardonnera pas.', req: { ok: () => st < 1 ? 'Les Fallen ne recrutent que des recherchés (prime ⭐ ou plus)' : null } }));
   L.push(C('Coopérer à l’interrogatoire', () => { const L2 = fx({ rep: { [pc.faction]: -25 }, spill: true }); cap.deadline += 8; release('Tu parles. Ils te relâchent, mais ta faction apprendra ce que tu as dit.', null, L2, true); }, { cls: 'danger', sub: 'Trahison : ta faction et ses alliés s’en souviendront.', req: { ok: () => st >= 3 ? 'Trop recherché : ils ne te relâcheront pas' : null } }));
   L.push(C('Attendre un sauvetage de tes alliés (1 mois)', () => { advance(4); if (G.status !== 'play') return; if (!pc.flags.cap) return; const rescuers = pc.party.filter(a => a.inj <= 0); const base = 0.15 + (pc.rep[pc.faction] || 0) / 250 + (rescuers.length * 0.12) + (pc.grade >= 3 ? 0.1 : 0); if (chance(base)) { const name = rescuers.length ? CH[rescuers[0].id].name : leaderName(pc.faction); release(`${esc(name)} et ses amis font sauter la porte de ta cellule en pleine nuit.`, { [pc.faction]: 4 }); } else show({ kicker: 'Captivité', title: 'Personne n’est venu', text: ['Les jours passent dans le silence.', `Il te reste ${Math.max(0, cap.deadline - G.wk)} semaine(s) avant le verdict.`], choices: [C('Continuer', hub)] }); }, { sub: `Chances : ~${Math.round((0.15 + (pc.rep[pc.faction] || 0) / 250 + freeAllies * 0.12 + (pc.grade >= 3 ? 0.1 : 0)) * 100)} %` }));
@@ -30,7 +30,7 @@ function captiveMonth() {
   }
 }
 function release(text, repFx, extra, interrogated) {
-  const pc = G.pc; const L = extra || []; pc.flags.cap = null; if (pc.stash) { pc.inv = pc.stash.inv; pc.eq = pc.stash.eq; pc.stash = null; }
+  const pc = G.pc; const L = extra || []; pc.flags.cap = null; pc.flags.noCap = G.wk + 12; if (pc.stash) { pc.inv = pc.stash.inv; pc.eq = pc.stash.eq; pc.stash = null; }
   pc.hp = Math.max(pc.hp, Math.round(pc.hpMax * 0.5)); pc.en = pc.enMax; if (!interrogated) addHeat(-10, L);
   if (repFx) L.push(...fx({ rep: repFx }));
   G.loc = G.loc === 'swahilis' && wantedStars() >= 4 ? 'swahilis' : G.loc; recalc(); logEntry('Libéré.'); G.board = null;

@@ -132,6 +132,11 @@ function loseCombat(surrender) {
 // Défaite : capture / pillage / mort
 function defeatOutcome(lethal, text) {
   const pc = G.pc; pc.hp = Math.max(1, pc.hp);
+  if (lethal === 'capture' && (G.wk < 12 || G.wk < (pc.flags.noCap || 0))) {
+    // sursis : on vient d'être libéré (ou la partie débute) — on s'en sort, mais ça coûte cher
+    const lost = Math.min(pc.money, Math.round(pc.money * 0.2) + 20); pc.money -= lost; pc.hp = Math.max(1, Math.round(pc.hpMax * 0.3)); addHeat(2, []);
+    return show({ kicker: 'DÉFAITE', title: 'Tu t’en sors de justesse', text: [text || 'Tu es battu.', 'Tu rampes hors de la mêlée avant qu’on ne te passe les menottes. Tu perds ' + lost + ' ¢ et du sang, mais tu es libre.'], choices: [C('Continuer', hub)] });
+  }
   if (lethal === 'capture') {
     const st = wantedStars(); const p = clamp(0.05 + 0.06 * st, 0.05, 0.35);
     if (chance(p)) { const d = pcDie('Abattu lors de ton arrestation.'); if (d) return show({ kicker: 'DÉFAITE', title: 'Tiré à bout portant', text: ['Un agent tire. Tout devient noir…', `${esc(d.rescued)} t’arrache à la mêlée, in extremis. Tu n’auras pas de seconde chance.`], choices: [C('Continuer', hub)] }); return; }
