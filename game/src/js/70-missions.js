@@ -125,6 +125,14 @@ function missionApproach(o) {
   const a = ARCH[o.arch];
   show({ extra: o.tchar ? portrait(o.tchar, 96) : null, kicker: `${o.promo ? 'ÉPREUVE DE GRADE' : 'MISSION'} · ${o.empName} · ${stars(o.tier)}`, title: a.n, text: [ctxText(a.intro, o), o.tchar && CH[o.tchar] ? `Cible désignée : <b>${esc(CH[o.tchar].name)}</b> (${esc(F[CH[o.tchar].faction].name)}, ${charPowerText(CH[o.tchar])}).` : '', ['assassinat', 'kidnapping', 'incendie', 'emeute'].includes(o.arch) ? '<span class="badc">Sans retour : des gens en subiront les conséquences.</span>' : '', `<span class="mut">${o.pay} ¢ · ${o.xp} XP${o.merit ? ' · +' + o.merit + ' mérite' : ''} · ${o.weeks} sem.${o.promo ? ' · <b>grade à la clé</b>' : ''}</span>`].filter(Boolean), choices: [...approachChoices(o), ...(G.pc.en >= 2 && !G.pc.stim ? [C('Se concentrer', () => { G.pc.en -= 2; G.pc.stim = 1; toast('Concentration : +3 au prochain jet'); sfx('win'); missionApproach(o); }, { ic: '⚡', sub: '+3 au prochain jet · 2⚡', cls: 'back' })] : []), ...(hasItem('stimulant') && !G.pc.stim ? [C('Utiliser un stimulant (+3 au prochain jet)', () => { useItem('stimulant'); toast('Stimulant : +3 au prochain jet'); sfx('win'); missionApproach(o); }, { ic: '💉', cls: 'back' })] : []), C('Renoncer', o.back || (o.feed ? hub : missionBoard), { cls: 'back' })] });
 }
+// Au début on est petit : chaque mission coûte de l'énergie et des forces, de moins en moins à mesure qu'on s'endurcit
+const earlyF = () => clamp(1 - stoneCount() * 0.16 - (G.wk || 0) / 260, 0, 1);
+function earlyTax(ok) {
+  const pc = G.pc, ef = earlyF(); if (ef < 0.15) return; const bits = [];
+  if (pc.enMax > 0 && pc.en > 0 && chance(0.35 + 0.5 * ef)) { pc.en = Math.max(0, pc.en - 1); bits.push('−1⚡'); }
+  if (chance((ok ? 0.45 : 0.85) * ef + 0.05)) { const d = Math.max(1, Math.round(pc.hpMax * (0.05 + 0.07 * ef) * (ok ? 0.8 : 1.3))); pc.hp = Math.max(1, pc.hp - d); bits.push('−' + d + '❤'); }
+  if (bits.length) toast('Tu y laisses des forces : ' + bits.join(' '));
+}
 function resolveApproach(o, k, dc) {
   const a = ARCH[o.arch]; const d = APPROACH[k]; const pc = G.pc;
   if (k === 'furtif' && typeof feat === 'function' && feat('infil') && INFIL.has(o.arch)) return infiltration(o);
@@ -132,6 +140,7 @@ function resolveApproach(o, k, dc) {
   const tags = k === 'pouvoir' ? a.ptags : d.t; const qb = k === 'pouvoir' ? qaBonus(o) : 0; if (qb) questUse(); const penal = k === 'pouvoir' && !qb && !a.ptags.some(t => (powerTags()[t] || 0) > 0) ? -2 : 0;
   const r = check(d.a, dc, tags, (d.money ? 4 : 0) + penal + qb);
   advance(o.weeks); if (G.status !== 'play') return;
+  earlyTax(r.ok);
   const txt = a.ap[k];
   if (r.ok && k === 'pouvoir' && pcPowers()[0]) pxGain(pcPowers()[0].id, 1);
   if (r.ok) {

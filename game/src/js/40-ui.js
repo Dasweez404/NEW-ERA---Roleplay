@@ -125,7 +125,7 @@ function choicesEl(list, tiles, tcls) {
     return h('button', { class: 'ch rv ' + (c.cls || '') + (cta ? ' cta' : '') + (back ? ' back' : ''), style: `--i:${i + 4}`, 'data-k': i + 1, disabled: !!c.lock, onclick: () => { if (!c.lock) { sfx('click'); buzz(10); try { if (typeof tele === 'function') tele('pick', { l: String(c.label || '').slice(0, 40), p: c.pct }); } catch (e) { } c.go(); } } },
       !cta && !back && !tiles ? (c.img && hasSpr(c.img) ? h('span', { class: 'cimg' }, sprFit(c.img, 52)) : h('span', { class: 'key' }, i + 1)) : null, tiles && c.img && hasSpr(c.img) ? h('span', { class: 'tspr' }, sprFit(c.img, 64)) : (tiles && c.ic ? h('span', { class: 'tic' }, c.ic) : null),
       h('span', { class: 'body' }, h('span', { class: 'l' }, emo(c.label)), c.sub ? h('span', { class: 's' }, emo(c.sub)) : null, c.lock ? h('span', { class: 'lockwhy' }, '🔒 ' + c.lock) : null),
-      c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo') }, c.pct + '%', c.att ? h('small', {}, c.att) : null) : null, cta ? h('span', { class: 'arrow' }, '›') : null);
+      c.pct != null ? h('span', { class: 'pct ' + (c.pct >= 65 ? 'hi' : c.pct >= 40 ? 'mid' : 'lo'), title: 'Le calcul du dé n’apparaît qu’au moment du jet' }, h('i', { class: 'pips' }, h('b'), h('b'), h('b')), c.att ? h('small', {}, c.att) : null) : null, cta ? h('span', { class: 'arrow' }, '›') : null);
   }));
 }
 

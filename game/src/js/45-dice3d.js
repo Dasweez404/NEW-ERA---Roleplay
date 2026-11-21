@@ -68,3 +68,15 @@ function gem3d(color, S = 96) {
   };
   requestAnimationFrame(step); return cv;
 }
+
+// ───────── Inclinaison 3D : bandeau de ville, scène de combat et portraits suivent le doigt / la souris ─────────
+(() => {
+  const SEL = '.strip, .cstage, .portwrap, .cityhead'; let cur = null;
+  const tilt = (el, e) => { const r = el.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; el.style.transform = `perspective(700px) rotateY(${(x * 14).toFixed(1)}deg) rotateX(${(-y * 10).toFixed(1)}deg) scale(1.015)`; el.style.transition = 'transform .08s'; };
+  const rest = el => { if (el) { el.style.transform = ''; el.style.transition = 'transform .35s cubic-bezier(.2,1.2,.4,1)'; } };
+  document.addEventListener('pointermove', e => { const el = e.target.closest && e.target.closest(SEL); if (cur && cur !== el) rest(cur); cur = el; if (el) tilt(el, e); }, { passive: true });
+  document.addEventListener('pointerup', () => { rest(cur); cur = null; }, { passive: true });
+  document.addEventListener('pointerleave', () => { rest(cur); cur = null; }, { passive: true });
+  // gyroscope léger sur mobile (si autorisé) : le bandeau de ville se balance
+  window.addEventListener('deviceorientation', e => { if (e.gamma == null) return; const el = document.querySelector('.strip'); if (!el || cur) return; el.style.transform = `perspective(700px) rotateY(${Math.max(-8, Math.min(8, e.gamma / 5)).toFixed(1)}deg) rotateX(${Math.max(-6, Math.min(6, ((e.beta || 45) - 45) / 8)).toFixed(1)}deg)`; }, { passive: true });
+})();

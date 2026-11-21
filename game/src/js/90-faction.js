@@ -133,7 +133,7 @@ function diplomacy() {
     const state = rel >= 2 ? ['🤝 Allié', 'ok'] : rel <= -2 ? ['⚔ En guerre', 'war'] : ['Neutre', 'neu'];
     const lockAll = left <= 0 ? 'Assez pour cette ville' : null;
     const mk = (cls, ic, txt, fn, why) => h('button', { class: 'dipb ' + cls, disabled: !!why, title: why || '', onclick: () => { sfx('click'); fn(); } }, h('span', { class: 'dic' }, ic), h('small', {}, txt));
-    const left1 = rel >= 2 ? mk('al', '💔', 'Rompre', () => breakAl(fid), lockAll) : mk('al', '🤝', `${pct}%`, () => propose(fid), lockAll || (rel <= -2 ? 'En guerre : impossible' : rep < -20 ? 'Ils te détestent' : null));
+    const left1 = rel >= 2 ? mk('al', '💔', 'Rompre', () => breakAl(fid), lockAll) : mk('al', pct >= 65 ? '🟢' : pct >= 40 ? '🟡' : '🔴', 'Allier', () => propose(fid), lockAll || (rel <= -2 ? 'En guerre : impossible' : rep < -20 ? 'Ils te détestent' : null));
     const right1 = mk('wr', '⚔', 'Guerre', () => war(fid), lockAll || (rel <= -2 ? 'Déjà en guerre' : null));
     const bs = base(fid); return h('div', { class: 'dipcard ' + state[1] + (bs ? ' base-' + bs : ''), style: `--c:${facHue(fid)}` }, bs ? h('span', { class: 'dipflag ' + bs, title: bs === 'foe' ? 'Ennemi de base' : 'Ami de base' }, bs === 'foe' ? '🔥 Ennemi naturel' : '🌿 Ami naturel') : null, h('div', { class: 'dipn' }, F[fid].name), h('div', { class: 'dips' }, state[0]), h('div', { class: 'dipbs' }, left1, right1));
   });

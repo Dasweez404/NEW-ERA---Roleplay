@@ -109,6 +109,7 @@ function runStory(s, roleId) {
 }
 function storyCard() {
   const f = G.pc.flags; const seen = f.storySeen = f.storySeen || [];
+  { const ch = typeof chainDue === 'function' ? chainDue() : null; if (ch) return runChain(ch); }
   const loc = Object.keys(LOCAL_STORIES).filter(k => F[k] && F[k].hq === G.loc);
   if (loc.length && chance(0.6)) {
     const lk = f.storyLoc = f.storyLoc || []; const k = pick(loc); const arr = LOCAL_STORIES[k]; const id = k + ':' + rint(0, arr.length - 1);
