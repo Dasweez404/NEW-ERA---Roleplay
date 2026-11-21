@@ -52,3 +52,8 @@ Ces points complètent les documents d'origine (PDF V.11, CSV, XLSX) là où ils
 | Fin d'une partie réussie | Fin libre (retraite, domination, libération, renoncement selon les actes) ET chute de Néo comme grande issue possible. |
 
 À intégrer dans le jeu : dialogues, descriptions de factions, missions Omega (infiltration de factions recherchées), retrait d'implant via Gamma Lab.
+
+## Canon précisé (réponses de l'auteur)
+- **Pierres antiques** : le même phénomène que la génotite. Les « pierres mutas » sont, elles aussi, apparues sur Terre ; elles sont de même nature que ce qui a déclenché l'éveil des géno-porteurs.
+- **Protocole ANTI** : à la fois une vraie protection née d'un drame fondateur, et un prétexte de contrôle qui a dérivé avec le temps.
+- **Panthéon et Néo** : leur secret est qu'ils veulent détruire les pierres (ils connaissent un danger que personne d'autre ne connaît).

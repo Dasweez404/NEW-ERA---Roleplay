@@ -38,7 +38,7 @@ function stoneMenu() {
   const known = DATA.stones.filter(s => !pc.stones[s.id] && (W.stoneLv[s.id] || W.stoneClue[s.id]));
   const cards = h('div', { class: 'stclues' }, known.length ? known.map(s => { const lv = W.stoneLv[s.id] || 1; const loc = W.stoneLoc[s.id];
     return h('div', { class: 'stclue', style: `--c:${s.color}` }, h('b', {}, `Pierre de ${s.name}`), h('span', { class: 'stlv' }, '◆'.repeat(lv) + '◇'.repeat(3 - lv)), h('div', { class: 'small mut' }, lv === 1 ? `Rumeur : zone ${zoneOf(loc)}.` : lv === 2 ? `Quelque part près de ${capName(loc)}. Une quête t’y attend.` : `${esc2(stoneClueText(s))}`)); }) : [h('div', { class: 'mut small' }, G.wk < 6 ? 'Les pierres sont encore des légendes. Les premiers indices arriveront au fil de tes aventures.' : 'Aucun indice pour l’instant. Les missions et les rencontres en livrent parfois.')]);
-  show({ kicker: 'Pierres antiques', title: `${stoneCount()}/16`, text: ['<span class="mut">Les indices font apparaître des 💎 sur la carte de l’Orbitrail. Va là-bas : l’enquête se fera pendant ton séjour, et la pierre se récupère à la fin de la quête principale.</span>'], extra: h('div', {}, stoneGrid(), cards), choices: L });
+  show({ kicker: 'Pierres antiques', title: `${stoneCount()}/16`, text: ['<span class="mut">Même nature que la génotite : les pierres sont apparues sur Terre en même temps que l’éveil. Les indices font apparaître des 💎 sur la carte de l’Orbitrail. Va là-bas : l’enquête se fera pendant ton séjour, et la pierre se récupère à la fin de la quête principale.</span>'], extra: h('div', {}, stoneGrid(), cards), choices: L });
 }
 const esc2 = t => cap(t);
 function glyphLib() {
