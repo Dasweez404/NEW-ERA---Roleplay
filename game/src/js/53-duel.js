@@ -133,7 +133,6 @@ function startCombat(cfg) {
   if (cfg.buff) { CB.hitBuff += cfg.buff; clog(`Tu connais ses coups : +${cfg.buff} à tous tes jets.`, 'good'); }
   CB.thr = threat(); CB.N = roundsFor2(cfg, CB.foes, CB.thr.gap); CB.team = isTeamBattle(cfg); if (CB.team) { CB.N = 6; CB.T = clamp(2 + (CB.foes.length >= 4 ? 1 : 0) + (CB.thr.gap >= 1 ? 1 : 0), 2, 4); CB.Lmax = 3; } else { CB.N = 1; CB.T = 1; CB.Lmax = 1; }
   if (hasAnti('buff')) CB.hitBuff += 1; if (hasAnti('rebound')) CB.shield += 6; if (hasAnti('shield')) CB.shield += 8; if (hasAnti('dash')) CB.dodge += 1;
-  clog(cfg.intro || 'Le combat commence !');
   if (cfg.noPreview) return beginDuel();
   if (CB.thr.gap <= -2) return sweepAway();
   if (!cfg.noAuto && cfg.lethal !== 'death' && !cfg.noPreview) { nextIntent(); const mv = moves().filter(m => m.attr && !m.lock && m.kind === 'hit'); const best = mv.reduce((b, m) => Math.max(b, odds(...oddsOf(m))), 0); if (best >= 0.8 && CB.foes.length <= 3) return autoWin(); }
@@ -266,13 +265,13 @@ function foesStrip() {
   const fs = CB.foes.filter(f => !(f.cid && typeof hasSpr === 'function' && hasSpr(f.cid))).map(f => { return h('div', { class: 'fchip' + (f.dead ? ' dead' : ''), 'data-k': 'f' + CB.foes.indexOf(f) }, h('div', { class: 'fcn' }, h('span', { class: 'fn' }, fname(f)), f.cid && CH[f.cid] ? h('span', { class: 'fst' }, '★'.repeat(Math.min(5, CH[f.cid].stars || 0)) || '·') : null)); });
   return fs.length ? h('div', { class: 'foechips' }, fs) : null;
 }
-function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Ce qui se prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
+function intentChip() { const it = intentOf(); if (!it || CB.over) return null; return h('div', { class: 'intent slim' }, h('span', { class: 'iic' }, it.ic), h('div', {}, h('b', {}, CB.intent.ab ? `${fname(CB.intent.foe)} : ${FAMS[CB.intent.ab.fam].ic} ${CB.intent.ab.name} (${CB.intent.ab.power})` : 'Ce qui se prépare : ' + it.n), h('div', { class: 'small mut' }, it.tip))); }
 function renderCombat() {
   if (CB && CB.auto) return; const cfg = CB.cfg; const mode = CB.mode || 'combat';
   const sit = fillF((PHASE[mode] || PHASE.combat)[Math.min(CB.round - 1, 4)]); const T = CB.T, Lm = CB.Lmax, ldv = Math.max(-Lm, Math.min(T, lead()));
   const meter = CB.team ? h('div', { class: 'tens' }, h('span', { class: 'tl' }, '😣'), ...Array.from({ length: T + Lm + 1 }, (_, i) => { const v = i - Lm; return h('i', { class: 'ts ' + (v === ldv ? 'cur' : v < 0 ? 'neg' : v > 0 ? 'pos' : 'mid') + (v === 0 ? ' zero' : '') }); }), h('span', { class: 'tl' }, '😎')) : null; const st = [CB.shield ? `🛡 ${CB.shield}` : '', CB.dodge ? `💨 esquive ×${CB.dodge}` : '', CB.nextBonus ? `${CB.nextBonus > 0 ? '+' : ''}${CB.nextBonus} au jet` : '', allyBonus() ? `🤝 alliés +${allyBonus()}` : ''].filter(Boolean).join(' · ');
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
-  show({ compact: true, kicker: CB.team ? `${MODES[mode]} · BATAILLE D’ÉQUIPE · TOUR ${CB.round}/${CB.N}` : `${MODES[mode]} · UNE DÉCISION`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, teamStrip(), foesStrip(), meter, intentChip(), h('div', { class: 'small mut' }, CB.team ? `Prends ${T} d’avance pour l’emporter · tu cèdes à −${Lm} · ${CB.N} tours au plus.` : 'L’écart de ton jet décide du sort : défaite, blessure, retraite ennemie, ou victoire dont tu choisis les suites.'), st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: innerWidth >= 700, tileCls: 'hand' });
+  show({ compact: true, kicker: CB.team ? `${MODES[mode]} · BATAILLE D’ÉQUIPE · TOUR ${CB.round}/${CB.N}` : `${MODES[mode]} · UNE DÉCISION`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, teamStrip(), foesStrip(), meter, intentChip(), CB.team ? h('div', { class: 'small mut' }, `Prends ${T} d’avance · tu cèdes à −${Lm} · ${CB.N} tours au plus`) : null, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: innerWidth >= 700, tileCls: 'hand' });
 }
 function combatChoices() {
   const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));

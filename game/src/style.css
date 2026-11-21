@@ -855,3 +855,10 @@ body::after{display:none!important}
 
 .cstage .cfoe,.cstage .cme,.cstage .cmate{display:flex;flex-direction:column;align-items:center;gap:2px}.cstage .cap{font:600 .55rem var(--fm);color:#c8ccf0;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:640px){.cstage{min-height:96px}.cstage img{max-height:84px;width:auto}}
+
+/* mobile aéré : bandeau de ville illustré en tête de scène, sans le fil d'actualités */
+@media (max-width:640px){
+  .roomy .strip{display:block;margin:4px 0 2px;border:1px solid rgba(255,255,255,.12)}.roomy .strip .snews{display:none}.roomy .strip-img .sdate{display:none}
+  .roomy .card.scene{min-height:calc(100dvh - 330px)}
+  .intent.slim{padding:4px 10px;margin:4px 0}.intent.slim .small{display:none}.intent.slim .iic{font-size:1.1rem}
+}

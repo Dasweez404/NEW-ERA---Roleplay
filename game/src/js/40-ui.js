@@ -96,7 +96,7 @@ function hudEl() {
       h('div', { class: 'stat hp' }, h('span', { class: 'lab ic' }, '♥'), h('div', { class: 'bar' }, hpBar), h('span', { class: 'val' }, hpN, '/' + pc.hpMax)),
       h('div', { class: 'stat en' }, h('span', { class: 'lab ic' }, '⚡'), h('div', { class: 'bar' }, enBar), h('span', { class: 'val' }, pc.en + '/' + pc.enMax))),
     h('div', { class: 'hud-pills' },
-      h('span', { class: 'pill cash', title: 'Crédits' }, '🪙 ', money), h('span', { class: 'pill' + (st ? ' wanted' : ''), title: WANTED_TXT[st] }, st ? 'PRIME ' + starStr(st) : 'Aucune prime'), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
+      h('span', { class: 'pill cash', title: 'Crédits' }, '🪙 ', money), (st ? h('span', { class: 'pill wanted', title: WANTED_TXT[st] }, 'PRIME ' + starStr(st)) : null), h('button', { class: 'pill gem', title: 'Pierres antiques', onclick: () => { sfx('click'); parkOpen(stoneMenu); } }, '💎 ' + stoneCount() + '/16'),
       h('span', { class: 'pill dim cityrel', title: 'Ta réputation dans cette zone' }, '📍 ' + capName(G.loc) + (typeof cityRep === 'function' ? (() => { const v = cityRep(); return ' · ' + (v >= 25 ? '💖' : v >= 10 ? '🙂' : v <= -25 ? '💢' : v <= -10 ? '😠' : '😐') + ' ' + cityLabel(v); })() : ''))));
 }
 function menuPop() {
