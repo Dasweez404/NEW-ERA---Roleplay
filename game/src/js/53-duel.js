@@ -273,6 +273,11 @@ function renderCombat() {
   const rlog = h('div', { class: 'rlog' }, CB.log.slice(-2).map(l => h('div', { class: l.c }, l.t)));
   show({ compact: true, kicker: CB.team ? `${MODES[mode]} · BATAILLE D’ÉQUIPE · TOUR ${CB.round}/${CB.N}` : `${MODES[mode]} · UNE DÉCISION`, title: cfg.title, text: [sit], extra: h('div', { class: 'combat' }, teamStrip(), foesStrip(), meter, intentChip(), CB.team ? h('div', { class: 'small mut' }, `Prends ${T} d’avance · tu cèdes à −${Lm} · ${CB.N} tours au plus`) : null, st ? h('div', { class: 'small acc' }, st) : null, rlog), choices: combatChoices(), tiles: innerWidth >= 700, tileCls: 'hand' });
 }
+function riskTag(m) {
+  const o = oddsOf(m); if (!o) return m.sub; const pr = odds(...o); const lethal = CB.cfg && CB.cfg.lethal; const bad = lethal === 'death' || lethal === true ? '☠️ mort possible' : lethal === 'capture' ? '⛓ capture possible' : '🩸 blessure';
+  const t = pr < 0.35 ? `${bad} · risque élevé` : pr < 0.6 ? `${bad} si ça tourne mal` : '';
+  return [m.sub, t].filter(Boolean).join(' · ');
+}
 function combatChoices() {
-  const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: m.sub, odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
+  const pc = G.pc; return moves().map((m, i) => C(m.label, () => play(m), { ic: m.ic, sub: riskTag(m), odds: oddsOf(m), cls: m.cls || (i === 0 ? 'safe' : ''), req: { ok: () => m.lock || (m.cost && pc.en < m.cost ? 'Énergie insuffisante' : null) } }));
 }

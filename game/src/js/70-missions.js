@@ -111,7 +111,7 @@ function missionBoard() {
 function missionBrief(o) { missionApproach(o); }
 function approachChoices(o) {
   const a = ARCH[o.arch]; const L = []; const pc = G.pc; const dc = dcOf(o.tier, o.diff);
-  const keys = Object.keys(a.ap); const gates = gateSet(keys.map(k => ({ lab: a.ap[k][0], attr: APPROACH[k].a })), o.tier);
+  const keys = rotatePick(Object.keys(a.ap), null, 'a:' + o.arch, k => k === 'pouvoir' && a.ptags.some(t => (powerTags()[t] || 0) > 0)); const gates = gateSet(keys.map(k => ({ lab: a.ap[k][0], attr: APPROACH[k].a })), o.tier);
   keys.forEach((k, gi) => {
     const d = APPROACH[k]; let tags = d.t; let sub = '';
     if (k === 'pouvoir') { tags = a.ptags; const match = a.ptags.some(t => (powerTags()[t] || 0) > 0); sub = match ? 'pouvoir adapté ✔' : 'pouvoir peu adapté'; const qa0 = questAbility(); if (qaBonus(o)) sub = `✨ ${qa0.q.n} : +4 au jet (2⚡, jamais garanti)`; }

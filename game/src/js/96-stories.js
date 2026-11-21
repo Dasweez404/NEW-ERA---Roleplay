@@ -83,10 +83,18 @@ const LOCAL_STORIES = {
   gamma: [['Gamma Lab · Laboratoire', 'Le cobaye volontaire', p => `À ${p}, un chercheur de la Gamma Lab cherche un volontaire pour tester un nouveau sérum. Le salaire est correct.`, [['Accepter', 'corps', ['defense'], 'Le sérum fonctionne : tu te sens plus fort.', 'Le sérum te rend malade.', { xp: 20, hp: 10, rep: { gamma: 4 } }, { hp: -8 }], ['Analyser le sérum d’abord', 'intellect', ['tech'], 'Tu corriges la formule.', 'Il te congédie.', { xp: 22, item: { capsule: 1 } }, { xp: 4 }]]]],
   omega: [['Omega · Quartier', 'Le chasseur d’Omega', p => `À ${p}, un agent d’Omega te suit depuis la gare. Il n’a pas l’air hostile, plutôt curieux.`, [['L’aborder', 'charisme', ['social'], 'Il t’offre un contrat risqué.', 'Il t’ignore.', { xp: 18, money: 100, rep: { omega: 3 } }, { xp: 4 }], ['Le semer', 'agilite', ['mobility'], 'Tu le perds.', 'Il te rattrape.', { xp: 14 }, { heat: 2 }]]]],
 };
+// Au plus 4 choix par quête : on garde les options spéciales (rôle) et on fait tourner les autres d'une apparition à l'autre
+function rotatePick(arr, mem, key, keepFn) {
+  if (arr.length <= 4) return arr;
+  const f = G.pc.flags; f.rot = f.rot || {}; const n = f.rot[key] = ((f.rot[key] || 0) + 1);
+  const keep = arr.filter(x => keepFn && keepFn(x)).slice(0, 2); const rest = arr.filter(x => !keep.includes(x)); const out = [];
+  for (let i = 0; i < 4 - keep.length; i++) out.push(rest[(n + i) % rest.length]);
+  return arr.filter(x => keep.includes(x) || out.includes(x));
+}
 function runStory(s, roleId) {
   const t = wTier(); const place = esc(capName(G.loc));
   const extra = (typeof ROLE_OPTS !== 'undefined' && ROLE_OPTS[s[1]] && hasRole(ROLE_OPTS[s[1]][0])) ? [ROLE_OPTS[s[1]][1]] : [];
-  const opts = [...s[3], ...extra];
+  const opts = rotatePick([...s[3], ...extra], null, 's:' + s[1], o => extra.includes(o));
   const gates = gateSet(opts.map(o => ({ lab: o[0], attr: o[1] })), t);
   const L = opts.map((o, gi) => { const [lab, attr, tags, okT, koT, okFx, koFx, kar] = o; const dc = 11 + 2 * t;
     return C(lab, () => {
