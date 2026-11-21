@@ -43,3 +43,28 @@ const D3 = (() => {
   function still(cv, value, rgb) { const S = 88, dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = cv.height = S * dpr; cv.style.width = cv.style.height = S + 'px'; draw(cv, target(value - 1), rgb, S); }
   return { roll, still };
 })();
+
+// ───────── Cristal 3D : bipyramide hexagonale tournante aux couleurs de la pierre ─────────
+function gem3d(color, S = 96) {
+  const cv = document.createElement('canvas'); const dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = cv.height = S * dpr; cv.style.width = cv.style.height = S + 'px'; cv.className = 'gem3d';
+  const hex = /^#/.test(color) ? color.replace('#', '') : 'ffe83a'; const f = hex.length === 3 ? hex.split('').map(x => x + x).join('') : hex.padEnd(6, '0');
+  const rgb = [0, 2, 4].map(i => parseInt(f.substr(i, 2), 16) || 200);
+  const top = [0, -1.15, 0], bot = [0, 1.15, 0]; const n = 6; const gird = Array.from({ length: n }, (_, i) => [Math.cos(i / n * Math.PI * 2) * .78, 0, Math.sin(i / n * Math.PI * 2) * .78]);
+  const crown = gird.map(g => [g[0] * .52, -.5, g[2] * .52]);
+  const rot = (v, a, b) => { let [x, y, z] = v; let c = Math.cos(a), s = Math.sin(a); [x, z] = [x * c + z * s, -x * s + z * c]; c = Math.cos(b); s = Math.sin(b); [y, z] = [y * c - z * s, y * s + z * c]; return [x, y, z]; };
+  const t0 = performance.now(); const c = cv.getContext('2d');
+  const step = now => {
+    if (!cv.isConnected && now - t0 > 400) return;
+    const a = (now - t0) / 900, b = 0.35; c.setTransform(cv.width / S, 0, 0, cv.width / S, 0, 0); c.clearRect(0, 0, S, S);
+    const P = v => { const r = rot(v, a, b); return [S / 2 + r[0] * S * .34, S / 2 + r[1] * S * .34, r[2]]; };
+    const tris = []; for (let i = 0; i < n; i++) { const j = (i + 1) % n; tris.push([P(top), P(crown[i]), P(crown[j])], [P(crown[i]), P(gird[i]), P(gird[j])], [P(crown[i]), P(gird[j]), P(crown[j])], [P(gird[i]), P(bot), P(gird[j])]); }
+    tris.sort((u, w) => (u[0][2] + u[1][2] + u[2][2]) - (w[0][2] + w[1][2] + w[2][2]));
+    for (const tr of tris) {
+      const nx = (tr[1][0] - tr[0][0]) * (tr[2][1] - tr[0][1]) - (tr[1][1] - tr[0][1]) * (tr[2][0] - tr[0][0]); const lum = 0.45 + 0.55 * Math.abs(Math.sin((tr[0][0] + tr[1][1] + tr[2][0]) * .09 + a * 1.3));
+      c.beginPath(); c.moveTo(tr[0][0], tr[0][1]); c.lineTo(tr[1][0], tr[1][1]); c.lineTo(tr[2][0], tr[2][1]); c.closePath();
+      c.fillStyle = `rgba(${rgb.map(x => Math.min(255, Math.round(x * lum + 40 * lum))).join(',')},${nx > 0 ? .92 : .82})`; c.fill(); c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = .8; c.stroke();
+    }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step); return cv;
+}

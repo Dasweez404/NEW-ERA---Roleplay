@@ -97,7 +97,7 @@ function gainStone(id) {
   const s = STONE[id]; const pc = G.pc; const L = [];
   if (pc.stones[id]) return L;
   pc.stones[id] = G.wk; G.world.stoneHolder[id] = 'pc'; G.world.stoneLoc[id] = G.loc; G.score.stones = Math.max(G.score.stones, stoneCount());
-  splash({ title: 'PIERRE ' + s.name.toUpperCase(), sub: `${stoneCount()}/16 pierres antiques`, color: s.color, icon: '💎', ms: 2300 }); sfx('stone'); buzz([30, 40, 80]);
+  splash({ title: 'PIERRE ' + s.name.toUpperCase(), sub: `${stoneCount()}/16 pierres antiques`, color: s.color, icon: (typeof gem3d === 'function' && !REDUCED ? gem3d(s.color, 104) : '💎'), ms: 2600 }); sfx('stone'); buzz([30, 40, 80]);
   L.push({ t: `✨ Pierre antique de ${s.name} obtenue (${stoneCount()}/16) ! +1 ${AT[STONE_ATTR[id]].short}`, c: 'acc' });
   logEntry(`Pierre de ${s.name} obtenue.`);
   newsPush(`La pierre antique ${s.name} a changé de mains.`);
