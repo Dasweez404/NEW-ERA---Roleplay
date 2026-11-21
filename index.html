@@ -874,6 +874,18 @@ body::after{display:none!important}
   .roomy .card.scene{min-height:calc(100dvh - 330px)}
   .intent.slim{padding:4px 10px;margin:4px 0}.intent.slim .small{display:none}.intent.slim .iic{font-size:1.1rem}
 }
+
+/* polish visuel : entrées douces, reflets, profondeur */
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card.scene{animation:cardIn .35s ease-out both}
+.card{box-shadow:0 8px 28px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05)}
+.card h2,.card .title{text-shadow:0 0 18px rgba(120,220,255,.25)}
+button.tile,.tile,.choice{transition:transform .12s ease,box-shadow .2s ease,border-color .2s ease,background .2s}
+button.tile:active,.tile:active,.choice:active{transform:scale(.985)}
+@media (hover:hover){button.tile:hover,.tile:hover,.choice:hover{transform:translateX(3px);box-shadow:0 0 14px rgba(255,230,0,.18)}}
+.strip{box-shadow:0 4px 18px rgba(0,0,0,.45);border-radius:2px;overflow:hidden}
+body{background-image:radial-gradient(ellipse at 50% -10%,rgba(60,90,160,.28),transparent 60%),radial-gradient(ellipse at 90% 110%,rgba(160,40,120,.16),transparent 55%)}
+@media (prefers-reduced-motion:reduce){.card.scene{animation:none}}
 </style>
 </head>
 <body>
@@ -1383,7 +1395,7 @@ function skill(attrId, tags = []) {
 }
 // Équilibrage : les difficultés (dc) écrites dans le jeu sont recalées sur une courbe douce (±9 % par niveau d'écart),
 // et les bonus cumulés (pouvoir, rôle, style, matériel, équipe…) sont plafonnés pour qu'un perso spécialisé reste battable.
-const dcEff = dc => Math.round(3.8 + 0.58 * dc);
+const dcEff = dc => Math.round(3.9 + 0.58 * dc + (typeof G !== 'undefined' && G && G.pc && G.pc.stones ? Math.max(0, 1 - stoneCount() * 0.5) : 1));
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
   const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };
