@@ -217,13 +217,13 @@ function trainMenu() {
 }
 const roleCap = () => 2 + Math.floor(G.pc.grade / 2);
 function roleMenu() {
-  const pc = G.pc; const cap = roleCap(); const L = [];
+  const pc = G.pc; const cap = roleCap(); const L = []; const free = !pc.flags.roleTaken && !pc.roles.length; const cost = free ? 0 : 150;
   Object.entries(ROLES).forEach(([id, r]) => {
     const has = pc.roles.includes(id); const rq = { attr: {}, ok: () => (!has && pc.roles.length >= cap) ? `Tu ne peux pas avoir plus de ${cap} rôle(s) à ton grade` : null };
     if (r.req.attr) rq.attr[r.req.attr[0]] = r.req.attr[1]; if (r.req.grade) rq.grade = r.req.grade;
     const okStyle = !r.req.style || r.req.style.includes(pc.style);
     const lockStyle = okStyle ? null : `Style requis : ${r.req.style.map(s => STYLES[s].name).join(' / ')}`;
-    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= 150; pc.roles.push(id); } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); toast(has ? `Rôle abandonné : ${r.name}` : `${ROLE_IC[id] || ''} Tu deviens ${r.name}`); sfx('win'); if (pc.flags.rolePromo) { pc.flags.rolePromo = false; return hub(); } cityMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, { money: 150 }) });
+    const ch = C(`${has ? '✔ ' : ''}${r.name}`, () => { if (has) pc.roles = pc.roles.filter(x => x !== id); else { pc.money -= cost; pc.roles.push(id); pc.flags.roleTaken = true; } logEntry(has ? `Tu abandonnes le rôle ${r.name}.` : `Tu deviens ${r.name}.`); toast(has ? `Rôle abandonné : ${r.name}` : `${ROLE_IC[id] || ''} Tu deviens ${r.name}`); sfx('win'); if (pc.flags.rolePromo) { pc.flags.rolePromo = false; return hub(); } cityMenu(); }, { ic: ROLE_IC[id] || '◆', sub: `${r.desc}${has ? ' · rôle acquis' : free ? ' · 🎁 gratuit (premier rôle)' : ' · 150 ¢'}`, cls: has ? 'safe' : '', req: has ? null : Object.assign(rq, free ? {} : { money: 150 }) });
     if (lockStyle && !has) ch.lock = ch.lock || lockStyle; L.push(ch);
   });
   L.push(C(pc.flags.rolePromo ? 'Plus tard' : '← Retour', () => { if (pc.flags.rolePromo) { pc.flags.rolePromo = false; return hub(); } trainMenu(); }, pc.flags.rolePromo ? { cls: 'back' } : undefined)); show({ kicker: 'Rôles', title: `Choisir un rôle (${pc.roles.length}/${cap})`, text: ['Un rôle donne +2 aux jets de son domaine et ouvre des contrats dédiés. Touche un rôle acquis pour l’abandonner.'], choices: L, tiles: true });
