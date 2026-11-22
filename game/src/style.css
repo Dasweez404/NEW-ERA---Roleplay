@@ -914,3 +914,5 @@ body{background-image:radial-gradient(ellipse at 50% -10%,rgba(60,90,160,.28),tr
 }
 
 .invrow{display:flex;align-items:center;gap:8px}.invrow .invic{font-size:1.2rem;flex:none}.invrow.worn{border-left:3px solid var(--ok);padding-left:6px}.invrow .tab{margin-left:auto}
+
+.invrow .invic{min-width:1.4em;text-align:center}

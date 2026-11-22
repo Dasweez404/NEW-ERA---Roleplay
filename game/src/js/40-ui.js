@@ -229,10 +229,10 @@ function tabInv() {
   const eq = (slot, label) => h('div', {}, h('b', {}, label + ' : '), pc.eq[slot] ? ITEMS[pc.eq[slot]].n : h('span', { class: 'mut' }, 'aucun'));
   box.append(h('div', { class: invFree() ? 'mut' : 'badc', style: 'margin-bottom:6px' }, `🎒 ${invCount()}/${invCap()}${invFree() ? '' : ' · sac plein'}`), eq('arme', 'Arme'), eq('armure', 'Armure'));
   const ids = Object.keys(pc.inv);
-  if (!ids.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, '🎒 Sac vide.'));
+  if (!ids.length) box.append(h('div', { class: 'mut', style: 'margin-top:8px' }, 'Sac vide.'));
   ids.forEach(id => {
     const it = ITEMS[id]; const st = (it.t === 'arme' || it.t === 'armure') && typeof itemStat === 'function' ? itemStat(it) : ''; const gear = it.t === 'arme' || it.t === 'armure';
-    const worn = gear && pc.eq[it.t === 'arme' ? 'arme' : 'armure'] === id; const row = h('div', { class: 'invrow' + (worn ? ' worn' : '') }, h('span', { class: 'invic', title: worn ? 'Porté' : 'Dans le sac' }, worn ? (it.t === 'arme' ? '⚔️' : '🛡️') : '🎒'), h('b', {}, it.n + (pc.inv[id] > 1 ? ' ×' + pc.inv[id] : '')), st ? h('span', { class: 'mut small' }, ' ' + st) : null);
+    const worn = gear && pc.eq[it.t === 'arme' ? 'arme' : 'armure'] === id; const row = h('div', { class: 'invrow' + (worn ? ' worn' : '') }, h('span', { class: 'invic', title: worn ? 'Équipé : tu le portes sur toi' : '' }, worn ? '🎒' : ''), h('b', {}, it.n + (pc.inv[id] > 1 ? ' ×' + pc.inv[id] : '')), st ? h('span', { class: 'mut small' }, ' ' + st) : null);
     if (gear) { const slot = it.t === 'arme' ? 'arme' : 'armure'; row.append(h('button', { class: 'tab', onclick: () => { pc.eq[slot] = pc.eq[slot] === id ? null : id; render(true); } }, pc.eq[slot] === id ? 'Déséquiper' : 'Équiper')); }
     if (!gear && it.t !== 'vehicule') row.append(h('button', { class: 'tab', title: 'Jeter un exemplaire', onclick: () => { takeItem(id); sfx('click'); render(true); } }, '🗑'));
     box.append(row);
