@@ -912,3 +912,5 @@ body{background-image:radial-gradient(ellipse at 50% -10%,rgba(60,90,160,.28),tr
   .kicker,.pill,.chip,.tab,.lab,.key{font-size:max(.8rem,14px)}
   .ch .l{font-size:1.05rem}.pct small{font-size:.72rem}
 }
+
+.invrow{display:flex;align-items:center;gap:8px}.invrow .invic{font-size:1.2rem;flex:none}.invrow.worn{border-left:3px solid var(--ok);padding-left:6px}.invrow .tab{margin-left:auto}
