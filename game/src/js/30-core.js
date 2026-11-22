@@ -38,7 +38,7 @@ function skill(attrId, tags = []) {
 }
 // Équilibrage : les difficultés (dc) écrites dans le jeu sont recalées sur une courbe douce (±9 % par niveau d'écart),
 // et les bonus cumulés (pouvoir, rôle, style, matériel, équipe…) sont plafonnés pour qu'un perso spécialisé reste battable.
-const dcEff = dc => { let e = 1; if (typeof G !== 'undefined' && G && G.pc && G.pc.stones) e = (1 + 0.8 * (G.pc.pstars || 0) + (G.pc.grade || 0) * 0.3) - stoneCount() * 0.5 - (typeof recentCaps === 'function' ? recentCaps() * 1.2 : 0); return Math.round(4.5 + 0.58 * dc + Math.max(0, e)); };
+const dcEff = dc => { let e = 1; if (typeof G !== 'undefined' && G && G.pc && G.pc.stones) e = (1 + 0.8 * (G.pc.pstars || 0) + (G.pc.grade || 0) * 0.3) - stoneCount() * 0.5 - (typeof recentCaps === 'function' ? recentCaps() * 1.2 : 0); return Math.round(4.5 + 0.58 * dc + Math.max(0, e) + (typeof G !== 'undefined' && G && G.pc && G.pc.stones ? Math.max(0, stoneCount() - 3) * 0.4 : 0)); };
 function check(attrId, dc, tags = [], extra = 0) {
   const s = skill(attrId, tags); const r = rint(1, 20); const mod = s.mod + extra; const total = r + mod; const d = dcEff(dc);
   const res = { r, total, dc: d, mod, parts: s.parts, crit: r === 20, fumble: r === 1, attr: attrId };

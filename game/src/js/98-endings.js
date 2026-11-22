@@ -10,9 +10,9 @@ const ENDINGS = [
   { id: 'liberation', ic: '☀', n: 'Chute de la Force d’Autorité', d: 'Faire tomber 3 bases de la F.A., rang ▲4.',
     prog: () => [['Bases de la F.A. tombées', G.pc.flags.faFall || 0, 3], ['Rang', Math.min(G.pc.grade, 4), 4]],
     title: '☀ LA CHUTE DU NOUVEAU RÉGIME', text: ['La troisième base tombe. Les mechas s’éteignent un à un, les doyens négocient leur reddition. Sans la Force d’Autorité, les porteurs marchent à visage découvert pour la première fois depuis des années. Le protocole ANTI se termine ici.'] },
-  { id: 'sceau', ic: '🔒', n: 'Le Sceau', d: 'Réunir 8 pierres et sceller leur pouvoir (moralité de Protecteur).',
-    prog: () => [['Pierres antiques', stoneCount(), 8], ['Moralité de Protecteur (6+)', Math.max(0, Math.min(karma(), 6)), 6]],
-    title: '🔒 LE SCEAU', text: ['Huit pierres posées en cercle. Tu ne les prends pas : tu les scelles. L’ogénite se tait, les royaumes éteints peuvent enfin dormir. Aucun détenteur ne pourra plus remodeler le monde, ni pour le meilleur ni pour le pire. Une fin sans gloire, et sans regrets.'] },
+  { id: 'sceau', ic: '🔒', n: 'Le Sceau', d: 'Réunir 10 pierres et sceller leur pouvoir (moralité de Protecteur).',
+    prog: () => [['Pierres antiques', stoneCount(), 10], ['Moralité de Protecteur (6+)', Math.max(0, Math.min(karma(), 6)), 6]],
+    title: '🔒 LE SCEAU', text: ['Dix pierres posées en cercle. Tu ne les prends pas : tu les scelles. L’ogénite se tait, les royaumes éteints peuvent enfin dormir. Aucun détenteur ne pourra plus remodeler le monde, ni pour le meilleur ni pour le pire. Une fin sans gloire, et sans regrets.'] },
 ];
 const endingDone = e => e.prog().every(([, v, t, inv]) => inv ? v <= t : v >= t);
 const availableEndings = () => (G && G.pc && G.status === 'play') ? ENDINGS.filter(endingDone) : [];
